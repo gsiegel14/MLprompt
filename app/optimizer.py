@@ -50,7 +50,7 @@ def load_config() -> Dict[str, Any]:
         logger.error(f"Error loading configuration: {e}")
         return {
             'optimizer': {
-                'model_name': 'gemini-1.5-flash',
+                'model_name': 'gemini-2.5-flash',
                 'temperature': 0.7,
                 'max_output_tokens': 2048,
                 'strategies': ['reasoning_first', 'full_rewrite']
