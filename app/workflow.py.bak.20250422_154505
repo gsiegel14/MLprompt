@@ -137,15 +137,15 @@ class PromptOptimizationWorkflow:
                 error_count = 0
                 
                 # Limit batch size to prevent memory issues
-                if batch_size == 0 or batch_size > 50:  # Increased limit from 20 to 50
-                    logger.info(f"Limiting batch size to 50 examples (original: {batch_size})")
-                    effective_batch_size = 50
+                if batch_size == 0 or batch_size > 20:
+                    logger.info(f"Limiting batch size to 20 examples (original: {batch_size})")
+                    effective_batch_size = 20
                     batch = batch[:20] if len(batch) > 20 else batch
                 else:
                     effective_batch_size = batch_size
                 
                 # Process in even smaller chunks to prevent memory issues
-                max_chunk_size = min(10, len(batch))  # Increased from 5 to 10  # Process at most 5 at a time, reduced from 10
+                max_chunk_size = min(5, len(batch))  # Process at most 5 at a time, reduced from 10
                 for chunk_start in range(0, len(batch), max_chunk_size):
                     chunk_end = min(chunk_start + max_chunk_size, len(batch))
                     logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")

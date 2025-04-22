@@ -41,10 +41,9 @@ class ExperimentTracker:
             optimizer_reasoning (str, optional): Reasoning from the optimizer
         """
         try:
-            # Create experiment directory if it doesn't exist
+            # Create experiment directories if needed
             exp_dir = os.path.join(self.base_dir, experiment_id)
             os.makedirs(exp_dir, exist_ok=True)
-            logger.debug(f"Ensuring experiment directory exists: {exp_dir}")
             
             # Save prompts
             prompt_data = {
@@ -69,13 +68,9 @@ class ExperimentTracker:
             
             # Save example results (if provided)
             if examples:
-                # Create examples directory
-                examples_dir = os.path.join(exp_dir, 'examples')
-                os.makedirs(examples_dir, exist_ok=True)
-                examples_file = os.path.join(examples_dir, f"examples_{iteration}.json")
+                examples_file = os.path.join(exp_dir, f"examples_{iteration}.json")
                 with open(examples_file, 'w') as f:
                     json.dump(examples, f, indent=2)
-                logger.debug(f"Saved {len(examples)} examples to {examples_file}")
             
             # Save optimizer reasoning (if provided)
             if optimizer_reasoning:
@@ -154,17 +149,6 @@ class ExperimentTracker:
                 "system_prompt": prompts_data.get('system_prompt', ''),
                 "output_prompt": prompts_data.get('output_prompt', '')
             }
-            
-            # Try to load examples if they exist
-            examples_dir = os.path.join(exp_dir, 'examples')
-            examples_file = os.path.join(examples_dir, f"examples_{iteration}.json")
-            if os.path.exists(examples_file):
-                try:
-                    with open(examples_file, 'r') as f:
-                        experiment_data["examples"] = json.load(f)
-                    logger.debug(f"Loaded examples from {examples_file}")
-                except Exception as e:
-                    logger.error(f"Error loading examples from {examples_file}: {e}")
             
             # Try to load optimizer reasoning if it exists
             reasoning_file = os.path.join(exp_dir, f"reasoning_{iteration}.txt")
