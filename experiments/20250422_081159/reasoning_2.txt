@@ -1,0 +1,6 @@
+Failed to extract output prompt from response. Using original.
+Failed to extract system prompt from response. Using original.
+"output_prompt": "Answer the question using the following format:\n\n1. **Question:** (Rephrase the question clearly and concisely.)\n2. **Reasoning:** (Explain your step-by-step reasoning process.  Show your work.  If the question is a multiple choice question, explicitly consider each option and explain why you eliminate or select it.)\n3. **Answer:** (State your final answer clearly and concisely.)",
+  "reasoning": "The original system prompt was overly verbose and included irrelevant details (e.g.,  passing the USMLE with a perfect score).  The restriction module was also too long and repetitive, making it less effective. The revised system prompt is concise, focusing on the core functionality: answering questions accurately and completely while acknowledging limitations. The original output prompt was overly structured and included unnecessary steps. The revised output prompt is simpler and emphasizes clear reasoning and justification. The examples showed the model was trying to apply medical reasoning to non-medical questions.  The revised prompts focus on general reasoning abilities and address the limitations explicitly, preventing the model from attempting to answer inappropriate questions."
+}
+```

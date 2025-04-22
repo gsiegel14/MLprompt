@@ -1,0 +1,5 @@
+Failed to extract output prompt from response. Using original.
+Failed to extract system prompt from response. Using original.
+"reasoning": "The original system prompt was overly verbose and contained unnecessary details about the model's expertise, potentially leading to overreliance on imagined expertise and hindering genuine reasoning. The restriction module was also overly detailed and included examples, which is counterproductive to generalizing reasoning abilities.  The new system prompt is concise and focuses on the core task, while clearly defining the boundaries of acceptable questions. The new output prompt encourages clear and structured reasoning by explicitly requesting step-by-step explanations where necessary and structured reasoning for multiple-choice questions.  Removing the examples from both prompts reduces the risk of overfitting and encourages the model to generalize its reasoning capabilities."
+}
+```

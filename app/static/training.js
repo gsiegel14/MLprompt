@@ -674,6 +674,328 @@ document.addEventListener('DOMContentLoaded', function() {
         trainingLogsEl.textContent = '';
     }
     
+    // Show Model Results Modal
+    function showModelResults(data) {
+        // Prepare the modal with data
+        populateModelResultsModal(data);
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('model-results-modal'));
+        modal.show();
+    }
+    
+    // Populate Model Results Modal
+    function populateModelResultsModal(data) {
+        // Clear previous content
+        document.getElementById('examplesAccordion').innerHTML = '';
+        document.getElementById('error-analysis-table').innerHTML = '';
+        
+        // Show/hide no examples message
+        const noExamplesMessage = document.getElementById('no-examples-message');
+        
+        // Overview tab - performance metrics
+        if (data.metrics) {
+            document.getElementById('result-avg-score').textContent = (data.metrics.avg_score * 100).toFixed(1) + '%';
+            document.getElementById('result-perfect-matches').textContent = `${data.metrics.perfect_matches}/${data.metrics.total_examples}`;
+            document.getElementById('result-total-examples').textContent = data.metrics.total_examples;
+            
+            // Set average latency if available
+            const avgLatency = data.metrics.avg_latency || 'N/A';
+            document.getElementById('result-avg-latency').textContent = typeof avgLatency === 'number' ? 
+                `${avgLatency.toFixed(0)}ms` : avgLatency;
+        } else {
+            document.getElementById('result-avg-score').textContent = '0%';
+            document.getElementById('result-perfect-matches').textContent = '0/0';
+            document.getElementById('result-total-examples').textContent = '0';
+            document.getElementById('result-avg-latency').textContent = 'N/A';
+        }
+        
+        // Experiment info
+        document.getElementById('result-experiment-id').textContent = data.experiment_id || '-';
+        document.getElementById('result-iteration').textContent = data.iteration || '-';
+        document.getElementById('result-timestamp').textContent = new Date().toLocaleString();
+        document.getElementById('result-model').textContent = data.model || 'gemini-1.5-flash';
+        document.getElementById('result-batch-size').textContent = data.batch_size || '-';
+        document.getElementById('result-optimizer-strategy').textContent = data.optimizer_strategy || '-';
+        
+        // Examples tab - If we have example data
+        if (data.examples && data.examples.length > 0) {
+            noExamplesMessage.style.display = 'none';
+            
+            // Generate example accordions
+            const examplesContainer = document.getElementById('examplesAccordion');
+            
+            data.examples.forEach((example, index) => {
+                // Calculate score class
+                let scoreClass = 'text-warning';
+                if (example.score >= 0.9) {
+                    scoreClass = 'text-success';
+                } else if (example.score < 0.5) {
+                    scoreClass = 'text-danger';
+                }
+                
+                // Create accordion item
+                const accordionItem = document.createElement('div');
+                accordionItem.className = 'accordion-item';
+                accordionItem.dataset.score = example.score;
+                accordionItem.dataset.category = example.score >= 0.9 ? 'perfect' : 
+                                                (example.score >= 0.5 ? 'partial' : 'failed');
+                
+                accordionItem.innerHTML = `
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#example-${index}" aria-expanded="false" aria-controls="example-${index}">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <span>Example #${index + 1}: ${truncateText(example.user_input, 70)}</span>
+                                <span class="badge ${scoreClass} ms-2">Score: ${(example.score * 100).toFixed(1)}%</span>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="example-${index}" class="accordion-collapse collapse" data-bs-parent="#examplesAccordion">
+                        <div class="accordion-body">
+                            <div class="mb-3">
+                                <h6 class="fw-bold">Input:</h6>
+                                <pre class="p-2 bg-light border rounded">${example.user_input}</pre>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="fw-bold">Expected Output:</h6>
+                                <pre class="p-2 bg-light border rounded">${example.ground_truth_output}</pre>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="fw-bold">Model Response:</h6>
+                                <pre class="p-2 bg-light border rounded ${example.score >= 0.9 ? 'border-success' : (example.score < 0.5 ? 'border-danger' : 'border-warning')}">${example.model_response}</pre>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge ${scoreClass}">Score: ${(example.score * 100).toFixed(1)}%</span>
+                                </div>
+                                <button class="btn btn-sm btn-primary view-response-details" data-example-index="${index}">
+                                    <i class="fa-solid fa-magnifying-glass me-1"></i> Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                examplesContainer.appendChild(accordionItem);
+            });
+            
+            // Add example filter logic
+            const exampleFilter = document.getElementById('example-filter');
+            exampleFilter.addEventListener('change', function() {
+                const filterValue = this.value;
+                const examples = document.querySelectorAll('.accordion-item');
+                
+                examples.forEach(example => {
+                    if (filterValue === 'all' || example.dataset.category === filterValue) {
+                        example.style.display = 'block';
+                    } else {
+                        example.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Initialize metrics charts
+            initializeMetricsCharts(data);
+            
+        } else {
+            noExamplesMessage.style.display = 'block';
+        }
+    }
+    
+    // Initialize metrics charts
+    function initializeMetricsCharts(data) {
+        // Score distribution chart
+        const scoreCtx = document.getElementById('score-distribution-chart').getContext('2d');
+        
+        // Create score distribution buckets
+        const scoreRanges = [
+            { min: 0, max: 0.2, label: '0-20%', color: 'rgba(220, 53, 69, 0.7)' },
+            { min: 0.2, max: 0.4, label: '20-40%', color: 'rgba(253, 126, 20, 0.7)' },
+            { min: 0.4, max: 0.6, label: '40-60%', color: 'rgba(255, 193, 7, 0.7)' },
+            { min: 0.6, max: 0.8, label: '60-80%', color: 'rgba(25, 135, 84, 0.6)' },
+            { min: 0.8, max: 1.01, label: '80-100%', color: 'rgba(25, 135, 84, 0.9)' }
+        ];
+        
+        // Calculate scores if we have examples
+        let scoreCounts = [0, 0, 0, 0, 0];
+        
+        if (data.examples && data.examples.length > 0) {
+            data.examples.forEach(example => {
+                const score = example.score;
+                // Find which bucket this score belongs to
+                for (let i = 0; i < scoreRanges.length; i++) {
+                    if (score >= scoreRanges[i].min && score < scoreRanges[i].max) {
+                        scoreCounts[i]++;
+                        break;
+                    }
+                }
+            });
+            
+            // Create and fill error analysis table
+            createErrorAnalysisTable(data.examples);
+        }
+        
+        // Create chart
+        if (window.scoreDistributionChart) {
+            window.scoreDistributionChart.destroy();
+        }
+        
+        window.scoreDistributionChart = new Chart(scoreCtx, {
+            type: 'bar',
+            data: {
+                labels: scoreRanges.map(range => range.label),
+                datasets: [{
+                    label: 'Number of Examples',
+                    data: scoreCounts,
+                    backgroundColor: scoreRanges.map(range => range.color),
+                    borderColor: scoreRanges.map(range => range.color.replace('0.7', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.raw} example(s)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Create error analysis table
+    function createErrorAnalysisTable(examples) {
+        // Define error categories and initialize counts
+        const errorCategories = {
+            'missing_content': { count: 0, examples: [] },
+            'irrelevant_content': { count: 0, examples: [] },
+            'incorrect_diagnosis': { count: 0, examples: [] },
+            'format_error': { count: 0, examples: [] },
+            'low_score': { count: 0, examples: [] }
+        };
+        
+        // Analyze each example for error patterns
+        examples.forEach((example, index) => {
+            // Skip high-scoring examples
+            if (example.score >= 0.9) return;
+            
+            // Check for specific error patterns
+            const lowerResponse = example.model_response.toLowerCase();
+            const lowerTruth = example.ground_truth_output.toLowerCase();
+            
+            // Basic analysis based on patterns
+            if (example.score < 0.5) {
+                errorCategories.low_score.count++;
+                errorCategories.low_score.examples.push(index);
+            }
+            
+            if (lowerTruth.length > lowerResponse.length * 1.5) {
+                errorCategories.missing_content.count++;
+                errorCategories.missing_content.examples.push(index);
+            }
+            
+            // Look for format issues (e.g., missing structured output)
+            if ((lowerTruth.includes("diagnosis:") && !lowerResponse.includes("diagnosis:")) ||
+                (lowerTruth.includes("differential:") && !lowerResponse.includes("differential:"))) {
+                errorCategories.format_error.count++;
+                errorCategories.format_error.examples.push(index);
+            }
+            
+            // Diagnosis errors (simplified detection)
+            if (example.score < 0.8 && example.score > 0.5) {
+                errorCategories.incorrect_diagnosis.count++;
+                errorCategories.incorrect_diagnosis.examples.push(index);
+            }
+        });
+        
+        // Create table rows
+        const tableBody = document.getElementById('error-analysis-table');
+        tableBody.innerHTML = '';
+        
+        let hasErrors = false;
+        Object.entries(errorCategories).forEach(([category, data]) => {
+            if (data.count > 0) {
+                hasErrors = true;
+                const row = document.createElement('tr');
+                
+                // Format category name for display
+                const displayName = category.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+                
+                // Calculate percentage
+                const percentage = ((data.count / examples.length) * 100).toFixed(1);
+                
+                // Format example links
+                const exampleLinks = data.examples.map(index => 
+                    `<a href="#" class="example-link" data-example-index="${index}">Ex ${index+1}</a>`
+                ).join(', ');
+                
+                row.innerHTML = `
+                    <td>${displayName}</td>
+                    <td>${data.count}</td>
+                    <td>${percentage}%</td>
+                    <td>${exampleLinks}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            }
+        });
+        
+        // If no errors found, show a message
+        if (!hasErrors) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="4" class="text-center text-success">No significant error patterns detected!</td>`;
+            tableBody.appendChild(row);
+        }
+        
+        // Add click handlers for example links
+        document.querySelectorAll('.example-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const index = parseInt(this.dataset.exampleIndex);
+                
+                // Switch to examples tab and expand the selected example
+                document.getElementById('examples-tab').click();
+                
+                // Ensure the example is visible (change filter if needed)
+                document.getElementById('example-filter').value = 'all';
+                document.querySelectorAll('.accordion-item').forEach(item => {
+                    item.style.display = 'block';
+                });
+                
+                // Expand the accordion for this example
+                const targetAccordion = document.getElementById(`example-${index}`);
+                const bsCollapse = new bootstrap.Collapse(targetAccordion, { toggle: true });
+                
+                // Scroll to the example
+                targetAccordion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+    }
+    
+    // Helper function to truncate text
+    function truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+    
     // Start training
     function startTraining() {
         const systemPrompt = systemPromptEl.value.trim();
@@ -747,6 +1069,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Log results
                 log(`Completed ${data.iterations} iterations for experiment ${data.experiment_id}`);
                 log(`Best score achieved: ${(data.best_score * 100).toFixed(1)}% at iteration ${data.best_iteration}`);
+                
+                // Add button to view detailed results
+                const viewResultsBtn = document.createElement('button');
+                viewResultsBtn.className = 'btn btn-info btn-sm mt-2 mb-2';
+                viewResultsBtn.innerHTML = '<i class="fa-solid fa-chart-line me-1"></i> View Detailed Results';
+                viewResultsBtn.addEventListener('click', function() {
+                    // Prepare the model results data
+                    const modelResultsData = {
+                        experiment_id: data.experiment_id,
+                        iteration: data.iterations || 0,
+                        batch_size: batchSize,
+                        model: config.model || 'gemini-1.5-flash',
+                        optimizer_strategy: optimizerStrategy,
+                        examples: data.initial ? data.initial.examples : []
+                    };
+                    
+                    // Add metrics depending on whether optimization was performed
+                    if (data.optimized && data.optimized.metrics) {
+                        modelResultsData.metrics = data.optimized.metrics;
+                    } else if (data.initial && data.initial.metrics) {
+                        modelResultsData.metrics = data.initial.metrics;
+                    }
+                    
+                    // Show the detailed results modal
+                    showModelResults(modelResultsData);
+                });
+                
+                // Add the button to the logs area
+                const btnContainer = document.createElement('div');
+                btnContainer.className = 'text-center';
+                btnContainer.appendChild(viewResultsBtn);
+                trainingLogsEl.appendChild(btnContainer);
                 
                 // If optimization was performed
                 if (data.optimized && data.optimized.metrics) {
@@ -1123,12 +1477,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     resultsHtml += `<div class="alert alert-success">
                         <strong>Best Version:</strong> ${bestVersion} (${bestScore.toFixed(1)}%)
                     </div>`;
+                    
+                    // Add button to view detailed results of best version
+                    resultsHtml += `<div class="text-center mt-3 mb-2">
+                        <button id="view-validation-results-btn" class="btn btn-info">
+                            <i class="fa-solid fa-magnifying-glass-chart me-1"></i> View Detailed Results
+                        </button>
+                    </div>`;
                 }
                 
                 resultsHtml += '</div>';
                 
                 // Add to the logs area
                 document.querySelector('.validation-container').innerHTML = resultsHtml;
+                
+                // Add event listener to view detailed results button
+                const viewValidationResultsBtn = document.getElementById('view-validation-results-btn');
+                if (viewValidationResultsBtn && bestVersion) {
+                    viewValidationResultsBtn.addEventListener('click', function() {
+                        // Prepare detailed results data for the best version
+                        const bestResults = data.validation_results[bestVersion];
+                        const modelResultsData = {
+                            experiment_id: currentExperimentId || 'validation',
+                            iteration: bestVersion,
+                            batch_size: 'All validation examples',
+                            model: config.model || 'gemini-1.5-flash',
+                            optimizer_strategy: 'Validation run',
+                            metrics: bestResults.metrics,
+                            examples: bestResults.examples || []
+                        };
+                        
+                        // Show the detailed results modal
+                        showModelResults(modelResultsData);
+                    });
+                }
                 
                 showAlert('Validation complete', 'success');
             }
