@@ -1,27 +1,25 @@
 import os
 import logging
-import random
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
-# Sample responses for testing without API
-SAMPLE_RESPONSES = {
-    "What is the capital of France?": "Paris",
-    "How many planets are in our solar system?": "Eight planets: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune",
-    "What's the square root of 64?": "8",
-    "Who wrote Romeo and Juliet?": "William Shakespeare",
-    "What is the formula for water?": "H2O"
-}
+# Initialize the Gemini API with the key from environment variables
+api_key = os.environ.get("GOOGLE_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+else:
+    logger.warning("GOOGLE_API_KEY not found in environment variables. API calls will fail.")
 
 def get_llm_response(system_prompt, user_input, output_prompt, config=None):
     """
-    Get a response from the Vertex AI LLM.
+    Get a response from the Google Gemini API.
     
     Args:
         system_prompt (str): The system prompt to guide the model
         user_input (str): The user input to process
         output_prompt (str): The output prompt format instructions
-        config (dict): Configuration for Vertex AI
+        config (dict): Configuration for Gemini API
         
     Returns:
         str: The model's response
@@ -29,50 +27,58 @@ def get_llm_response(system_prompt, user_input, output_prompt, config=None):
     if not config:
         # Default configuration
         config = {
-            'project_id': os.environ.get('GCP_PROJECT_ID', ''),
-            'location': 'us-central1',
-            'model_name': 'gemini-1.5-pro-preview-0409'
+            'model_name': 'gemini-1.5-pro-preview-0409',
+            'temperature': 0.0,
+            'top_p': 0.95,
+            'top_k': 40,
+            'max_output_tokens': 1024
         }
     
-    project_id = config.get('project_id')
+    model_name = config.get('model_name', 'gemini-1.5-pro')
+    temperature = config.get('temperature', 0.0)
+    top_p = config.get('top_p', 0.95)
+    top_k = config.get('top_k', 40)
+    max_output_tokens = config.get('max_output_tokens', 1024)
     
     logger.info(f"Processing request with system prompt: {system_prompt[:50]}...")
     logger.info(f"User input: {user_input[:50]}...")
     logger.info(f"Output prompt: {output_prompt[:50]}...")
     
-    # Check if we have GCP credentials
-    if project_id and os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
-        logger.info("Detected GCP credentials, but using mock responses for demo")
-    
-    # IMPORTANT NOTE: 
-    # In the actual implementation, this would call Vertex AI
-    # The code below is a mock implementation for demonstration purposes only
-    # To use the real API, you would need to set up GCP credentials and install the required packages
-
     try:
-        # For demo purposes, use deterministic responses with some variation
-        clean_input = user_input.strip().lower()
+        # Format the output prompt with the user input
+        formatted_output_prompt = output_prompt.replace('{user_input}', user_input)
         
-        # Check if we have a predefined response
-        for key, response in SAMPLE_RESPONSES.items():
-            if clean_input in key.lower():
-                logger.info(f"Using predefined response for: {key}")
-                return response
+        # Combine the system prompt and the formatted output prompt
+        combined_prompt = f"{system_prompt}\n\n{formatted_output_prompt}"
         
-        # For other inputs, generate a simple response
-        words = user_input.split()
-        response_length = min(len(words) + 5, 20)
+        # Check if API key is available
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment variables")
+            
+        # Initialize the model
+        model = genai.GenerativeModel(model_name)
         
-        # A more elaborate mock response based on the input
-        if "what" in clean_input:
-            return f"Based on your query about '{' '.join(words[:3])}...', the answer would depend on specific details."
-        elif "how" in clean_input:
-            return f"The process for '{' '.join(words[:3])}...' typically involves several steps that would be explained in detail."
-        elif "why" in clean_input:
-            return f"The reason for '{' '.join(words[:3])}...' is complex and would be thoroughly analyzed."
+        # Generate response
+        generation_config = {
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "max_output_tokens": max_output_tokens,
+        }
+        
+        response = model.generate_content(
+            combined_prompt,
+            generation_config=generation_config
+        )
+        
+        # Extract and return the response text
+        if response.text:
+            logger.info(f"Generated response: {response.text[:100]}...")
+            return response.text
         else:
-            return f"I've processed your input about '{' '.join(words[:3])}...' and would provide a detailed response."
+            logger.warning("Empty response received from Gemini API")
+            return "No response generated."
             
     except Exception as e:
-        logger.error(f"Error in mock LLM response: {e}")
+        logger.error(f"Error calling Gemini API: {e}")
         return f"Sorry, I couldn't process your request due to an error: {str(e)}"

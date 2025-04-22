@@ -21,10 +21,12 @@ except Exception as e:
     logger.error(f"Error loading configuration: {e}")
     # Default configuration
     config = {
-        'vertex_ai': {
-            'project_id': os.environ.get('GCP_PROJECT_ID', ''),
-            'location': 'us-central1',
-            'model_name': 'gemini-1.5-pro-preview-0409'
+        'gemini': {
+            'model_name': 'gemini-1.5-pro',
+            'temperature': 0.0,
+            'top_p': 0.95,
+            'top_k': 40,
+            'max_output_tokens': 1024
         }
     }
 
@@ -73,12 +75,12 @@ def run_evaluation():
                 continue
             
             try:
-                # Call Vertex AI
+                # Call Gemini API
                 model_response = get_llm_response(
                     system_prompt, 
                     user_input, 
                     output_prompt,
-                    config['vertex_ai']
+                    config.get('gemini', {})
                 )
                 
                 # Calculate evaluation score
