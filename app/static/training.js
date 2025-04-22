@@ -435,13 +435,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.error) {
                     showAlert(data.error, 'danger');
                 } else if (data.examples && data.examples.length > 0) {
-                    // Format examples as CSV lines
-                    const formattedExamples = data.examples.map(ex => 
-                        `${ex.user_input},${ex.ground_truth_output}`
-                    ).join('\n');
+                    // Store the example data directly
+                    trainingData = data.examples;
                     
-                    examplesTextEl.value = formattedExamples;
-                    updateDataStats();
+                    // Format examples as text for display
+                    examplesTextEl.value = data.csv_content || '';
+                    
+                    // Update stats using the direct count from the API
+                    const totalCount = data.count;
+                    const trainCount = (datasetType === 'train') ? totalCount : 0;
+                    const valCount = (datasetType === 'validation') ? totalCount : 0;
+                    
+                    const statsHTML = `
+                        <div class="row text-center">
+                            <div class="col">
+                                <div class="fs-5">${totalCount}</div>
+                                <div class="small text-muted">Examples</div>
+                            </div>
+                            <div class="col">
+                                <div class="fs-5">${trainCount}</div>
+                                <div class="small text-muted">Train</div>
+                            </div>
+                            <div class="col">
+                                <div class="fs-5">${valCount}</div>
+                                <div class="small text-muted">Validation</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    dataStatsEl.innerHTML = statsHTML;
                     
                     // Update train/validation percentage based on dataset type
                     if (datasetType === 'train') {
@@ -466,7 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .catch(error => console.error('Error loading NEJM prompts:', error));
                     
-                    updateDataStats();
                     showAlert(`Loaded ${data.examples.length} NEJM ${datasetType} examples`, 'success');
                 } else {
                     showAlert(`No NEJM ${datasetType} examples found`, 'warning');
