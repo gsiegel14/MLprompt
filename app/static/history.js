@@ -591,7 +591,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
         alertContainer.appendChild(alert);
-
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
+            alertInstance.close();
+        }, 5000);
+    }
     
     // Examples handling
     function loadExamplesForIteration(iteration) {
@@ -818,14 +824,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
         
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            const alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
-            alertInstance.close();
-        }, 5000);
-    }
-    
-    function escapeHtml(text) {
+        function escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
