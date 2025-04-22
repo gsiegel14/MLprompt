@@ -254,7 +254,7 @@ class PromptOptimizationWorkflow:
                 logger.info("Forced garbage collection before starting optimization")
                 
                 # Use a smaller set of examples for optimization to prevent memory issues
-                max_optimization_examples = 3  # Reduced from 15 to 3 for reliability
+                max_optimization_examples = 3  # Keep small for optimization
                 optimization_examples = results[:max_optimization_examples] if len(results) > max_optimization_examples else results
                 logger.info(f"Using {len(optimization_examples)} examples for optimization")
                 
@@ -262,8 +262,9 @@ class PromptOptimizationWorkflow:
                 logger.info("Pausing for 2 seconds before optimization to avoid rate limits...")
                 time.sleep(2)
                 
-                # Make a copy of examples for the experiment tracker (up to 15)
-                results_for_tracker = results[:max_optimization_examples] if len(results) > max_optimization_examples else results.copy()
+                # Make a copy of examples for the experiment tracker (up to 25 for better history display)
+                max_tracker_examples = 25  # We want to save more examples for the history display
+                results_for_tracker = results[:max_tracker_examples] if len(results) > max_tracker_examples else results.copy()
                 logger.info(f"Saved {len(results_for_tracker)} examples for experiment tracker")
                 
                 # Free up original results array to save memory if it's large
