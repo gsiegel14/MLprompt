@@ -1,0 +1,18 @@
+[
+  {
+    "user_input": "What is the capital of France?",
+    "ground_truth_output": "Paris"
+  },
+  {
+    "user_input": "What is the capital of Japan?",
+    "ground_truth_output": "Tokyo"
+  },
+  {
+    "user_input": "What is the capital of Italy?",
+    "ground_truth_output": "Rome"
+  },
+  {
+    "user_input": "What is the capital of Germany?",
+    "ground_truth_output": "Berlin"
+  }
+]

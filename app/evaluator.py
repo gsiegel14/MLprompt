@@ -1,9 +1,25 @@
 import re
 import difflib
 import logging
+import yaml
 from typing import Dict, Any, List, Union
 
 logger = logging.getLogger(__name__)
+
+def load_config() -> Dict[str, Any]:
+    """Load configuration from config.yaml."""
+    try:
+        with open('config.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+            return config
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}")
+        return {
+            'evaluation': {
+                'metrics': ['exact_match', 'semantic_similarity', 'keyword_match'],
+                'perfect_threshold': 0.9
+            }
+        }
 
 def calculate_score(model_response: str, ground_truth_output: str) -> float:
     """
@@ -65,6 +81,11 @@ def evaluate_batch(examples: List[Dict[str, Any]]) -> Dict[str, Any]:
             "perfect_match_percent": 0.0
         }
     
+    # Load the configuration
+    config = load_config()
+    eval_config = config.get('evaluation', {})
+    perfect_threshold = eval_config.get('perfect_threshold', 0.9)
+    
     total_score = 0.0
     perfect_matches = 0
     
@@ -83,15 +104,15 @@ def evaluate_batch(examples: List[Dict[str, Any]]) -> Dict[str, Any]:
         
         total_score += score
         
-        # Consider a match "perfect" if score > 0.9
-        if score >= 0.9:
+        # Consider a match "perfect" if score > threshold
+        if score >= perfect_threshold:
             perfect_matches += 1
     
     total_examples = len(examples)
     
     return {
-        "avg_score": total_score / total_examples,
+        "avg_score": total_score / total_examples if total_examples > 0 else 0.0,
         "perfect_matches": perfect_matches,
         "total_examples": total_examples,
-        "perfect_match_percent": (perfect_matches / total_examples) * 100
+        "perfect_match_percent": (perfect_matches / total_examples) * 100 if total_examples > 0 else 0.0
     }

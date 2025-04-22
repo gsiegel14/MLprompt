@@ -1,0 +1,33 @@
+{
+  "api_integration": {
+    "success": true,
+    "result": "Paris\n"
+  },
+  "evaluation": {
+    "success": true,
+    "result": {
+      "avg_score": 0.44646464646464645,
+      "perfect_matches": 1,
+      "total_examples": 3,
+      "perfect_match_percent": 33.33333333333333
+    }
+  },
+  "optimization": {
+    "success": true,
+    "result": "Optimization results (truncated)"
+  },
+  "experiment_tracking": {
+    "success": true,
+    "result": "2 iterations tracked"
+  },
+  "complete_training_loop": {
+    "success": true,
+    "result": {
+      "experiment_id": "20250422_052120",
+      "iterations": 2,
+      "final_system_prompt": "You are a helpful assistant that provides geographical information.",
+      "final_output_prompt": "Answer the question.",
+      "best_score": 0
+    }
+  }
+}

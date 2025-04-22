@@ -2,7 +2,7 @@
 
 # Google Gemini API Configuration
 gemini:
-  model_name: "gemini-1.5-pro"
+  model_name: "gemini-1.0-pro"  # Free tier model
   temperature: 0.0
   top_p: 0.95
   top_k: 40
