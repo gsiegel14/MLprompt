@@ -1,9 +1,8 @@
+# Prompt ML Platform Configuration
+
 # Google Gemini API Configuration
 gemini:
-  # Model name
-  model_name: 'gemini-1.5-pro'
-  
-  # Generation parameters
+  model_name: "gemini-1.5-pro"
   temperature: 0.0
   top_p: 0.95
   top_k: 40
@@ -11,11 +10,30 @@ gemini:
 
 # Application Configuration
 app:
-  # Maximum number of examples to process in a single request (0 for unlimited)
-  max_examples: 0
-  
-  # Enable caching of model responses (to avoid redundant API calls)
+  max_examples: 0  # 0 means no limit
   enable_caching: true
-  
-  # Debug mode (more verbose logging)
   debug: true
+
+# Optimizer Configuration
+optimizer:
+  model_name: "gemini-1.5-pro"
+  temperature: 0.7  # Higher temperature for more creative prompt improvements
+  max_output_tokens: 2048
+  strategies:
+    - "full_rewrite"  # Complete prompt rewrite
+    - "targeted_edit"  # Specific changes to problematic sections
+    - "example_addition"  # Add few-shot examples to prompts
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "exact_match"  # Perfect match (1.0)
+    - "semantic_similarity"  # Similar meaning
+    - "keyword_match"  # Contains key elements
+  perfect_threshold: 0.9  # Score threshold for "perfect" match
+
+# Training Configuration
+training:
+  default_train_ratio: 0.8  # Default train/validation split
+  default_max_iterations: 5  # Default number of optimization rounds
+  early_stopping_patience: 2  # Stop if no improvement after N iterations
