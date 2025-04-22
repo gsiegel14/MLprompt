@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const viewDetailsBtn = document.getElementById('view-details-btn');
     const clearLogsBtn = document.getElementById('clear-logs-btn');
     const validateBtn = document.getElementById('validate-btn');
+    const loadNejmTrainBtn = document.getElementById('load-nejm-train-btn');
+    const loadNejmValidationBtn = document.getElementById('load-nejm-validation-btn');
     const trainingLogsEl = document.getElementById('training-logs');
     const trainingProgressEl = document.getElementById('training-progress');
     const currentScoreEl = document.getElementById('current-score');
@@ -69,6 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
     csvFileEl.addEventListener('change', handleCSVUpload);
     trainPercentEl.addEventListener('input', updateTrainPercentDisplay);
     optimizerPresetEl.addEventListener('change', updateOptimizerPreset);
+    loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
+    loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
     
     // Initialize UI
     function initializeUI() {
@@ -380,6 +384,63 @@ document.addEventListener('DOMContentLoaded', function() {
         outputPromptEl.value = 'Your response should be factual, concise, and directly answer the question. Avoid explaining your reasoning unless specifically asked.';
         
         showAlert('Sample prompts loaded', 'info');
+    }
+    
+    // Load NEJM dataset (train or validation)
+    function loadNejmDataset(datasetType) {
+        showSpinner();
+        log(`Loading NEJM ${datasetType} dataset...`);
+        
+        fetch(`/load_dataset?type=nejm_${datasetType}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else if (data.examples && data.examples.length > 0) {
+                    // Format examples as CSV lines
+                    const formattedExamples = data.examples.map(ex => 
+                        `${ex.user_input},${ex.ground_truth_output}`
+                    ).join('\n');
+                    
+                    examplesTextEl.value = formattedExamples;
+                    updateDataStats();
+                    
+                    // Update train/validation percentage based on dataset type
+                    if (datasetType === 'train') {
+                        trainPercentEl.value = 100;
+                        trainPercentDisplayEl.textContent = 100;
+                        validationSplit = 1.0;
+                    } else if (datasetType === 'validation') {
+                        trainPercentEl.value = 0;
+                        trainPercentDisplayEl.textContent = 0;
+                        validationSplit = 0.0;
+                    }
+                    
+                    // Also load corresponding prompts
+                    fetch('/load_dataset?type=nejm_prompts')
+                        .then(response => response.json())
+                        .then(promptData => {
+                            if (!promptData.error && promptData.prompts) {
+                                systemPromptEl.value = promptData.prompts.system_prompt || systemPromptEl.value;
+                                outputPromptEl.value = promptData.prompts.output_prompt || outputPromptEl.value;
+                                log('Loaded NEJM specialized prompts');
+                            }
+                        })
+                        .catch(error => console.error('Error loading NEJM prompts:', error));
+                    
+                    updateDataStats();
+                    showAlert(`Loaded ${data.examples.length} NEJM ${datasetType} examples`, 'success');
+                } else {
+                    showAlert(`No NEJM ${datasetType} examples found`, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading NEJM ${datasetType} dataset:`, error);
+                showAlert(`Error loading NEJM ${datasetType} dataset`, 'danger');
+            })
+            .finally(() => {
+                hideSpinner();
+            });
     }
     
     // Show experiment modal

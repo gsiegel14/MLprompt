@@ -191,8 +191,58 @@ def load_dataset():
                         examples = json.load(f)
                 except Exception as e:
                     logger.warning(f"Could not load validation examples from file: {e}")
+        elif dataset_type == 'nejm_train':
+            # Load NEJM training dataset
+            try:
+                with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
+                    examples = json.load(f)
+                logger.info(f"Loaded {len(examples)} NEJM training examples")
+            except Exception as e:
+                logger.error(f"Could not load NEJM training examples: {e}")
+                return jsonify({'error': f"Could not load NEJM training examples: {str(e)}"}), 500
+        elif dataset_type == 'nejm_validation':
+            # Load NEJM validation dataset
+            try:
+                with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
+                    examples = json.load(f)
+                logger.info(f"Loaded {len(examples)} NEJM validation examples")
+            except Exception as e:
+                logger.error(f"Could not load NEJM validation examples: {e}")
+                return jsonify({'error': f"Could not load NEJM validation examples: {str(e)}"}), 500
+        elif dataset_type == 'nejm_prompts':
+            # Load NEJM specialized prompts
+            try:
+                system_prompt_path = os.path.join('prompts', 'system_prompt_advanced_medical.txt')
+                output_prompt_path = os.path.join('prompts', 'output_prompt_advanced_medical.txt')
+                
+                system_prompt = ""
+                output_prompt = ""
+                
+                if os.path.exists(system_prompt_path):
+                    with open(system_prompt_path, 'r') as f:
+                        system_prompt = f.read()
+                else:
+                    # Default medical system prompt if file doesn't exist
+                    system_prompt = "You are a medical AI assistant with expertise in diagnostic reasoning based on clinical cases."
+                
+                if os.path.exists(output_prompt_path):
+                    with open(output_prompt_path, 'r') as f:
+                        output_prompt = f.read()
+                else:
+                    # Default medical output prompt if file doesn't exist
+                    output_prompt = "Based on the clinical information provided, what is the most likely diagnosis?"
+                
+                return jsonify({
+                    'prompts': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Error loading NEJM prompts: {e}")
+                return jsonify({'error': f"Error loading NEJM prompts: {str(e)}"}), 500
         else:
-            return jsonify({'error': 'Invalid dataset type. Use "train" or "validation"'}), 400
+            return jsonify({'error': 'Invalid dataset type. Use "train", "validation", "nejm_train", "nejm_validation", or "nejm_prompts"'}), 400
         
         # Create a CSV-like string from the examples for display
         csv_content = "user_input,ground_truth_output\n"
