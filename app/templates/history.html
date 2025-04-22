@@ -376,8 +376,172 @@
 </body>
 </html>
 <script>
-    function loadExamplesForIteration(iteration) {
+    window.loadExamplesForIteration = function(iteration) {
         console.log("Loading examples for iteration:", iteration);
-        // Add your actual loading logic here.  This is a placeholder.
+        const experimentId = document.getElementById('breadcrumb-experiment').textContent;
+        
+        // Show examples container and loading indicator
+        const examplesContainer = document.getElementById('examples-container');
+        const examplesLoading = document.getElementById('examples-loading');
+        const examplesContent = document.getElementById('examples-content');
+        
+        if (examplesContainer) {
+            examplesContainer.style.display = 'block';
+        }
+        
+        if (examplesLoading) {
+            examplesLoading.style.display = 'block';
+        }
+        
+        if (examplesContent) {
+            examplesContent.innerHTML = '';
+        }
+        
+        // Update breadcrumb if it exists
+        const breadcrumbIteration = document.getElementById('breadcrumb-iteration');
+        if (breadcrumbIteration) {
+            breadcrumbIteration.textContent = iteration;
+        }
+        
+        // Scroll to examples container
+        if (examplesContainer) {
+            examplesContainer.scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+        
+        // Fetch examples
+        fetch(`/api/experiments/${experimentId}/iterations/${iteration}/examples`)
+            .then(response => response.json())
+            .then(data => {
+                if (examplesLoading) {
+                    examplesLoading.style.display = 'none';
+                }
+                
+                if (data.examples && data.examples.length > 0 && examplesContent) {
+                    // Create a container for examples
+                    const examplesGrid = document.createElement('div');
+                    examplesGrid.className = 'row';
+                    
+                    data.examples.forEach((example, index) => {
+                        // Create example card
+                        const exampleCol = document.createElement('div');
+                        exampleCol.className = 'col-md-6 mb-4';
+                        
+                        const exampleCard = document.createElement('div');
+                        exampleCard.className = 'card example-card';
+                        
+                        const cardBody = document.createElement('div');
+                        cardBody.className = 'card-body';
+                        
+                        // Example number and score
+                        const cardHeader = document.createElement('div');
+                        cardHeader.className = 'd-flex justify-content-between align-items-center mb-3';
+                        
+                        const exampleNumber = document.createElement('h5');
+                        exampleNumber.className = 'card-title mb-0';
+                        exampleNumber.textContent = `Example ${index + 1}`;
+                        
+                        const scoreContainer = document.createElement('div');
+                        scoreContainer.className = 'score-container';
+                        
+                        const scoreValue = document.createElement('span');
+                        scoreValue.className = 'score badge ' + (example.score >= 0.9 ? 'badge-success' : (example.score >= 0.7 ? 'badge-warning' : 'badge-danger'));
+                        
+                        if (example.score !== undefined) {
+                            scoreValue.textContent = `Score: ${(example.score * 100).toFixed(1)}%`;
+                        } else {
+                            scoreValue.textContent = 'No Score';
+                            scoreValue.className = 'score badge badge-secondary';
+                        }
+                        
+                        scoreContainer.appendChild(scoreValue);
+                        cardHeader.appendChild(exampleNumber);
+                        cardHeader.appendChild(scoreContainer);
+                        
+                        // User Input
+                        const userInputSection = document.createElement('div');
+                        userInputSection.className = 'mb-3';
+                        
+                        const userInputLabel = document.createElement('h6');
+                        userInputLabel.textContent = 'User Input';
+                        
+                        const userInputContent = document.createElement('div');
+                        userInputContent.className = 'user-input p-2 bg-light border rounded';
+                        userInputContent.textContent = example.user_input || 'No user input available';
+                        
+                        userInputSection.appendChild(userInputLabel);
+                        userInputSection.appendChild(userInputContent);
+                        
+                        // Ground Truth
+                        const groundTruthSection = document.createElement('div');
+                        groundTruthSection.className = 'mb-3';
+                        
+                        const groundTruthLabel = document.createElement('h6');
+                        groundTruthLabel.textContent = 'Ground Truth';
+                        
+                        const groundTruthContent = document.createElement('div');
+                        groundTruthContent.className = 'ground-truth p-2 bg-light border rounded';
+                        groundTruthContent.textContent = example.ground_truth_output || 'No ground truth available';
+                        
+                        groundTruthSection.appendChild(groundTruthLabel);
+                        groundTruthSection.appendChild(groundTruthContent);
+                        
+                        // Model Response
+                        const modelResponseSection = document.createElement('div');
+                        modelResponseSection.className = 'mb-3';
+                        
+                        const modelResponseLabel = document.createElement('h6');
+                        modelResponseLabel.textContent = 'Model Response';
+                        
+                        const modelResponseContent = document.createElement('div');
+                        modelResponseContent.className = 'model-response p-2 bg-light border rounded';
+                        modelResponseContent.textContent = example.model_response || 'No model response available';
+                        
+                        modelResponseSection.appendChild(modelResponseLabel);
+                        modelResponseSection.appendChild(modelResponseContent);
+                        
+                        // Optimized Response (if available)
+                        if (example.optimized_response) {
+                            const optimizedResponseSection = document.createElement('div');
+                            optimizedResponseSection.className = 'mb-3';
+                            
+                            const optimizedResponseLabel = document.createElement('h6');
+                            optimizedResponseLabel.textContent = 'Optimized Response';
+                            
+                            const optimizedResponseContent = document.createElement('div');
+                            optimizedResponseContent.className = 'optimized-response p-2 bg-light border rounded';
+                            optimizedResponseContent.textContent = example.optimized_response;
+                            
+                            optimizedResponseSection.appendChild(optimizedResponseLabel);
+                            optimizedResponseSection.appendChild(optimizedResponseContent);
+                            
+                            cardBody.appendChild(optimizedResponseSection);
+                        }
+                        
+                        cardBody.appendChild(cardHeader);
+                        cardBody.appendChild(userInputSection);
+                        cardBody.appendChild(groundTruthSection);
+                        cardBody.appendChild(modelResponseSection);
+                        
+                        exampleCard.appendChild(cardBody);
+                        exampleCol.appendChild(exampleCard);
+                        examplesGrid.appendChild(exampleCol);
+                    });
+                    
+                    examplesContent.appendChild(examplesGrid);
+                } else if (examplesContent) {
+                    examplesContent.innerHTML = '<div class="alert alert-info">No examples available for this iteration.</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching examples:', error);
+                if (examplesLoading) {
+                    examplesLoading.style.display = 'none';
+                }
+                if (examplesContent) {
+                    examplesContent.innerHTML = '<div class="alert alert-danger">Failed to load examples. Please try again later.</div>';
+                }
+            });
     }
 </script>

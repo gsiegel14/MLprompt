@@ -378,18 +378,45 @@ def fix_history_html():
         with open("app/templates/history.html", "r") as f:
             content = f.read()
             
+        # Check if loadExamplesForIteration is correctly defined
+        if 'function loadExamplesForIteration(' in content and 'window.loadExamplesForIteration' not in content:
+            # Fix function definition
+            new_content = content.replace(
+                'function loadExamplesForIteration(',
+                'window.loadExamplesForIteration = function('
+            )
+            logger.info("✅ Fixed history.html by making loadExamplesForIteration a window property")
+            
+            # Save changes
+            with open("app/templates/history.html", "w") as f:
+                f.write(new_content)
+            return True
+            
         # Check if view-examples buttons have onclick attribute
-        if 'class="btn btn-sm btn-outline-primary view-examples"' in content and 'onclick="loadExamplesForIteration' not in content:
-            # Add onclick attribute to view-examples buttons
+        if 'class="btn btn-sm btn-outline-primary view-examples"' in content and 'onclick="loadExamplesForIteration' not in content and 'onclick="window.loadExamplesForIteration' not in content:
+            # Add onclick attribute to view-examples buttons with window prefix
             new_content = content.replace(
                 'class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}"',
-                'class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}" onclick="loadExamplesForIteration(${iteration.iteration})"'
+                'class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}" onclick="window.loadExamplesForIteration(${iteration.iteration})"'
             )
             
             with open("app/templates/history.html", "w") as f:
                 f.write(new_content)
                 
             logger.info("✅ Fixed history.html by adding onclick attribute to view-examples buttons")
+            return True
+        # If loadExamplesForIteration function exists but without window prefix
+        elif 'onclick="loadExamplesForIteration(' in content and 'onclick="window.loadExamplesForIteration(' not in content:
+            # Update onclick to use window prefix
+            new_content = content.replace(
+                'onclick="loadExamplesForIteration(',
+                'onclick="window.loadExamplesForIteration('
+            )
+            
+            with open("app/templates/history.html", "w") as f:
+                f.write(new_content)
+                
+            logger.info("✅ Fixed history.html by adding window prefix to loadExamplesForIteration calls")
             return True
         else:
             logger.info("✅ No fix needed for history.html")

@@ -320,29 +320,78 @@ function displayIterations(experimentId, iterations) {
 
 // Make sure this function is available in the global scope (window)
 window.loadExamplesForIteration = function(iteration) {
-    const experimentId = document.getElementById('breadcrumb-experiment').textContent;
+    const experimentId = document.getElementById('breadcrumb-experiment')?.textContent;
+    if (!experimentId) {
+        console.error('Error: breadcrumb-experiment element not found');
+        return;
+    }
 
     // Show examples container and loading indicator
     const examplesContainer = document.getElementById('examples-container');
     const examplesLoading = document.getElementById('examples-loading');
     const examplesContent = document.getElementById('examples-content');
+    
+    if (!examplesContainer || !examplesLoading || !examplesContent) {
+        console.error('Error: examples container elements not found');
+        return;
+    }
 
     examplesContainer.style.display = 'block';
     examplesLoading.style.display = 'block';
     examplesContent.innerHTML = '';
 
     // Update breadcrumb
-    document.getElementById('breadcrumb-iteration').textContent = iteration;
+    const breadcrumbIteration = document.getElementById('breadcrumb-iteration');
+    if (breadcrumbIteration) {
+        breadcrumbIteration.textContent = iteration;
+    }
 
     // Scroll to examples container
     examplesContainer.scrollIntoView({
         behavior: 'smooth'
     });
 
+    console.log(`Fetching examples for experiment ${experimentId}, iteration ${iteration}`);
     fetch(`/api/experiments/${experimentId}/iterations/${iteration}/examples`)
         .then(response => response.json())
         .then(data => {
-            displayExamples(data.examples);
+            if (typeof displayExamples === 'function') {
+                displayExamples(data.examples);
+            } else {
+                console.error('Error: displayExamples function not found');
+                // Fallback display logic
+                if (data.examples && data.examples.length > 0) {
+                    examplesLoading.style.display = 'none';
+                    const examplesHtml = data.examples.map((example, index) => {
+                        return `
+                            <div class="col-md-6 mb-4">
+                                <div class="card example-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Example ${index + 1}</h5>
+                                        <div class="mb-3">
+                                            <h6>User Input:</h6>
+                                            <div class="user-input p-2 bg-light">${example.user_input || 'No user input'}</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Ground Truth:</h6>
+                                            <div class="ground-truth p-2 bg-light">${example.ground_truth_output || 'No ground truth'}</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Model Response:</h6>
+                                            <div class="model-response p-2 bg-light">${example.model_response || 'No model response'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    examplesContent.innerHTML = `<div class="row">${examplesHtml}</div>`;
+                } else {
+                    examplesLoading.style.display = 'none';
+                    examplesContent.innerHTML = '<div class="alert alert-info">No examples available for this iteration.</div>';
+                }
+            }
         })
         .catch(error => {
             console.error('Error fetching examples:', error);
