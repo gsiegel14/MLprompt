@@ -172,11 +172,23 @@ def upload_csv():
     else:
         return jsonify({'error': 'File type not allowed. Please upload a CSV file.'}), 400
 
-@app.route('/load_dataset', methods=['GET'])
+@app.route('/load_dataset', methods=['GET', 'POST'])
 def load_dataset():
     """Load the current training and validation datasets."""
     try:
-        dataset_type = request.args.get('type', 'train')
+        # Support both GET and POST for flexibility
+        if request.method == 'GET':
+            dataset_type = request.args.get('type', 'train')
+        else:
+            data = request.json
+            dataset_type = data.get('type', 'train')
+        
+        # Initialize empty examples list
+        examples = []
+        
+        # Use in-memory cache for NEJM datasets to improve performance
+        nejm_train_cache = getattr(app, 'nejm_train_cache', None)
+        nejm_validation_cache = getattr(app, 'nejm_validation_cache', None)
         
         if dataset_type == 'train':
             examples = data_module.get_train_examples()
@@ -197,63 +209,89 @@ def load_dataset():
                 except Exception as e:
                     logger.warning(f"Could not load validation examples from file: {e}")
         elif dataset_type == 'nejm_train':
-            # Load NEJM training dataset
-            try:
-                # First try from examples.json, then fallback to current_train.json
+            # Use cached data if available
+            if nejm_train_cache and config.get('app', {}).get('enable_caching', True):
+                examples = nejm_train_cache
+                logger.debug(f"Using cached NEJM training examples ({len(examples)} examples)")
+            else:
+                # Load NEJM training dataset
                 try:
-                    with open(os.path.join('data/train', 'examples.json'), 'r') as f:
-                        examples = json.load(f)
-                except:
-                    with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
-                        examples = json.load(f)
-                
-                # Make sure we actually have examples
-                if not examples or len(examples) == 0:
-                    # If we got an empty list, run the fix_nejm_data script
-                    import sys
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
-                    fix_nejm_module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(fix_nejm_module)
-                    fix_nejm_module.fix_nejm_data()
+                    # First try from examples.json, then fallback to current_train.json
+                    try:
+                        with open(os.path.join('data/train', 'examples.json'), 'r') as f:
+                            examples = json.load(f)
+                    except:
+                        with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
+                            examples = json.load(f)
                     
-                    # Now try loading again
-                    with open(os.path.join('data/train', 'examples.json'), 'r') as f:
-                        examples = json.load(f)
-                
-                logger.info(f"Loaded {len(examples)} NEJM training examples")
-            except Exception as e:
-                logger.error(f"Could not load NEJM training examples: {e}")
-                return jsonify({'error': f"Could not load NEJM training examples: {str(e)}"}), 500
+                    # Make sure we actually have examples
+                    if not examples or len(examples) == 0:
+                        # If we got an empty list, run the fix_nejm_data script
+                        import sys
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
+                        fix_nejm_module = importlib.util.module_from_spec(spec)
+                        
+                        if spec and spec.loader:
+                            spec.loader.exec_module(fix_nejm_module)
+                            fix_nejm_module.fix_nejm_data()
+                            
+                            # Now try loading again
+                            with open(os.path.join('data/train', 'examples.json'), 'r') as f:
+                                examples = json.load(f)
+                        else:
+                            logger.error("Could not load fix_nejm_data module")
+                    
+                    # Cache the data for future requests
+                    if examples:
+                        app.nejm_train_cache = examples
+                    
+                    logger.info(f"Loaded {len(examples)} NEJM training examples")
+                except Exception as e:
+                    logger.error(f"Could not load NEJM training examples: {e}")
+                    return jsonify({'error': f"Could not load NEJM training examples: {str(e)}"}), 500
         elif dataset_type == 'nejm_validation':
-            # Load NEJM validation dataset
-            try:
-                # First try from examples.json, then fallback to current_validation.json
+            # Use cached data if available
+            if nejm_validation_cache and config.get('app', {}).get('enable_caching', True):
+                examples = nejm_validation_cache
+                logger.debug(f"Using cached NEJM validation examples ({len(examples)} examples)")
+            else:
+                # Load NEJM validation dataset
                 try:
-                    with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
-                        examples = json.load(f)
-                except:
-                    with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
-                        examples = json.load(f)
-                
-                # Make sure we actually have examples
-                if not examples or len(examples) == 0:
-                    # If we got an empty list, run the fix_nejm_data script
-                    import sys
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
-                    fix_nejm_module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(fix_nejm_module)
-                    fix_nejm_module.fix_nejm_data()
+                    # First try from examples.json, then fallback to current_validation.json
+                    try:
+                        with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
+                            examples = json.load(f)
+                    except:
+                        with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
+                            examples = json.load(f)
                     
-                    # Now try loading again
-                    with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
-                        examples = json.load(f)
-                
-                logger.info(f"Loaded {len(examples)} NEJM validation examples")
-            except Exception as e:
-                logger.error(f"Could not load NEJM validation examples: {e}")
-                return jsonify({'error': f"Could not load NEJM validation examples: {str(e)}"}), 500
+                    # Make sure we actually have examples
+                    if not examples or len(examples) == 0:
+                        # If we got an empty list, run the fix_nejm_data script
+                        import sys
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
+                        fix_nejm_module = importlib.util.module_from_spec(spec)
+                        
+                        if spec and spec.loader:
+                            spec.loader.exec_module(fix_nejm_module)
+                            fix_nejm_module.fix_nejm_data()
+                            
+                            # Now try loading again
+                            with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
+                                examples = json.load(f)
+                        else:
+                            logger.error("Could not load fix_nejm_data module")
+                    
+                    # Cache the data for future requests
+                    if examples:
+                        app.nejm_validation_cache = examples
+                    
+                    logger.info(f"Loaded {len(examples)} NEJM validation examples")
+                except Exception as e:
+                    logger.error(f"Could not load NEJM validation examples: {e}")
+                    return jsonify({'error': f"Could not load NEJM validation examples: {str(e)}"}), 500
         elif dataset_type == 'nejm_prompts':
             # Load NEJM specialized prompts
             try:

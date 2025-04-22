@@ -73,9 +73,23 @@ class PromptOptimizationWorkflow:
         Returns:
             dict: Results of the training cycle
         """
+        # Begin extensive debugging logs
+        logger.info("=== STARTING NEW TRAINING CYCLE ===")
+        logger.info(f"Parameters: max_iterations={max_iterations}, early_stopping_patience={early_stopping_patience}")
+        logger.info(f"batch_size={batch_size}, optimizer_strategy={optimizer_strategy}, optimizer_type={optimizer_type}")
+        logger.info(f"Initial system prompt length: {len(system_prompt)} chars")
+        logger.info(f"Initial output prompt length: {len(output_prompt)} chars")
+        
         # Start a new experiment
         experiment_id = self.experiment_tracker.start_experiment()
         logger.info(f"Started experiment {experiment_id}")
+        
+        # Memory debugging
+        import gc
+        import psutil
+        process = psutil.Process()
+        memory_before = process.memory_info().rss / 1024 / 1024
+        logger.info(f"Memory usage before training: {memory_before:.2f} MB")
         
         # Initialize variables for tracking
         current_system_prompt = system_prompt
@@ -85,68 +99,123 @@ class PromptOptimizationWorkflow:
         best_iteration = 0
         
         # Load optimizer prompt based on type
+        logger.info(f"Loading optimizer prompt type: {optimizer_type}")
         optimizer_prompt = load_optimizer_prompt(optimizer_type)
+        logger.info(f"Optimizer prompt loaded, length: {len(optimizer_prompt)} chars")
         
         # Initialize the iteration counter
         final_iteration = 0
+        
+        # Force garbage collection before starting
+        gc.collect()
+        logger.info("Garbage collection performed before starting training loop")
         
         # Training loop
         for iteration in range(1, max_iterations + 1):
             final_iteration = iteration
             logger.info(f"Starting iteration {iteration} of {max_iterations}")
             
-            # ----- PHASE 1: Primary LLM Inference & Evaluation -----
-            
-            # Get batch of training examples
-            batch = self.data_module.get_batch(batch_size=batch_size, validation=False)
-            if not batch:
-                logger.warning("No training examples available")
-                return {"error": "No training examples available"}
-            
-            # Process each example with the Primary LLM
-            results = []
-            for i, example in enumerate(batch):
-                try:
-                    user_input = example.get('user_input', '')
-                    ground_truth = example.get('ground_truth_output', '')
+            try:
+                # Memory check at start of iteration
+                memory_before_iter = process.memory_info().rss / 1024 / 1024
+                logger.info(f"Memory before iteration {iteration}: {memory_before_iter:.2f} MB")
+                
+                # ----- PHASE 1: Primary LLM Inference & Evaluation -----
+                logger.info(f"PHASE 1: Starting Primary LLM Inference & Evaluation (iteration {iteration})")
+                
+                # Get batch of training examples
+                batch = self.data_module.get_batch(batch_size=batch_size, validation=False)
+                if not batch:
+                    logger.warning("No training examples available")
+                    return {"error": "No training examples available"}
+                
+                logger.info(f"Got batch of {len(batch)} examples (batch_size={batch_size})")
+                
+                # Process each example with the Primary LLM
+                results = []
+                success_count = 0
+                error_count = 0
+                
+                # Process in smaller chunks if batch size is large
+                max_chunk_size = min(10, len(batch))  # Process at most 10 at a time
+                for chunk_start in range(0, len(batch), max_chunk_size):
+                    chunk_end = min(chunk_start + max_chunk_size, len(batch))
+                    logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")
                     
-                    # Call the Primary LLM
-                    logger.info(f"Processing example {i+1}/{len(batch)}")
-                    model_response = get_llm_response(
-                        current_system_prompt,
-                        user_input,
-                        current_output_prompt,
-                        self.config.get('gemini', {})
-                    )
+                    for i in range(chunk_start, chunk_end):
+                        example = batch[i]
+                        try:
+                            user_input = example.get('user_input', '')
+                            ground_truth = example.get('ground_truth_output', '')
+                            
+                            # Call the Primary LLM
+                            logger.info(f"Processing example {i+1}/{len(batch)}")
+                            model_response = get_llm_response(
+                                current_system_prompt,
+                                user_input,
+                                current_output_prompt,
+                                self.config.get('gemini', {})
+                            )
+                            
+                            # Evaluate the response
+                            score = calculate_score(model_response, ground_truth)
+                            
+                            # Store a truncated version of inputs/outputs to reduce memory usage
+                            truncated_input = user_input[:1000] + "..." if len(user_input) > 1000 else user_input
+                            truncated_ground_truth = ground_truth[:1000] + "..." if len(ground_truth) > 1000 else ground_truth
+                            truncated_response = model_response[:2000] + "..." if len(model_response) > 2000 else model_response
+                            
+                            # Store the result
+                            results.append({
+                                'user_input': truncated_input,
+                                'ground_truth_output': truncated_ground_truth,
+                                'model_response': truncated_response,
+                                'score': score
+                            })
+                            success_count += 1
+                        except Exception as e:
+                            logger.error(f"Error processing example {i+1}: {e}")
+                            error_count += 1
+                            continue
                     
-                    # Evaluate the response
-                    score = calculate_score(model_response, ground_truth)
-                    
-                    # Store the result
-                    results.append({
-                        'user_input': user_input,
-                        'ground_truth_output': ground_truth,
-                        'model_response': model_response,
-                        'score': score
-                    })
-                except Exception as e:
-                    logger.error(f"Error processing example {i}: {e}")
-                    continue
-            
-            # Calculate overall metrics
-            metrics = evaluate_batch(results)
-            current_score = metrics.get('avg_score', 0)
-            
-            # ----- PHASE 2: Optimizer LLM Refinement -----
-            
-            # Call the Optimizer LLM to improve the prompts
-            optimization_result = optimize_prompts(
-                current_system_prompt,
-                current_output_prompt,
-                results,
-                optimizer_prompt,
-                optimizer_strategy
-            )
+                    # Run garbage collection between chunks
+                    gc.collect()
+                
+                logger.info(f"Completed Phase 1 with {success_count} successful examples and {error_count} errors")
+                
+                # Calculate overall metrics
+                metrics = evaluate_batch(results)
+                current_score = metrics.get('avg_score', 0)
+                logger.info(f"Current average score: {current_score:.4f}")
+                
+                # Memory check after Phase 1
+                memory_after_phase1 = process.memory_info().rss / 1024 / 1024
+                logger.info(f"Memory after Phase 1: {memory_after_phase1:.2f} MB (change: {memory_after_phase1 - memory_before_iter:.2f} MB)")
+                
+                # ----- PHASE 2: Optimizer LLM Refinement -----
+                logger.info(f"PHASE 2: Starting Optimizer LLM Refinement (iteration {iteration})")
+                
+                # Use only the first 10 examples for optimization to reduce memory usage
+                optimization_examples = results[:10] if len(results) > 10 else results
+                logger.info(f"Using {len(optimization_examples)} examples for optimization")
+                
+                # Call the Optimizer LLM to improve the prompts
+                optimization_result = optimize_prompts(
+                    current_system_prompt,
+                    current_output_prompt,
+                    optimization_examples,  # Using reduced example set
+                    optimizer_prompt,
+                    optimizer_strategy
+                )
+                
+                # Memory check after Phase 2
+                memory_after_phase2 = process.memory_info().rss / 1024 / 1024
+                logger.info(f"Memory after Phase 2: {memory_after_phase2:.2f} MB (change: {memory_after_phase2 - memory_after_phase1:.2f} MB)")
+                
+            except Exception as e:
+                logger.error(f"Critical error in iteration {iteration}: {e}")
+                # Try to recover and continue with the next iteration
+                continue
             
             # Extract the new prompts
             new_system_prompt = optimization_result.get('system_prompt', current_system_prompt)

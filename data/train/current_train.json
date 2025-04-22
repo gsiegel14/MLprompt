@@ -1,31 +1,27 @@
 [
   {
-    "user_input": "Dr. Jacquelyn M. Nestor (Medicine): A 19-year-old woman was transferred to this hospital because of respiratory failure. The patient had been in her usual state of health until 3 weeks before the curr...",
-    "ground_truth_output": "Takayasu\u2019s arteritis."
-  },
-  {
-    "user_input": "Dr. Christopher V. Radcliffe (Medicine): A 46-year-old man was evaluated in the rheumatology clinic of this hospital because of arthritis and rash. One week before the current presentation\\",
-    "ground_truth_output": "an episode...,Secondary syphilis."
+    "user_input": "user_input",
+    "ground_truth_output": "ground_truth_output"
   },
   {
     "user_input": "Dr. Yousef R. Badran: A 72-year-old man was transferred to this hospital because of heartburn\\",
-    "ground_truth_output": "nausea\\, and the inability to eat solid and liquid food. The patient had a history of gastroesophageal ref...,Linitis plastica (invasive gastric adenocarcinoma)..."
-  },
-  {
-    "user_input": "Dr. Javier A. Suarez (Neurology): A 32-year-old man was admitted to this hospital after 2 weeks of confusion and headache and 2 days of fever. The patient had been in his usual state of health until 1...",
-    "ground_truth_output": "Encephalitis due to Beh\u00e7et\u2019s disease."
-  },
-  {
-    "user_input": "Dr. Zoe N. Memel (Medicine): A 60-year-old man presented to this hospital because of fevers\\",
-    "ground_truth_output": "fatigue\\, arthralgias\\, a mouth ulcer\\, and a rash. The patient had been in his usual state of health until 1 ...,Anti\u2013melanoma differentiation\u2013associated protein 5..."
+    "ground_truth_output": "nausea\\\\, and the inability to eat solid and liquid..."
   },
   {
     "user_input": "Dr. Zachary A. Sporn (Medicine): A 38-year-old woman was evaluated at this hospital because of dyspnea\\",
-    "ground_truth_output": "chest discomfort\\, and nodules on chest imaging. Three years before the current admission\\, the pa...,Granulomatous lung disease as an extraintestinal m..."
+    "ground_truth_output": "chest discomfort\\\\, and nodules on chest imaging. T..."
   },
   {
     "user_input": "Dr. Ian D. Cooley (Medicine): A 68-year-old man was admitted to this hospital because of painful mouth ulcers and weight loss. The patient had been well until 6 weeks before the current admission\\",
-    "ground_truth_output": "whe...,Eosinophilic leukemia."
+    "ground_truth_output": "whe...\\,Eosinophilic leukemia."
+  },
+  {
+    "user_input": "Dr. Zoe N. Memel (Medicine): A 60-year-old man presented to this hospital because of fevers\\",
+    "ground_truth_output": "fatigue\\\\, arthralgias\\\\, a mouth ulcer\\\\, and a rash..."
+  },
+  {
+    "user_input": "Dr. Christopher V. Radcliffe (Medicine): A 46-year-old man was evaluated in the rheumatology clinic of this hospital because of arthritis and rash. One week before the current presentation\\",
+    "ground_truth_output": "an episode...\\,Secondary syphilis."
   },
   {
     "user_input": "user_input",

@@ -1,14 +1,10 @@
 [
   {
-    "user_input": "Dr. Sunu S. Thomas: A 26-year-old pregnant woman was transferred to this hospital for evaluation and treatment of cardiogenic shock after a cardiac arrest resulting from ventricular tachycardia. The p...",
-    "ground_truth_output": "Pregnancy-associated myocardial infarction\\, probab..."
+    "user_input": "Dr. Jacquelyn M. Nestor (Medicine): A 19-year-old woman was transferred to this hospital because of respiratory failure. The patient had been in her usual state of health until 3 weeks before the curr...",
+    "ground_truth_output": "Takayasu\u2019s arteritis."
   },
   {
-    "user_input": "Dr. Prashanth Rajarajan (Neurology): A 78-year-old woman was admitted to this hospital because of progressive confusion and evolving changes on magnetic resonance imaging (MRI) of the head. The patien...",
-    "ground_truth_output": "Paraneoplastic encephalomyelitis due to small-cell..."
-  },
-  {
-    "user_input": "Dr. Alison C. Castle: A 70-year-old woman with advanced human immunodeficiency virus (HIV) infection was evaluated in a clinic in KwaZulu-Natal\\",
-    "ground_truth_output": "South Africa\\, because of cough\\, shortness of breath\\, an...,Advanced human immunodeficiency virus infection\\, p..."
+    "user_input": "Dr. Javier A. Suarez (Neurology): A 32-year-old man was admitted to this hospital after 2 weeks of confusion and headache and 2 days of fever. The patient had been in his usual state of health until 1...",
+    "ground_truth_output": "Encephalitis due to Beh\u00e7et\u2019s disease."
   }
 ]
