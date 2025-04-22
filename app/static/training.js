@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadExperimentBtn = document.getElementById('load-experiment-btn');
     const viewDetailsBtn = document.getElementById('view-details-btn');
     const clearLogsBtn = document.getElementById('clear-logs-btn');
+    const validateBtn = document.getElementById('validate-btn');
     const trainingLogsEl = document.getElementById('training-logs');
     const trainingProgressEl = document.getElementById('training-progress');
     const currentScoreEl = document.getElementById('current-score');
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadExperimentBtn.addEventListener('click', showExperimentModal);
     viewDetailsBtn.addEventListener('click', viewFullDetails);
     clearLogsBtn.addEventListener('click', clearLogs);
+    validateBtn.addEventListener('click', validatePrompts);
     csvFileEl.addEventListener('change', handleCSVUpload);
     trainPercentEl.addEventListener('input', updateTrainPercentDisplay);
     optimizerPresetEl.addEventListener('change', updateOptimizerPreset);
