@@ -509,21 +509,18 @@ def run_tests():
             with open("app/static/history.js", "r") as f:
                 js_content = f.read()
                 
-            if "function loadExamplesForIteration" in js_content:
-                logger.info("✅ Found 'loadExamplesForIteration' function in history.js")
+            if "window.loadExamplesForIteration" in js_content:
+                logger.info("✅ Found 'window.loadExamplesForIteration' function in history.js")
                 
                 # Extract the function implementation to see what it does
-                start_idx = js_content.find("function loadExamplesForIteration")
+                start_idx = js_content.find("window.loadExamplesForIteration")
                 if start_idx != -1:
                     end_idx = js_content.find("}", start_idx)
                     if end_idx != -1:
                         function_code = js_content[start_idx:end_idx+1]
                         logger.info(f"Function implementation:\n{function_code}")
-                        
-                        # Check if the function is properly defined
-                        if "window.loadExamplesForIteration" not in js_content:
-                            logger.warning("⚠️ Function is defined but not attached to window object")
-                            
+            elif "function loadExamplesForIteration" in js_content:
+                logger.warning("⚠️ Function is defined but not properly attached to window object")
             else:
                 logger.error("❌ Could not find 'loadExamplesForIteration' function in history.js")
                 
