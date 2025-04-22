@@ -17,6 +17,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const perfectMatchesElement = document.getElementById('perfect-matches');
     const totalExamplesElement = document.getElementById('total-examples');
     
+    // Dashboard elements
+    const trainCountElement = document.getElementById('train-count');
+    const validationCountElement = document.getElementById('validation-count');
+    const latestExperimentElement = document.getElementById('latest-experiment');
+    const iterationCountElement = document.getElementById('iteration-count');
+    const bestScoreElement = document.getElementById('best-score');
+    const quickTestButton = document.getElementById('quick-test-btn');
+    const loadNejmButton = document.getElementById('load-nejm-btn');
+    const clearExamplesButton = document.getElementById('clear-examples-btn');
+    const metricsChart = document.getElementById('metrics-chart');
+    
+    // Initialize dashboard components
+    initDashboard();
+    initMetricsChart();
+    
+    // Register additional event listeners for dashboard components
+    if (quickTestButton) quickTestButton.addEventListener('click', performQuickTest);
+    if (loadNejmButton) loadNejmButton.addEventListener('click', loadNejmData);
+    if (clearExamplesButton) clearExamplesButton.addEventListener('click', clearExamplesData);
+    
     // Add elegant entrance animations
     document.querySelectorAll('.card').forEach((card, index) => {
         card.style.animationDelay = `${index * 0.1}s`;
@@ -410,4 +430,250 @@ What's the square root of 64?,8`;
     
     // Add CSS animation for page load
     document.body.classList.add('page-loaded');
+    
+    // Dashboard Functions
+    
+    /**
+     * Initialize dashboard components with data
+     */
+    function initDashboard() {
+        // Fetch dataset counts
+        fetchDatasetCounts();
+        
+        // Fetch latest experiment data
+        fetchExperimentData();
+    }
+    
+    /**
+     * Initialize the metrics chart on the dashboard
+     */
+    function initMetricsChart() {
+        if (!metricsChart) return;
+        
+        const ctx = metricsChart.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Exact Match', 'Semantic Similarity', 'Keyword Match', 'LLM Evaluation'],
+                datasets: [{
+                    label: 'Average Score',
+                    data: [0.85, 0.92, 0.78, 0.94],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 0.5,
+                        max: 1
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Fetch dataset counts for the dashboard
+     */
+    function fetchDatasetCounts() {
+        if (!trainCountElement || !validationCountElement) return;
+        
+        // Fetch training count
+        fetch('/load_dataset?type=train')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count) {
+                    trainCountElement.textContent = data.count;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching training counts:', error);
+            });
+            
+        // Fetch validation count
+        fetch('/load_dataset?type=validation')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count) {
+                    validationCountElement.textContent = data.count;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching validation counts:', error);
+            });
+    }
+    
+    /**
+     * Fetch experiment data for the dashboard
+     */
+    function fetchExperimentData() {
+        if (!latestExperimentElement || !iterationCountElement || !bestScoreElement) return;
+        
+        fetch('/experiments')
+            .then(response => response.json())
+            .then(data => {
+                if (data.experiments && data.experiments.length > 0) {
+                    // Sort by date descending
+                    const sortedExperiments = [...data.experiments].sort((a, b) => 
+                        new Date(b.created_at) - new Date(a.created_at)
+                    );
+                    
+                    const latestExperiment = sortedExperiments[0];
+                    latestExperimentElement.textContent = latestExperiment.id;
+                    
+                    // Fetch experiment details
+                    fetch(`/experiments/${latestExperiment.id}`)
+                        .then(response => response.json())
+                        .then(expData => {
+                            if (expData.iterations && expData.iterations.length > 0) {
+                                iterationCountElement.textContent = expData.iterations.length;
+                                
+                                // Find best score
+                                const bestScore = Math.max(...expData.iterations.map(i => i.avg_score));
+                                bestScoreElement.textContent = bestScore.toFixed(2);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching experiment details:', error);
+                        });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching experiments:', error);
+            });
+    }
+    
+    /**
+     * Perform a quick test on a sample
+     */
+    function performQuickTest() {
+        // Use a sample prompt for testing
+        const sampleInput = "What is the primary treatment for acute myocardial infarction?";
+        
+        const systemPrompt = systemPromptTextarea.value.trim();
+        const outputPrompt = outputPromptTextarea.value.trim();
+        
+        if (!systemPrompt || !outputPrompt) {
+            showAlert('Please enter system and output prompts first');
+            return;
+        }
+        
+        // Show spinner
+        spinnerElement.style.display = 'block';
+        
+        // Prepare test data
+        const testData = {
+            system_prompt: systemPrompt,
+            output_prompt: outputPrompt,
+            user_input: sampleInput
+        };
+        
+        // Call the test API
+        fetch('/test_prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(testData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            spinnerElement.style.display = 'none';
+            
+            if (data.error) {
+                showAlert(data.error);
+                return;
+            }
+            
+            // Show the result in an alert
+            const result = `
+                <strong>Quick Test Result:</strong><br>
+                <div class="mt-2 p-2 bg-light rounded">
+                    <strong>Input:</strong> ${sampleInput}<br><br>
+                    <strong>Response:</strong><br>
+                    ${data.response}
+                </div>
+                <div class="mt-2">
+                    <span class="badge bg-info">${data.response_time}</span>
+                    <span class="badge bg-primary">${data.quality}</span>
+                </div>
+            `;
+            
+            showAlert(result, 'success');
+        })
+        .catch(error => {
+            spinnerElement.style.display = 'none';
+            showAlert('Error running test: ' + error.message);
+        });
+    }
+    
+    /**
+     * Load NEJM dataset
+     */
+    function loadNejmData() {
+        // Show spinner
+        spinnerElement.style.display = 'block';
+        
+        // First load NEJM prompts
+        fetch('/load_dataset?type=nejm_prompts')
+            .then(response => response.json())
+            .then(data => {
+                if (data.prompts) {
+                    systemPromptTextarea.value = data.prompts.system_prompt;
+                    outputPromptTextarea.value = data.prompts.output_prompt;
+                }
+                
+                // Then load NEJM examples
+                return fetch('/load_dataset?type=nejm_train');
+            })
+            .then(response => response.json())
+            .then(data => {
+                spinnerElement.style.display = 'none';
+                
+                if (data.error) {
+                    showAlert(data.error);
+                    return;
+                }
+                
+                if (data.examples && data.examples.length > 0) {
+                    // Use the truncated CSV content for display
+                    examplesTextarea.value = data.csv_content;
+                    showAlert(`Successfully loaded ${data.count} NEJM examples`, 'success');
+                } else {
+                    showAlert('No NEJM examples found');
+                }
+            })
+            .catch(error => {
+                spinnerElement.style.display = 'none';
+                showAlert('Error loading NEJM data: ' + error.message);
+            });
+    }
+    
+    /**
+     * Clear examples textarea
+     */
+    function clearExamplesData() {
+        examplesTextarea.value = '';
+        showAlert('Examples cleared', 'info');
+    }
 });
