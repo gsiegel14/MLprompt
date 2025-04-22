@@ -136,12 +136,21 @@ class PromptOptimizationWorkflow:
                 success_count = 0
                 error_count = 0
                 
-                # Process in smaller chunks if batch size is large
-                max_chunk_size = min(10, len(batch))  # Process at most 10 at a time
+                # Limit batch size to prevent memory issues
+                if batch_size == 0 or batch_size > 20:
+                    logger.info(f"Limiting batch size to 20 examples (original: {batch_size})")
+                    effective_batch_size = 20
+                    batch = batch[:20] if len(batch) > 20 else batch
+                else:
+                    effective_batch_size = batch_size
+                
+                # Process in even smaller chunks to prevent memory issues
+                max_chunk_size = min(5, len(batch))  # Process at most 5 at a time, reduced from 10
                 for chunk_start in range(0, len(batch), max_chunk_size):
                     chunk_end = min(chunk_start + max_chunk_size, len(batch))
                     logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")
                     
+                    chunk_results = []  # Use a separate array for this chunk
                     for i in range(chunk_start, chunk_end):
                         example = batch[i]
                         try:
@@ -160,13 +169,13 @@ class PromptOptimizationWorkflow:
                             # Evaluate the response
                             score = calculate_score(model_response, ground_truth)
                             
-                            # Store a truncated version of inputs/outputs to reduce memory usage
-                            truncated_input = user_input[:1000] + "..." if len(user_input) > 1000 else user_input
-                            truncated_ground_truth = ground_truth[:1000] + "..." if len(ground_truth) > 1000 else ground_truth
-                            truncated_response = model_response[:2000] + "..." if len(model_response) > 2000 else model_response
+                            # Aggressively truncate to reduce memory usage
+                            truncated_input = user_input[:500] + "..." if len(user_input) > 500 else user_input
+                            truncated_ground_truth = ground_truth[:500] + "..." if len(ground_truth) > 500 else ground_truth
+                            truncated_response = model_response[:1000] + "..." if len(model_response) > 1000 else model_response
                             
                             # Store the result
-                            results.append({
+                            chunk_results.append({
                                 'user_input': truncated_input,
                                 'ground_truth_output': truncated_ground_truth,
                                 'model_response': truncated_response,
@@ -178,8 +187,15 @@ class PromptOptimizationWorkflow:
                             error_count += 1
                             continue
                     
+                    # Add this chunk's results to the main results array
+                    results.extend(chunk_results)
+                    
+                    # Clear chunk_results to free memory
+                    chunk_results = []
+                    
                     # Run garbage collection between chunks
                     gc.collect()
+                    logger.info(f"Garbage collection performed after chunk {chunk_start+1}-{chunk_end}")
                 
                 logger.info(f"Completed Phase 1 with {success_count} successful examples and {error_count} errors")
                 
@@ -195,22 +211,55 @@ class PromptOptimizationWorkflow:
                 # ----- PHASE 2: Optimizer LLM Refinement -----
                 logger.info(f"PHASE 2: Starting Optimizer LLM Refinement (iteration {iteration})")
                 
-                # Use only the first 10 examples for optimization to reduce memory usage
-                optimization_examples = results[:10] if len(results) > 10 else results
+                # Memory check before optimization prep
+                gc.collect()  # Run garbage collection before optimization
+                logger.info("Forced garbage collection before starting optimization")
+                
+                # Use only the first 5 examples for optimization to reduce memory usage (reduced from 10)
+                optimization_examples = results[:5] if len(results) > 5 else results
                 logger.info(f"Using {len(optimization_examples)} examples for optimization")
                 
-                # Call the Optimizer LLM to improve the prompts
-                optimization_result = optimize_prompts(
-                    current_system_prompt,
-                    current_output_prompt,
-                    optimization_examples,  # Using reduced example set
-                    optimizer_prompt,
-                    optimizer_strategy
-                )
+                # Free up original results array to save memory
+                if len(results) > 5:
+                    # Keep a reference to the first 5 examples for saving in experiment tracker later
+                    results_for_tracker = results[:5]
+                    # Clear the full results array
+                    results = None
+                    gc.collect()
+                    logger.info("Cleared full results array to save memory")
+                else:
+                    results_for_tracker = results
+                
+                # Run additional garbage collection
+                gc.collect()
+                
+                try:
+                    # Call the Optimizer LLM to improve the prompts
+                    logger.info("Calling optimize_prompts function...")
+                    optimization_result = optimize_prompts(
+                        current_system_prompt,
+                        current_output_prompt,
+                        optimization_examples,
+                        optimizer_prompt,
+                        optimizer_strategy
+                    )
+                    logger.info("optimize_prompts function completed successfully")
+                except Exception as e:
+                    logger.error(f"Error in optimization: {e}")
+                    # Create a default result if optimization fails
+                    optimization_result = {
+                        "system_prompt": current_system_prompt,
+                        "output_prompt": current_output_prompt,
+                        "reasoning": f"Optimization failed: {str(e)}"
+                    }
                 
                 # Memory check after Phase 2
                 memory_after_phase2 = process.memory_info().rss / 1024 / 1024
                 logger.info(f"Memory after Phase 2: {memory_after_phase2:.2f} MB (change: {memory_after_phase2 - memory_after_phase1:.2f} MB)")
+                
+                # Run garbage collection again
+                gc.collect()
+                logger.info("Additional garbage collection after Phase 2")
                 
             except Exception as e:
                 logger.error(f"Critical error in iteration {iteration}: {e}")
@@ -229,7 +278,7 @@ class PromptOptimizationWorkflow:
                 current_system_prompt,
                 current_output_prompt,
                 metrics,
-                results[:5],  # Include only a few examples to avoid excessive storage
+                results_for_tracker,  # Using our stored subset of examples to avoid memory issues
                 optimizer_reasoning
             )
             
