@@ -548,6 +548,191 @@
         </div>
     </div>
     
+    <!-- Model Results Modal -->
+    <div class="modal fade" id="model-results-modal" tabindex="-1" aria-labelledby="model-results-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="model-results-modal-label">Model Run Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="modelResultsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-tab-pane" 
+                                type="button" role="tab" aria-controls="overview-tab-pane" aria-selected="true">Overview</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="examples-tab" data-bs-toggle="tab" data-bs-target="#examples-tab-pane" 
+                                type="button" role="tab" aria-controls="examples-tab-pane" aria-selected="false">Example Responses</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="metrics-tab" data-bs-toggle="tab" data-bs-target="#metrics-tab-pane" 
+                                type="button" role="tab" aria-controls="metrics-tab-pane" aria-selected="false">Detailed Metrics</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="modelResultsTabContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview-tab-pane" role="tabpanel" aria-labelledby="overview-tab">
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-primary text-white">
+                                            <strong>Performance Summary</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-3 text-center mb-3">
+                                                    <div class="metric-card p-3 rounded bg-light border h-100">
+                                                        <span class="fs-1 fw-bold text-primary" id="result-avg-score">0%</span>
+                                                        <div class="text-muted">Average Score</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 text-center mb-3">
+                                                    <div class="metric-card p-3 rounded bg-light border h-100">
+                                                        <span class="fs-1 fw-bold text-success" id="result-perfect-matches">0/0</span>
+                                                        <div class="text-muted">Perfect Matches</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 text-center mb-3">
+                                                    <div class="metric-card p-3 rounded bg-light border h-100">
+                                                        <span class="fs-1 fw-bold text-info" id="result-total-examples">0</span>
+                                                        <div class="text-muted">Total Examples</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 text-center mb-3">
+                                                    <div class="metric-card p-3 rounded bg-light border h-100">
+                                                        <span class="fs-1 fw-bold text-warning" id="result-avg-latency">0ms</span>
+                                                        <div class="text-muted">Avg Response Time</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <strong>Run Configuration</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Experiment ID</label>
+                                                        <div id="result-experiment-id" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Iteration</label>
+                                                        <div id="result-iteration" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Timestamp</label>
+                                                        <div id="result-timestamp" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Model Used</label>
+                                                        <div id="result-model" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Batch Size</label>
+                                                        <div id="result-batch-size" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Optimizer Strategy</label>
+                                                        <div id="result-optimizer-strategy" class="p-2 bg-light rounded border">-</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Examples Tab -->
+                        <div class="tab-pane fade" id="examples-tab-pane" role="tabpanel" aria-labelledby="examples-tab">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <strong>Example Responses</strong>
+                                            <select id="example-filter" class="form-select form-select-sm" style="width: auto;">
+                                                <option value="all">All Examples</option>
+                                                <option value="perfect">Perfect Matches</option>
+                                                <option value="partial">Partial Matches</option>
+                                                <option value="failed">Failed Matches</option>
+                                            </select>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="accordion" id="examplesAccordion">
+                                                <!-- Examples will be inserted here dynamically -->
+                                                <div class="text-center p-5 text-muted" id="no-examples-message">
+                                                    <i class="fa-solid fa-circle-info fa-2x mb-3"></i>
+                                                    <p>No example results available</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Detailed Metrics Tab -->
+                        <div class="tab-pane fade" id="metrics-tab-pane" role="tabpanel" aria-labelledby="metrics-tab">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="card mb-4">
+                                        <div class="card-header">
+                                            <strong>Score Distribution</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="score-distribution-chart" height="200"></canvas>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <strong>Error Analysis</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Error Type</th>
+                                                            <th>Count</th>
+                                                            <th>Percentage</th>
+                                                            <th>Example IDs</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="error-analysis-table">
+                                                        <!-- Table rows will be inserted here dynamically -->
+                                                        <tr class="text-center text-muted">
+                                                            <td colspan="4">No error analysis available</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="view-prompt-comparison-btn">
+                        <i class="fa-solid fa-code-compare me-1"></i> View Prompt Comparison
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Prompt Comparison Modal -->
     <div class="modal fade" id="prompt-comparison-modal" tabindex="-1" aria-labelledby="prompt-comparison-modal-label" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
