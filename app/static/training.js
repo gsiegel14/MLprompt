@@ -752,6 +752,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('model-results-modal'));
         modal.show();
+        
+        // Remove any existing event listeners to prevent duplicates
+        const comparisonsTab = document.getElementById('comparisons-tab');
+        const newComparisonsTab = comparisonsTab.cloneNode(true);
+        comparisonsTab.parentNode.replaceChild(newComparisonsTab, comparisonsTab);
+        
+        // Add event listener for the comparisons tab to ensure it's populated when clicked
+        newComparisonsTab.addEventListener('shown.bs.tab', function (e) {
+            console.log("Comparison tab shown");
+            updateComparisonTabView();
+        });
+        
+        // Force update if the comparisons tab is already active
+        if (newComparisonsTab.classList.contains('active')) {
+            updateComparisonTabView();
+        }
     }
     
     // Populate Model Results Modal
@@ -771,7 +787,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentExamples && currentExamples.length > 0) {
             noComparisonExamples.style.display = 'none';
             comparisonContent.style.display = 'block';
-            // Will be populated when tab is clicked through the updateComparisonTabView function
+            
+            // Auto-select the comparisons tab to show it first
+            // This makes the response comparisons more prominent
+            setTimeout(() => {
+                const comparisonsTab = document.getElementById('comparisons-tab');
+                // Create a Bootstrap tab instance and show it
+                const tab = new bootstrap.Tab(comparisonsTab);
+                tab.show();
+                // Also update the comparison view
+                updateComparisonTabView();
+            }, 300); // Small delay to ensure the modal is fully loaded
         } else {
             noComparisonExamples.style.display = 'block';
             comparisonContent.style.display = 'none';

@@ -1,10 +1,10 @@
 [
   {
-    "user_input": "user_input",
-    "ground_truth_output": "ground_truth_output"
+    "user_input": "Dr. Christopher V. Radcliffe (Medicine): A 46-year-old man was evaluated in the rheumatology clinic of this hospital because of arthritis and rash. One week before the current presentation\\",
+    "ground_truth_output": "an episode...\\\\\\\\,Secondary syphilis."
   },
   {
-    "user_input": "user_input",
-    "ground_truth_output": "ground_truth_output"
+    "user_input": "Dr. Ian D. Cooley (Medicine): A 68-year-old man was admitted to this hospital because of painful mouth ulcers and weight loss. The patient had been well until 6 weeks before the current admission\\",
+    "ground_truth_output": "whe...\\\\\\\\,Eosinophilic leukemia."
   }
 ]
