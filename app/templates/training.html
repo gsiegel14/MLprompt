@@ -144,6 +144,16 @@
                             </div>
                             
                             <div class="mb-3">
+                                <label for="batch-size" class="form-label">
+                                    Batch Size
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                       title="Number of examples to use per training iteration. Use 0 to process all available examples."></i>
+                                </label>
+                                <input type="number" min="0" max="100" class="form-control" id="batch-size" value="0">
+                                <div class="form-text">Number of examples to process (0 = all examples)</div>
+                            </div>
+                            
+                            <div class="mb-3">
                                 <label for="early-stopping" class="form-label">
                                     Early Stopping
                                     <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
