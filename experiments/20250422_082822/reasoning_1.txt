@@ -1,0 +1,3 @@
+"The original system prompt was overly verbose and included irrelevant information (e.g.,  detailed physician persona, numerous examples of restriction handling).  The revised prompt focuses on core principles of accurate and truthful responses, providing clear and concise restrictions without unnecessary detail.  The original output prompt was overly structured and prescriptive, forcing a specific reasoning format even when unnecessary. The revised output prompt allows for flexibility while maintaining a focus on direct and concise answers.  These changes improve reasoning by removing distractions and focusing the model on the core task of accurate information retrieval and response generation."
+}
+```

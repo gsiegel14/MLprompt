@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
     loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
     document.getElementById('apply-optimized-prompts-btn').addEventListener('click', applyOptimizedPrompts);
+    document.getElementById('view-latest-comparisons-btn').addEventListener('click', showLatestComparisons);
     
     // Add event listener for view details and compare prompts buttons
     document.addEventListener('click', function(e) {
@@ -1483,6 +1484,40 @@ document.addEventListener('DOMContentLoaded', function() {
             currentExampleIndex = newIndex;
             updateComparisonView();
         }
+    }
+    
+    // Show the most recent comparison results in a dedicated dialog
+    function showLatestComparisons() {
+        // Check if we have any examples to show
+        if (!currentExamples || currentExamples.length === 0) {
+            // If no training has been done yet, show a message
+            showAlert('No examples available yet. Run training first to see comparisons.', 'warning');
+            return;
+        }
+        
+        // Prepare the model results modal with the current examples
+        const modelResultsData = {
+            experiment_id: currentExperimentId || 'current_session',
+            iteration: 'Latest',
+            batch_size: 'All examples',
+            model: 'gemini-1.5-flash',
+            optimizer_strategy: document.getElementById('optimizer-strategy').value,
+            examples: currentExamples,
+            metrics: {
+                avg_score: parseFloat(document.getElementById('current-score').textContent) / 100 || 0,
+                perfect_matches: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[0],
+                total_examples: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[1] || 0
+            }
+        };
+        
+        // Show the model results modal
+        showModelResults(modelResultsData);
+        
+        // Automatically switch to the Examples tab and Comparison view
+        setTimeout(() => {
+            document.getElementById('examples-tab').click();
+            toggleExampleView('comparison');
+        }, 300);
     }
     
     // Show spinner with safety timeout

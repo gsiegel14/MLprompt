@@ -1,0 +1,4 @@
+Failed to extract output prompt from response. Using original.
+"The revised system prompt removes unnecessary verbosity and detailed restrictions, focusing on core principles of truthfulness and accuracy while maintaining safety guidelines implicitly. The revised output prompt adds a crucial instruction to provide step-by-step reasoning when necessary, thus directly addressing the lack of explicit reasoning guidance in the original prompt. This encourages a more transparent and logically sound response generation process, improving overall reasoning quality and reducing the likelihood of errors or hallucinations."
+}
+```

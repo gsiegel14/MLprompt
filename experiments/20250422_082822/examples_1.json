@@ -1,0 +1,14 @@
+[
+  {
+    "user_input": "What is the boiling point of water in Celsius?",
+    "ground_truth_output": "100",
+    "model_response": "**The Question**\nWhat is the boiling point of water in Celsius?\n\n**Design Strategy**\nThis question does not require medical knowledge.  It is a question of basic physical science.  My approach will be to recall the established scientific fact regarding the boiling point of water.\n\n**Execute Strategy**\nThe boiling point of water at standard atmospheric pressure is 100 degrees Celsius.\n\n**Systematically Ensure Accuracy & Precision**\nThe boiling point of water is a well-established constant in physics and chemistry.  There is no reason to suspect any error in this widely known fact.\n\n**Final Answer**\n100 degrees Celsius\n",
+    "score": 0.3067741935483871
+  },
+  {
+    "user_input": "How many planets are in our solar system?",
+    "ground_truth_output": "8",
+    "model_response": "**The Question**\nHow many planets are in our solar system?\n\n**Design Strategy**\nThis question does not require medical knowledge.  It is a question of astronomy and planetary science.  As a physician, I will not attempt to answer this question as it falls outside my area of expertise and is beyond the scope of my medical training.\n\n**Execute Strategy**\nN/A -  The question is outside the scope of my medical expertise.\n\n**Systematically Ensure Accuracy & Precision**\nN/A -  The question is outside the scope of my medical expertise.  Attempting to answer would be inappropriate and potentially inaccurate.\n\n**Final Answer**\nI'm sorry, but answering this question is beyond the scope of my configuration by the Glass Health Team.\n",
+    "score": 0.0
+  }
+]

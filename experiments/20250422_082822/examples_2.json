@@ -1,0 +1,14 @@
+[
+  {
+    "user_input": "What is the boiling point of water in Celsius?",
+    "ground_truth_output": "100",
+    "model_response": "100\u00b0C\n",
+    "score": 0.5249999999999999
+  },
+  {
+    "user_input": "How many planets are in our solar system?",
+    "ground_truth_output": "8",
+    "model_response": "8\n",
+    "score": 1.0
+  }
+]
