@@ -278,6 +278,10 @@ def save_prompts():
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # Ensure directories exist
+        os.makedirs('prompts/system', exist_ok=True)
+        os.makedirs('prompts/output', exist_ok=True)
+        
         # Save system prompt
         system_filename = f"system_prompt_{timestamp}.txt"
         with open(os.path.join('prompts/system', system_filename), 'w') as f:

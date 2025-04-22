@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const stopTrainingBtn = document.getElementById('stop-training-btn');
     const savePromptsBtn = document.getElementById('save-prompts-btn');
     const showSamplePromptsBtn = document.getElementById('show-sample-prompts');
-    const optimizerPresetEl = document.getElementById('optimizer-preset');
+    const optimizerPresetEl = document.getElementById('optimizer-strategy');
     const optimizerPromptPreviewEl = document.getElementById('optimizer-prompt-preview');
     const editOptimizerBtn = document.getElementById('edit-optimizer-btn');
     const showOptimizerBtn = document.getElementById('show-optimizer-btn');
@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', function() {
     stopTrainingBtn.addEventListener('click', stopTraining);
     savePromptsBtn.addEventListener('click', savePrompts);
     showSamplePromptsBtn.addEventListener('click', showSamplePrompts);
+    document.getElementById('load-medical-prompts').addEventListener('click', loadMedicalPrompts);
     editOptimizerBtn.addEventListener('click', showOptimizerModal);
     showOptimizerBtn.addEventListener('click', showOptimizerModal);
     saveOptimizerBtn.addEventListener('click', saveOptimizerPrompt);
     loadExperimentBtn.addEventListener('click', showExperimentModal);
-    viewDetailsBtn.addEventListener('click', viewFullDetails);
     clearLogsBtn.addEventListener('click', clearLogs);
     validateBtn.addEventListener('click', validatePrompts);
     csvFileEl.addEventListener('change', handleCSVUpload);
@@ -73,6 +73,13 @@ document.addEventListener('DOMContentLoaded', function() {
     optimizerPresetEl.addEventListener('change', updateOptimizerPreset);
     loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
     loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
+    
+    // Add event listener for view details button once results are available
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'view-details-btn') {
+            viewFullDetails();
+        }
+    });
     
     // Initialize UI
     function initializeUI() {
