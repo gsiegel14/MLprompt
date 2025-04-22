@@ -1670,50 +1670,91 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update the comparison tab view
     function updateComparisonTabView() {
-        if (!currentExamples || currentExamples.length === 0) {
-            document.getElementById('comparison-content').style.display = 'none';
-            document.getElementById('no-comparison-examples').style.display = 'block';
-            return;
-        }
-        
-        document.getElementById('comparison-content').style.display = 'block';
-        document.getElementById('no-comparison-examples').style.display = 'none';
-        
-        // Update the navigation counter
-        document.getElementById('comparison-example-counter').textContent = 
-            `Example ${currentExampleIndex + 1} of ${currentExamples.length}`;
-        
-        // Disable/enable navigation buttons as needed
-        document.getElementById('comparison-prev-example').disabled = currentExampleIndex === 0;
-        document.getElementById('comparison-next-example').disabled = currentExampleIndex === currentExamples.length - 1;
-        
-        // Get the current example
-        const example = currentExamples[currentExampleIndex];
-        
-        // Update the comparison view content
-        document.getElementById('comparison-user-input').textContent = example.user_input || '';
-        document.getElementById('comparison-ground-truth').textContent = example.ground_truth_output || '';
-        document.getElementById('comparison-model-response').textContent = example.model_response || '';
-        document.getElementById('comparison-improved-response').textContent = example.improved_response || example.model_response || '';
-        
-        // Update scores
-        const initialScore = example.score ? (example.score * 100).toFixed(1) : '0.0';
-        document.getElementById('comparison-initial-score').textContent = `Score: ${initialScore}%`;
-        
-        // If there's an improved response with a score
-        let improvedScore = initialScore;
-        if (example.improved_score) {
-            improvedScore = (example.improved_score * 100).toFixed(1);
-        }
-        document.getElementById('comparison-improved-score').textContent = `Score: ${improvedScore}%`;
-        
-        // Highlight score improvement
-        if (parseFloat(improvedScore) > parseFloat(initialScore)) {
-            document.getElementById('comparison-improved-score').classList.remove('bg-secondary');
-            document.getElementById('comparison-improved-score').classList.add('bg-success');
-        } else {
-            document.getElementById('comparison-improved-score').classList.remove('bg-success');
-            document.getElementById('comparison-improved-score').classList.add('bg-secondary');
+        try {
+            console.log("Starting updateComparisonTabView function");
+            
+            // Get necessary DOM elements, with error checking
+            const comparisonContent = document.getElementById('comparison-content');
+            const noComparisonExamples = document.getElementById('no-comparison-examples');
+            const counterElement = document.getElementById('comparison-example-counter');
+            const prevButton = document.getElementById('comparison-prev-example');
+            const nextButton = document.getElementById('comparison-next-example');
+            
+            // Check if we have examples to show
+            if (!currentExamples || currentExamples.length === 0) {
+                console.log("No examples to show in comparison view");
+                if (comparisonContent) comparisonContent.style.display = 'none';
+                if (noComparisonExamples) noComparisonExamples.style.display = 'block';
+                return;
+            }
+            
+            console.log(`Showing comparison for example ${currentExampleIndex + 1}/${currentExamples.length}`);
+            
+            // Show content, hide no examples message
+            if (comparisonContent) comparisonContent.style.display = 'block';
+            if (noComparisonExamples) noComparisonExamples.style.display = 'none';
+            
+            // Update navigation counter
+            if (counterElement) {
+                counterElement.textContent = `Example ${currentExampleIndex + 1} of ${currentExamples.length}`;
+            } else {
+                console.warn("comparison-example-counter element not found");
+            }
+            
+            // Update navigation buttons
+            if (prevButton) prevButton.disabled = currentExampleIndex === 0;
+            if (nextButton) nextButton.disabled = currentExampleIndex === currentExamples.length - 1;
+            
+            // Get the current example
+            const example = currentExamples[currentExampleIndex];
+            if (!example) {
+                console.error("Example not found at index", currentExampleIndex);
+                return;
+            }
+            
+            // Update text content elements with safe checks
+            const updateElement = (id, content) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = content;
+                } else {
+                    console.warn(`Element '${id}' not found`);
+                }
+            };
+            
+            // Update the comparison view content
+            updateElement('comparison-user-input', example.user_input || '');
+            updateElement('comparison-ground-truth', example.ground_truth_output || '');
+            updateElement('comparison-model-response', example.model_response || '');
+            updateElement('comparison-improved-response', example.improved_response || example.model_response || '');
+            
+            // Update scores with safe checks
+            const initialScore = example.score ? (example.score * 100).toFixed(1) : '0.0';
+            updateElement('comparison-initial-score', `Score: ${initialScore}%`);
+            
+            // If there's an improved response with a score
+            let improvedScore = initialScore;
+            if (example.improved_score) {
+                improvedScore = (example.improved_score * 100).toFixed(1);
+            }
+            updateElement('comparison-improved-score', `Score: ${improvedScore}%`);
+            
+            // Highlight score improvement
+            const improvedScoreElement = document.getElementById('comparison-improved-score');
+            if (improvedScoreElement) {
+                if (parseFloat(improvedScore) > parseFloat(initialScore)) {
+                    improvedScoreElement.classList.remove('bg-secondary');
+                    improvedScoreElement.classList.add('bg-success');
+                } else {
+                    improvedScoreElement.classList.remove('bg-success');
+                    improvedScoreElement.classList.add('bg-secondary');
+                }
+            }
+            
+            console.log("Completed updateComparisonTabView successfully");
+        } catch (error) {
+            console.error("Error in updateComparisonTabView:", error);
+            showAlert("Error updating comparison view. See console for details.", "danger");
         }
     }
     
