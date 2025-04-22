@@ -12,20 +12,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const spinnerElement = document.getElementById('spinner');
     const alertContainer = document.getElementById('alert-container');
     
-    // Initialize tooltips
+    // Performance overview elements
+    const avgScoreElement = document.getElementById('avg-score');
+    const perfectMatchesElement = document.getElementById('perfect-matches');
+    const totalExamplesElement = document.getElementById('total-examples');
+    
+    // Add elegant entrance animations
+    document.querySelectorAll('.card').forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // Initialize tooltips with modern styling
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            boundary: document.body
+        });
     });
 
-    // Show sample prompts
+    // Show sample prompts with fade-in effect
     document.getElementById('show-sample-prompts').addEventListener('click', function() {
-        systemPromptTextarea.value = 
+        // Apply fade-out effect
+        systemPromptTextarea.style.opacity = '0.3';
+        outputPromptTextarea.style.opacity = '0.3';
+        examplesTextarea.style.opacity = '0.3';
+        
+        setTimeout(() => {
+            systemPromptTextarea.value = 
 `You are an expert assistant helping users with their questions.
 Always provide accurate, helpful, and concise responses.
 Be polite and professional at all times.`;
 
-        outputPromptTextarea.value = 
+            outputPromptTextarea.value = 
 `Please answer the following question:
 [Question]
 {user_input}
@@ -33,38 +51,60 @@ Be polite and professional at all times.`;
 
 Your answer should be clear, accurate, and helpful.`;
 
-        examplesTextarea.value = 
+            examplesTextarea.value = 
 `What is the capital of France?,Paris
 How many planets are in our solar system?,Eight planets: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune
 What's the square root of 64?,8`;
+
+            // Apply fade-in effect
+            systemPromptTextarea.style.opacity = '1';
+            outputPromptTextarea.style.opacity = '1';
+            examplesTextarea.style.opacity = '1';
+        }, 300);
     });
 
-    // Clear results
+    // Clear results with animation
     function clearResults() {
         resultsBody.innerHTML = '';
-        resultsSection.style.display = 'none';
+        avgScoreElement.textContent = '-';
+        perfectMatchesElement.textContent = '-';
+        totalExamplesElement.textContent = '-';
+        
+        if (resultsSection.style.display !== 'none') {
+            resultsSection.style.opacity = '0';
+            setTimeout(() => {
+                resultsSection.style.display = 'none';
+                resultsSection.style.opacity = '1';
+            }, 300);
+        }
     }
 
-    // Show alert message
+    // Show alert message with improved animation
     function showAlert(message, type = 'danger') {
-        alertContainer.innerHTML = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert alert-${type} alert-dismissible fade show`;
+        alertElement.setAttribute('role', 'alert');
+        alertElement.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
+        
+        // Clear previous alerts
+        alertContainer.innerHTML = '';
+        alertContainer.appendChild(alertElement);
+        
+        // Apply entrance animation
+        alertElement.style.animationName = 'fadeInDown';
+        alertElement.style.animationDuration = '0.5s';
         
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
-            const alert = document.querySelector('.alert');
-            if (alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            }
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alertElement);
+            bsAlert.close();
         }, 5000);
     }
 
-    // Handle CSV file upload
+    // Handle CSV file upload with improved UX
     csvFileInput.addEventListener('change', function(e) {
         if (this.files && this.files[0]) {
             const file = this.files[0];
@@ -79,8 +119,12 @@ What's the square root of 64?,8`;
             const formData = new FormData();
             formData.append('file', file);
             
-            // Show spinner
+            // Show spinner with fade-in
+            spinnerElement.style.opacity = '0';
             spinnerElement.style.display = 'block';
+            setTimeout(() => {
+                spinnerElement.style.opacity = '1';
+            }, 10);
             
             fetch('/upload_csv', {
                 method: 'POST',
@@ -96,7 +140,14 @@ What's the square root of 64?,8`;
                     data.examples.forEach(example => {
                         csvContent += `${example.user_input},${example.ground_truth_output}\n`;
                     });
-                    examplesTextarea.value = csvContent.trim();
+                    
+                    // Apply fade effect for textarea update
+                    examplesTextarea.style.opacity = '0.3';
+                    setTimeout(() => {
+                        examplesTextarea.value = csvContent.trim();
+                        examplesTextarea.style.opacity = '1';
+                    }, 300);
+                    
                     showAlert(`Successfully loaded ${data.examples.length} examples from CSV`, 'success');
                 } else {
                     showAlert('No valid examples found in the CSV file');
@@ -106,13 +157,17 @@ What's the square root of 64?,8`;
                 showAlert('Error uploading file: ' + error.message);
             })
             .finally(() => {
-                spinnerElement.style.display = 'none';
+                // Hide spinner with fade-out
+                spinnerElement.style.opacity = '0';
+                setTimeout(() => {
+                    spinnerElement.style.display = 'none';
+                }, 300);
                 csvFileInput.value = ''; // Reset file input
             });
         }
     });
 
-    // Run evaluation button handler
+    // Run evaluation button handler with improved animations
     runButton.addEventListener('click', function() {
         const systemPrompt = systemPromptTextarea.value.trim();
         const outputPrompt = outputPromptTextarea.value.trim();
@@ -121,16 +176,19 @@ What's the square root of 64?,8`;
         // Validate inputs
         if (!systemPrompt) {
             showAlert('System prompt is required');
+            systemPromptTextarea.focus();
             return;
         }
         
         if (!outputPrompt) {
             showAlert('Output prompt is required');
+            outputPromptTextarea.focus();
             return;
         }
         
         if (!examplesText) {
             showAlert('Example data is required');
+            examplesTextarea.focus();
             return;
         }
         
@@ -145,9 +203,16 @@ What's the square root of 64?,8`;
         // Clear previous results
         clearResults();
         
-        // Show spinner
+        // Show spinner with pulse animation
+        spinnerElement.style.opacity = '0';
         spinnerElement.style.display = 'block';
+        setTimeout(() => {
+            spinnerElement.style.opacity = '1';
+        }, 10);
+        
+        // Disable button with visual feedback
         runButton.disabled = true;
+        runButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Processing...';
         
         // Call API
         fetch('/run', {
@@ -162,26 +227,56 @@ What's the square root of 64?,8`;
             if (data.error) {
                 showAlert(data.error);
             } else if (data.results && data.results.length > 0) {
-                // Display results
+                // Calculate statistics for performance overview
+                let totalScore = 0;
+                let perfectCount = 0;
+                
+                // Display results with staggered animation
                 data.results.forEach((result, index) => {
                     const scoreClass = getScoreClass(result.score);
                     const scoreText = getScoreText(result.score);
                     
+                    // Update statistics
+                    totalScore += result.score;
+                    if (result.score >= 0.9) perfectCount++;
+                    
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td><pre>${index + 1}</pre></td>
+                        <td>${index + 1}</td>
                         <td><pre>${escapeHtml(result.user_input)}</pre></td>
                         <td><pre>${escapeHtml(result.ground_truth_output)}</pre></td>
                         <td><pre>${escapeHtml(result.model_response)}</pre></td>
                         <td class="${scoreClass}">${scoreText} (${result.score.toFixed(2)})</td>
                     `;
+                    
+                    // Add staggered animation
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateY(20px)';
+                    row.style.transition = 'all 0.3s ease-out';
+                    
                     resultsBody.appendChild(row);
+                    
+                    // Trigger animation after a delay based on index
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'translateY(0)';
+                    }, 50 * index);
                 });
                 
-                resultsSection.style.display = 'block';
+                // Update performance overview
+                const avgScore = totalScore / data.results.length;
+                avgScoreElement.textContent = avgScore.toFixed(2);
+                perfectMatchesElement.textContent = `${perfectCount}/${data.results.length}`;
+                totalExamplesElement.textContent = data.results.length;
                 
-                // Scroll to results
-                resultsSection.scrollIntoView({ behavior: 'smooth' });
+                // Show results section with fade-in
+                resultsSection.style.opacity = '0';
+                resultsSection.style.display = 'block';
+                setTimeout(() => {
+                    resultsSection.style.opacity = '1';
+                    // Scroll to results with smooth scrolling
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
             } else {
                 showAlert('No results returned from evaluation');
             }
@@ -190,12 +285,19 @@ What's the square root of 64?,8`;
             showAlert('Error running evaluation: ' + error.message);
         })
         .finally(() => {
-            spinnerElement.style.display = 'none';
+            // Hide spinner with fade-out
+            spinnerElement.style.opacity = '0';
+            setTimeout(() => {
+                spinnerElement.style.display = 'none';
+            }, 300);
+            
+            // Reset button
             runButton.disabled = false;
+            runButton.innerHTML = '<i class="fa-solid fa-play me-2"></i> Run Evaluation';
         });
     });
     
-    // Save prompts button handler
+    // Save prompts button handler with improved feedback
     saveButton.addEventListener('click', function() {
         const systemPrompt = systemPromptTextarea.value.trim();
         const outputPrompt = outputPromptTextarea.value.trim();
@@ -203,11 +305,13 @@ What's the square root of 64?,8`;
         // Validate inputs
         if (!systemPrompt) {
             showAlert('System prompt is required');
+            systemPromptTextarea.focus();
             return;
         }
         
         if (!outputPrompt) {
             showAlert('Output prompt is required');
+            outputPromptTextarea.focus();
             return;
         }
         
@@ -218,8 +322,15 @@ What's the square root of 64?,8`;
         };
         
         // Show spinner
+        spinnerElement.style.opacity = '0';
         spinnerElement.style.display = 'block';
+        setTimeout(() => {
+            spinnerElement.style.opacity = '1';
+        }, 10);
+        
+        // Disable button with visual feedback
         saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Saving...';
         
         // Call API
         fetch('/save_prompts', {
@@ -234,19 +345,26 @@ What's the square root of 64?,8`;
             if (data.error) {
                 showAlert(data.error);
             } else {
-                showAlert('Prompts saved successfully as ' + data.system_filename + ' and ' + data.output_filename, 'success');
+                showAlert(`Prompts saved successfully! <br><strong>System:</strong> ${data.system_filename}<br><strong>Output:</strong> ${data.output_filename}`, 'success');
             }
         })
         .catch(error => {
             showAlert('Error saving prompts: ' + error.message);
         })
         .finally(() => {
-            spinnerElement.style.display = 'none';
+            // Hide spinner with fade-out
+            spinnerElement.style.opacity = '0';
+            setTimeout(() => {
+                spinnerElement.style.display = 'none';
+            }, 300);
+            
+            // Reset button
             saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fa-solid fa-save me-2"></i> Save Prompts';
         });
     });
     
-    // Helper functions
+    // Enhanced helper functions
     function escapeHtml(text) {
         return text
             .replace(/&/g, "&amp;")
@@ -264,8 +382,32 @@ What's the square root of 64?,8`;
     
     function getScoreText(score) {
         if (score >= 0.9) return 'Perfect Match';
+        if (score > 0.7) return 'Great Match';
         if (score > 0.5) return 'Good Match';
+        if (score > 0.3) return 'Fair Match';
         if (score > 0) return 'Partial Match';
         return 'No Match';
     }
+    
+    // Add keyboard shortcuts for power users
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Enter to run evaluation
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            if (!runButton.disabled) {
+                e.preventDefault();
+                runButton.click();
+            }
+        }
+        
+        // Ctrl/Cmd + S to save prompts
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            if (!saveButton.disabled) {
+                e.preventDefault();
+                saveButton.click();
+            }
+        }
+    });
+    
+    // Add CSS animation for page load
+    document.body.classList.add('page-loaded');
 });

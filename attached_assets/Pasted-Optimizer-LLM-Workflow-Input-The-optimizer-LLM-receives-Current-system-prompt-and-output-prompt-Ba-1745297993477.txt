@@ -1,0 +1,64 @@
+Optimizer LLM Workflow
+Input: The optimizer LLM receives:
+Current system_prompt and output_prompt
+Batch of examples with:
+user_input
+ground_truth_output
+model_response (from the primary LLM)
+Evaluation metrics (accuracy, match status)
+Optimizer's own system instructions (optimizer_system_prompt)
+Process: The optimizer LLM analyzes failures and suggests refinements.
+Output: It returns:
+New system_prompt (with reasoning)
+New output_prompt (with reasoning)
+Explanation of changes made
+Training Loop (Backend)
+Apply to MLprompt
+# Pseudo-code for the ML training loop
+def run_training_epoch(system_prompt, output_prompt, training_data, optimizer_prompt):
+    # Step 1: Run primary LLM on all examples
+    results = []
+    for example in training_data:
+        response = primary_llm.generate(
+            system_prompt=system_prompt,
+            user_input=example.user_input + output_prompt
+        )
+        score = evaluator.calculate_score(response, example.ground_truth)
+        results.append({
+            "user_input": example.user_input,
+            "ground_truth": example.ground_truth,
+            "model_response": response,
+            "score": score
+        })
+    
+    # Step 2: Compute overall metrics
+    metrics = evaluator.aggregate_metrics(results)
+    
+    # Step 3: Select representative examples (e.g., worst performing)
+    examples_for_optimizer = select_examples(results, k=5)
+    
+    # Step 4: Call optimizer LLM to refine prompts
+    optimizer_input = {
+        "current_system_prompt": system_prompt,
+        "current_output_prompt": output_prompt,
+        "examples": examples_for_optimizer,
+        "metrics": metrics
+    }
+    
+    new_prompts = optimizer_llm.optimize(
+        system_prompt=optimizer_prompt,
+        user_input=format_for_optimizer(optimizer_input)
+    )
+    
+    # Step 5: Validate new prompts on validation set
+    validation_metrics = evaluate_on_validation(
+        new_prompts.system_prompt,
+        new_prompts.output_prompt
+    )
+    
+    # Step 6: Accept/reject based on improvement
+    if validation_metrics.score > previous_best_score:
+        return new_prompts, validation_metrics
+    else:
+        return None, metrics  # No improvement
+            "user_input": example.user_input,

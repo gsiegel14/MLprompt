@@ -1,0 +1,63 @@
+achine Learning Style Interface
+The UI will follow a typical ML training interface with:
+Prompt Configuration Panel
+Input areas for the initial system_prompt and output_prompt
+Version history/tracking of previous prompts
+Training Data Management
+CSV upload or direct input of user_input and ground_truth_output pairs
+Train/validation split options
+Dataset statistics
+Training Control Panel
+"Start Training" button to initiate the optimization loop
+Number of epochs/iterations setting
+Early stopping criteria options
+Optimizer LLM Configuration
+Input area for the optimizer_system_prompt (instructions for the second LLM)
+Toggle for different optimization strategies
+Results Dashboard
+Metrics over time chart (accuracy, match rate, etc.)
+Comparison table of before/after examples
+Prompt evolution visualization
+Logs Panel
+Real-time training progress
+Detailed optimizer LLM reasoning for each prompt revision
+Key Components (Revised Structure)
+Apply to MLprompt
+prompt-ml-platform/
+├── app/
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── styles.css
+│   │   ├── js/
+│   │   │   ├── main.js
+│   │   │   ├── training.js          # ML training loop UI logic
+│   │   │   └── visualization.js     # Charts and visualization
+│   │   └── img/
+│   ├── templates/
+│   │   ├── index.html               # Main ML interface
+│   │   ├── history.html             # Prompt version history
+│   │   └── compare.html             # Side-by-side comparison
+│   ├── __init__.py
+│   ├── main.py                      # Flask routes
+│   ├── llm_client.py                # Vertex AI interaction
+│   ├── optimizer.py                 # Second LLM optimization logic
+│   ├── evaluator.py                 # Metrics calculation
+│   ├── data_module.py               # Dataset handling
+│   └── experiment_tracker.py        # Tracking metrics/versions
+│
+├── data/
+│   ├── train/                       # Training examples
+│   └── validation/                  # Validation examples
+│
+├── prompts/
+│   ├── system/                      # System prompts versions
+│   ├── output/                      # Output prompts versions
+│   └── optimizer/                   # Optimizer LLM prompts
+│       └── default_optimizer.txt    # Default instructions for optimizer
+│
+├── experiments/                     # Saved experiment results
+│   └── metrics/                     # Metrics over time
+│
+├── config.yaml                      # Configuration
+├── requirements.txt
+└── README.md
