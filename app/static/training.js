@@ -508,6 +508,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemPrompt = systemPromptEl.value.trim();
         const outputPrompt = outputPromptEl.value.trim();
         const examples = parseExamples();
+        const optimizerType = document.getElementById('optimizer-type').value;
+        const optimizerStrategy = document.getElementById('optimizer-strategy').value;
         
         if (!systemPrompt || !outputPrompt) {
             showAlert('Both system prompt and output prompt are required', 'warning');
@@ -524,17 +526,24 @@ document.addEventListener('DOMContentLoaded', function() {
         startTrainingBtn.disabled = true;
         stopTrainingBtn.disabled = false;
         
-        log('Starting training process...');
+        log('Starting Two-Stage Training Cycle...');
         log(`System prompt: ${systemPrompt.substring(0, 50)}...`);
         log(`Output prompt: ${outputPrompt.substring(0, 50)}...`);
         log(`Training with ${examples.length} examples`);
+        log(`Optimizer type: ${optimizerType}, Strategy: ${optimizerStrategy}`);
         
         // Reset progress bar
         updateTrainingProgress(0, maxIterationsEl.value);
         
-        // Start the training process
+        // Clear chart data
+        metricsChart.data.labels = [];
+        metricsChart.data.datasets[0].data = [];
+        metricsChart.data.datasets[1].data = [];
+        metricsChart.update();
+        
+        // Start the training process with the two-stage workflow
         showSpinner();
-        fetch('/train', {
+        fetch('/two_stage_train', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -542,11 +551,10 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({
                 system_prompt: systemPrompt,
                 output_prompt: outputPrompt,
-                examples_format: 'text',
                 examples_content: examplesTextEl.value,
-                optimizer_prompt: optimizerPrompt,
-                experiment_id: currentExperimentId,
-                iteration: currentIteration
+                max_iterations: parseInt(maxIterationsEl.value),
+                optimizer_strategy: optimizerStrategy,
+                optimizer_type: optimizerType
             })
         })
         .then(response => response.json())
@@ -558,12 +566,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update experiment ID and iteration
                 currentExperimentId = data.experiment_id;
                 experimentIdEl.value = data.experiment_id;
-                currentIteration = data.optimized_iteration;
+                currentIteration = data.iterations || 0;
                 iterationEl.value = currentIteration;
                 
                 // Log results
-                log(`Completed iteration ${data.optimized_iteration} for experiment ${data.experiment_id}`);
-                log(`Initial metrics: Avg score ${(data.initial.metrics.avg_score * 100).toFixed(1)}%, Perfect matches: ${data.initial.metrics.perfect_matches}/${data.initial.metrics.total_examples}`);
+                log(`Completed ${data.iterations} iterations for experiment ${data.experiment_id}`);
+                log(`Best score achieved: ${(data.best_score * 100).toFixed(1)}% at iteration ${data.best_iteration}`);
                 
                 // If optimization was performed
                 if (data.optimized && data.optimized.metrics) {
@@ -709,5 +717,94 @@ document.addEventListener('DOMContentLoaded', function() {
         const logMessage = `[${timestamp}] ${message}\n`;
         trainingLogsEl.textContent += logMessage;
         trainingLogsEl.scrollTop = trainingLogsEl.scrollHeight;
+    }
+    
+    // Validate prompts function - tests prompt versions on validation set
+    function validatePrompts() {
+        if (trainingHistory.length < 2) {
+            showAlert('Need at least 2 iterations to validate', 'warning');
+            return;
+        }
+        
+        // Get versions to compare
+        const promptVersions = [];
+        for (let i = 0; i < trainingHistory.length; i++) {
+            promptVersions.push(trainingHistory[i].iteration);
+        }
+        
+        log('Starting validation on unseen data...');
+        
+        // Show spinner
+        showSpinner();
+        
+        // Send validation request
+        fetch('/validate_prompts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt_versions: promptVersions
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showAlert(data.error, 'danger');
+                log(`Validation error: ${data.error}`);
+            } else {
+                log(`Validation complete on ${data.example_count} unseen examples`);
+                
+                // Display validation results
+                let resultsHtml = '<div class="validation-results p-3 border rounded mb-3">';
+                resultsHtml += '<h5>Validation Results (Unseen Data)</h5>';
+                resultsHtml += '<table class="table table-sm table-striped">';
+                resultsHtml += '<thead><tr><th>Version</th><th>Avg Score</th><th>Perfect Matches</th></tr></thead>';
+                resultsHtml += '<tbody>';
+                
+                let bestVersion = null;
+                let bestScore = 0;
+                
+                for (const [version, results] of Object.entries(data.validation_results)) {
+                    const avgScore = results.metrics.avg_score * 100;
+                    const perfectMatches = results.metrics.perfect_matches;
+                    const totalExamples = results.example_count;
+                    
+                    resultsHtml += `<tr>
+                        <td>${version}</td>
+                        <td>${avgScore.toFixed(1)}%</td>
+                        <td>${perfectMatches}/${totalExamples}</td>
+                    </tr>`;
+                    
+                    if (avgScore > bestScore) {
+                        bestScore = avgScore;
+                        bestVersion = version;
+                    }
+                }
+                
+                resultsHtml += '</tbody></table>';
+                
+                if (bestVersion) {
+                    resultsHtml += `<div class="alert alert-success">
+                        <strong>Best Version:</strong> ${bestVersion} (${bestScore.toFixed(1)}%)
+                    </div>`;
+                }
+                
+                resultsHtml += '</div>';
+                
+                // Add to the logs area
+                document.querySelector('.validation-container').innerHTML = resultsHtml;
+                
+                showAlert('Validation complete', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error in validation:', error);
+            showAlert('Error during validation', 'danger');
+            log(`Validation error: ${error.message}`);
+        })
+        .finally(() => {
+            hideSpinner();
+        });
     }
 });
