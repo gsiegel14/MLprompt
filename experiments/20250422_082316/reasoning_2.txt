@@ -1,0 +1,3 @@
+"The original system prompt was unnecessarily verbose and included irrelevant details. The revised prompt is more concise and focuses on the core task.  The original output prompt imposed an overly rigid structure. The revised prompt allows for more flexibility while still maintaining clarity and conciseness. These changes improve the model's ability to reason by reducing unnecessary constraints and focusing on the essential aspects of factual question answering. The changes are minimal, focusing on clarity and conciseness to improve the model's overall reasoning performance without overfitting to the provided examples."
+}
+```

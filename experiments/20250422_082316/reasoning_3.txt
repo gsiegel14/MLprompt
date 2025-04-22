@@ -1,0 +1,3 @@
+"The original system prompt was slightly verbose. The revision removes unnecessary words while maintaining the core instruction.  The original output prompt's politeness requirement was slightly redundant given the system prompt's instruction. The revised output prompt simplifies this, making the instructions clearer and more direct, thereby improving the model's focus on factual accuracy and reducing ambiguity.  These minimal changes aim to enhance the model's reasoning by streamlining instructions and removing potential sources of confusion without introducing overfitting to the provided examples."
+}
+```
