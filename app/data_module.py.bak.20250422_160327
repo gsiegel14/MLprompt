@@ -16,23 +16,6 @@ class DataModule:
     train/validation splitting, and batch creation.
     """
     
-    def _load_examples_from_file(self, file_path):
-        """Load examples from a JSON file."""
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, 'r') as f:
-                    examples = json.load(f)
-                    if examples:
-                        logger.debug(f"Loaded {len(examples)} examples from {file_path}")
-                        return examples
-                    else:
-                        logger.warning(f"File {file_path} exists but contains no examples")
-            except Exception as e:
-                logger.error(f"Error loading examples from {file_path}: {e}")
-        else:
-            logger.warning(f"Examples file {file_path} does not exist")
-        return []
-
     def __init__(self, base_dir='data'):
         self.base_dir = base_dir
         self.train_dir = os.path.join(base_dir, 'train')
@@ -44,33 +27,6 @@ class DataModule:
         
         self.train_examples = []
         self.validation_examples = []
-
-        # Load train and validation examples
-        train_file = os.path.join(self.train_dir, 'current_train.json')
-        validation_file = os.path.join(self.validation_dir, 'current_validation.json')
-        
-        # Try to load from current files first
-        self.train_examples = self._load_examples_from_file(train_file)
-        self.validation_examples = self._load_examples_from_file(validation_file)
-        
-        # If current files are empty, try examples.json
-        if not self.train_examples:
-            alt_train_file = os.path.join(self.train_dir, 'examples.json')
-            self.train_examples = self._load_examples_from_file(alt_train_file)
-            if self.train_examples:
-                # Copy to current_train.json
-                self._save_examples(self.train_examples, train_file)
-                logger.info(f"Updated {train_file} with {len(self.train_examples)} examples")
-        
-        if not self.validation_examples:
-            alt_validation_file = os.path.join(self.validation_dir, 'examples.json')
-            self.validation_examples = self._load_examples_from_file(alt_validation_file)
-            if self.validation_examples:
-                # Copy to current_validation.json
-                self._save_examples(self.validation_examples, validation_file)
-                logger.info(f"Updated {validation_file} with {len(self.validation_examples)} examples")
-        
-        logger.info(f"Initialized DataModule with {len(self.train_examples)} train examples and {len(self.validation_examples)} validation examples")
     
     def load_examples_from_text(self, text_content: str, train_ratio: float = 0.8) -> Tuple[List, List]:
         """
@@ -113,9 +69,7 @@ class DataModule:
         Returns:
             tuple: (train_examples, validation_examples)
         """
-
         if not examples:
-            logger.warning("No examples provided to split")
             return [], []
         
         # Shuffle examples to ensure random split
@@ -162,23 +116,8 @@ class DataModule:
         """
         examples = self.validation_examples if validation else self.train_examples
         
-
         if not examples:
-            logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
-            # Try reloading examples from file
-            if validation:
-                examples_file = os.path.join(self.validation_dir, 'current_validation.json')
-                self.validation_examples = self._load_examples_from_file(examples_file)
-                examples = self.validation_examples
-            else:
-                examples_file = os.path.join(self.train_dir, 'current_train.json')
-                self.train_examples = self._load_examples_from_file(examples_file)
-                examples = self.train_examples
-            
-            logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
-            
-            if not examples:
-                return []
+            return []
         
         if batch_size <= 0 or batch_size >= len(examples):
             return examples

@@ -140,7 +140,7 @@ class PromptOptimizationWorkflow:
                 if batch_size == 0 or batch_size > 50:  # Increased limit from 20 to 50
                     logger.info(f"Limiting batch size to 50 examples (original: {batch_size})")
                     effective_batch_size = 50
-                    batch = batch[:20] if len(batch) > 20 else batch
+                    batch = batch[:50] if len(batch) > 50 else batch
                 else:
                     effective_batch_size = batch_size
                 
