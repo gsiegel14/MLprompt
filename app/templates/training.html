@@ -134,20 +134,28 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="max-iterations" class="form-label">Max Iterations</label>
+                                <label for="max-iterations" class="form-label">
+                                    Max Iterations
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                       title="The maximum number of prompt optimization cycles to run. Each cycle involves evaluation, optimization by the second LLM, and re-evaluation."></i>
+                                </label>
                                 <input type="number" min="1" max="10" class="form-control" id="max-iterations" value="3">
                                 <div class="form-text">Maximum number of optimization rounds</div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="early-stopping" class="form-label">Early Stopping</label>
+                                <label for="early-stopping" class="form-label">
+                                    Early Stopping
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                       title="Automatically stops training when a condition is met. 'No Improvement' stops after N iterations without score increase. 'Perfect Score' stops when a perfect match is achieved."></i>
+                                </label>
                                 <div class="input-group">
                                     <select class="form-select" id="early-stopping">
                                         <option value="none">None</option>
                                         <option value="no-improvement" selected>No Improvement</option>
                                         <option value="perfect">Perfect Score</option>
                                     </select>
-                                    <input type="number" class="form-control" id="patience" value="1" min="1" max="5">
+                                    <input type="number" class="form-control" id="patience" value="1" min="1" max="5" data-bs-toggle="tooltip" title="Number of iterations to wait before stopping">
                                 </div>
                                 <div class="form-text">Stop training if no improvement after N iterations</div>
                             </div>
@@ -155,11 +163,15 @@
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="use-validation" checked>
-                                    <label class="form-check-label" for="use-validation">Use Validation Split</label>
+                                    <label class="form-check-label" for="use-validation">
+                                        Use Validation Split
+                                        <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                           title="Reserves a portion of your examples to validate prompt effectiveness on unseen data. Helps ensure prompts don't just memorize training examples."></i>
+                                    </label>
                                 </div>
                                 <div class="input-group mt-2">
                                     <span class="input-group-text">Train</span>
-                                    <input type="range" class="form-range pt-1 px-2" id="train-percent" min="50" max="90" value="80">
+                                    <input type="range" class="form-range pt-1 px-2" id="train-percent" min="50" max="90" value="80" data-bs-toggle="tooltip" title="Adjust the percentage of examples used for training vs. validation">
                                     <span class="input-group-text"><span id="train-percent-display">80</span>%</span>
                                 </div>
                             </div>
@@ -188,7 +200,11 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="optimizer-preset" class="form-label">Optimization Strategy</label>
+                            <label for="optimizer-preset" class="form-label">
+                                Optimization Strategy
+                                <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                   title="Controls how the second LLM optimizes your prompts. Different strategies balance accuracy, relevance, and comprehensiveness."></i>
+                            </label>
                             <select class="form-select" id="optimizer-preset">
                                 <option value="default" selected>Default (Balanced)</option>
                                 <option value="precision">Precision-focused</option>
@@ -215,16 +231,20 @@
             <!-- Middle Column: Prompt Editor -->
             <div class="col-lg-4">
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fa-solid fa-keyboard me-2"></i> Prompt Editor
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-keyboard me-2"></i> Prompt Editor
+                            <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                               title="Edit the prompts that will be optimized. System Prompt provides context and instructions for the LLM, while Output Prompt defines the format of the response."></i>
+                        </span>
                     </div>
                     <div class="card-body">
                         <ul class="nav nav-tabs mb-3" id="prompt-tabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-tab-pane" type="button" role="tab" aria-controls="system-tab-pane" aria-selected="true">System Prompt</button>
+                                <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-tab-pane" type="button" role="tab" aria-controls="system-tab-pane" aria-selected="true" data-bs-toggle="tooltip" title="The System Prompt controls the LLM's behavior and understanding of its task">System Prompt</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-tab-pane" type="button" role="tab" aria-controls="output-tab-pane" aria-selected="false">Output Prompt</button>
+                                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-tab-pane" type="button" role="tab" aria-controls="output-tab-pane" aria-selected="false" data-bs-toggle="tooltip" title="The Output Prompt defines the desired structure and format of the LLM's response">Output Prompt</button>
                             </li>
                         </ul>
                         
@@ -250,8 +270,12 @@
                 
                 <!-- Training Data -->
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fa-solid fa-database me-2"></i> Training Data
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-database me-2"></i> Training Data
+                            <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                               title="Provide example inputs and expected outputs for the LLM. More diverse examples typically lead to better prompt optimization."></i>
+                        </span>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
@@ -292,8 +316,12 @@
             <div class="col-lg-4">
                 <!-- Progress and Metrics -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <i class="fa-solid fa-chart-line me-2"></i> Training Progress
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-chart-line me-2"></i> Training Progress
+                            <i class="fa-solid fa-circle-info text-white ms-1" data-bs-toggle="tooltip" 
+                               title="Visualizes your prompt optimization progress over iterations, showing how scores improve as prompts are refined."></i>
+                        </span>
                     </div>
                     <div class="card-body">
                         <!-- Training progress bar -->
@@ -328,8 +356,12 @@
                 
                 <!-- Latest Optimization -->
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fa-solid fa-code-compare me-2"></i> Latest Optimization
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-code-compare me-2"></i> Latest Optimization
+                            <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                               title="Shows how the second LLM improved your prompts in the latest iteration, including performance comparison and reasoning."></i>
+                        </span>
                     </div>
                     <div class="card-body">
                         <div class="optimization-status text-center py-3 mb-3" id="optimization-status">
