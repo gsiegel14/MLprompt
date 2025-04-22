@@ -2,7 +2,7 @@
 
 # Google Gemini API Configuration
 gemini:
-  model_name: "gemini-2.0-flash"  # Updated to available model
+  model_name: "gemini-1.5-flash"  # Free tier model
   temperature: 0.0
   top_p: 0.95
   top_k: 40
@@ -16,7 +16,7 @@ app:
 
 # Optimizer Configuration
 optimizer:
-  model_name: "gemini-2.0-flash"  # Updated to available model
+  model_name: "gemini-1.5-flash"  # Free tier model
   temperature: 0.7  # Higher temperature for more creative prompt improvements
   max_output_tokens: 2048
   strategies:
