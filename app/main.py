@@ -249,18 +249,44 @@ def load_dataset():
         else:
             return jsonify({'error': 'Invalid dataset type. Use "train", "validation", "nejm_train", "nejm_validation", or "nejm_prompts"'}), 400
         
-        # Create a CSV-like string from the examples for display
-        csv_content = "user_input,ground_truth_output\n"
-        for example in examples:
-            user_input = example.get('user_input', '').replace(',', '\\,').replace('\n', ' ')
-            ground_truth = example.get('ground_truth_output', '').replace(',', '\\,').replace('\n', ' ')
-            csv_content += f"{user_input},{ground_truth}\n"
-        
-        return jsonify({
-            'examples': examples,
-            'csv_content': csv_content,
-            'count': len(examples)
-        })
+        # For NEJM datasets, don't include full csv_content for performance reasons
+        # Just return a truncated version and the original examples
+        if dataset_type in ['nejm_train', 'nejm_validation']:
+            # Only include first 10 examples in csv_content to save bandwidth and processing time
+            short_examples = examples[:10]
+            csv_content = "user_input,ground_truth_output\n"
+            
+            for example in short_examples:
+                # Use shorter version of text for display only
+                user_input = example.get('user_input', '')[:200] + '...' if len(example.get('user_input', '')) > 200 else example.get('user_input', '')
+                ground_truth = example.get('ground_truth_output', '')[:50] + '...' if len(example.get('ground_truth_output', '')) > 50 else example.get('ground_truth_output', '')
+                
+                # Replace commas and newlines
+                user_input = user_input.replace(',', '\\,').replace('\n', ' ')
+                ground_truth = ground_truth.replace(',', '\\,').replace('\n', ' ')
+                
+                csv_content += f"{user_input},{ground_truth}\n"
+            
+            logger.info(f"Returning {len(examples)} examples with truncated CSV content")
+            return jsonify({
+                'examples': examples,
+                'csv_content': csv_content,
+                'count': len(examples),
+                'truncated': True
+            })
+        else:
+            # For smaller datasets, include full CSV content
+            csv_content = "user_input,ground_truth_output\n"
+            for example in examples:
+                user_input = example.get('user_input', '').replace(',', '\\,').replace('\n', ' ')
+                ground_truth = example.get('ground_truth_output', '').replace(',', '\\,').replace('\n', ' ')
+                csv_content += f"{user_input},{ground_truth}\n"
+            
+            return jsonify({
+                'examples': examples,
+                'csv_content': csv_content,
+                'count': len(examples)
+            })
     except Exception as e:
         logger.error(f"Error loading dataset: {e}")
         return jsonify({'error': str(e)}), 500

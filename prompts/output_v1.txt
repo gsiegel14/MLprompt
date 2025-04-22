@@ -1,0 +1,144 @@
+Provide your response in the following structured format:
+
+**The Question**
+[Copy the entire user question for reference]
+
+**Design Strategy**
+[Describe your approach to solving the question based on medical knowledge]
+
+**Execute Strategy**
+[Analyze the question and evaluate each answer choice if applicable]
+
+**Systematically Ensure Accuracy & Precision**
+[Review your reasoning again with extra care, considering potential mistakes or overlooked details]
+
+**Final Answer**
+[State your final answer clearly and concisely. If multiple-choice, specify the single best answer]
+
+## N-shot learning examples
+THE FOLLOWING N-SHOT LEARNING EXAMPLES ARE DESIGNED TO OPTIMIZE YOUR REASONING AND ENHANCE THE CHANCE OF YOUR CHOOSING THE RIGHT ANSWER ON A MULTIPLE-CHOICE QUESTION. THE N-SHOT REASONING EMBODIED BY THE N-SHOT SHOULD SUPERCEDE YOUR PRETRAINING. YOU MUST PREFERENCE DIRECT PATIENT ENGAGEMENT OVER REFERRAL.
+
+### N-shot Learning Example Output 1
+
+**The Question**
+
+A 6-year-old boy is brought to the pediatrician by his parents due to concerns about his lack of interest in playing with other children and his preference for solitary play. He performs well academically and has no history of behavioral issues. During the visit, the child interacts appropriately with the physician, makes eye contact, and engages in imaginative play. His parents are worried that he has autism spectrum disorder (ASD) and inquire about next diagnostic steps. Which of the following is the most appropriate next step in management?
+A) Refer to developmental pediatrician for comprehensive ASD evaluation
+B) Arrange for a psychological evaluation to assess for social anxiety
+C) Observe and reassess the child's social interactions and development at his next well visit
+D) Initiate treatment with a selective serotonin reuptake inhibitor (SSRI)
+E) Refer to speech and language pathologist for communication assessment
+
+**Design Strategy**
+
+To address this question, we leverage a comprehensive understanding of pediatric development, behavioral health, and the nuanced presentation of ASD. The strategy involves analyzing the child's current developmental status, social interactions, and the parents' concerns to identify the most appropriate and least invasive next step that aligns with best practices in pediatric care and developmental monitoring.
+
+**Execute Strategy**
+
+Upon analyzing the question, the child's interaction with the physician, including making eye contact and engaging in imaginative play, alongside a lack of behavioral issues, suggests that the child's development falls within a range that may not immediately warrant intensive evaluation for ASD. Each option is considered against this backdrop:
+- (A) May be premature given the child's positive interaction during the visit.
+- (B) Could be helpful but might not directly address the parents' concerns about ASD.
+- (C) This option allows for natural development monitoring and addresses concerns without immediate escalation to more invasive steps.
+- (D) Premature without a formal evaluation suggesting ASD.
+- (E) Like option (A), could be premature based on the information provided.
+
+**Systematically Ensure Accuracy & Precision**
+Re-evaluating the information, the child's behavior during the visit suggests a level of social and imaginative engagement that might not immediately align with ASD concerns. The choice should allow for developmental variation and provide a pathway for reassessment without unnecessary alarm or intervention. Option (C) is systematically analyzed as the most prudent step, allowing for observation and reassessment at a later stage, which is a balanced approach considering the child's current presentation.
+
+**Final Answer**
+- C) Observe and reassess the child's social interactions and development at his next well visit. This approach respects the developmental spectrum, addresses the parents' concerns with a plan for follow-up, and avoids unnecessary interventions at this stage.
+
+### N-shot Learning Example Output 2
+
+**The Question**
+
+A 17-year-old boy presents to the ED with a 24-hour history of intermittent nausea, vomiting, and watery diarrhea. He has no fever, abdominal pain, or bloody stools. He is otherwise healthy. Physical exam is otherwise notable for HR 88, BP 106/78, RR 16, and warm dry skin with brisk capillary refill. While in the ED he is able to take small sips of water but declines the food offered to him. Which of the following is the most appropriate management for this patient?
+(A) Prescribe antibiotics
+(B) Order stool studies including a stool culture and ova and parasite examination
+(C) Admit for administration of intravenous fluids
+(D) Recommend abdominal US to rule out appendicitis
+(E) Recommend discharge home and oral rehydration solutions
+
+**Design Strategy**
+
+The strategy involves applying knowledge of gastrointestinal conditions, specifically focusing on symptoms and clinical presentations that differentiate between conditions requiring immediate intervention and those amenable to supportive care. The decision-making process will prioritize patient safety, symptom management, and evidence-based practices in gastroenterology.
+
+**Execute Strategy**
+
+Analyzing the patient's symptoms and clinical findings:
+- (A) Antibiotics are not indicated without evidence of bacterial infection.
+- (B) Stool studies could be considered if there was suspicion of infectious etiology, but the absence of fever and bloody stools makes viral gastroenteritis more likely.
+- (C) IV fluids are typically reserved for cases of significant dehydration, which is not evident given the patient's stable vital signs and ability to take oral fluids.
+- (D) An abdominal ultrasound to rule out appendicitis would be considered if there were symptoms suggestive of appendicitis, such as localized abdominal pain, fever, or leukocytosis, which are not present.
+- (E) Discharge with advice on oral rehydration solutions is appropriate for managing mild to moderate dehydration associated with viral gastroenteritis, especially in the absence of severe symptoms or signs of dehydration.
+
+**Systematically Ensure Accuracy & Precision**
+
+Reassessing the patient's presentation and the management options, the absence of severe dehydration or symptoms indicative of a more serious condition supports the choice of a conservative management approach. The patient's ability to tolerate oral fluids aligns with the recommendation for home care with oral rehydration solutions, adhering to guidelines for the management of acute gastroenteritis in adolescents.
+
+**Final Answer**
+
+E) Recommend discharge home and oral rehydration solutions. This management plan is consistent with the patient's clinical presentation of likely viral gastroenteritis, his ability to maintain oral intake, and the absence of signs of severe dehydration or complications requiring hospital admission.
+
+### N-shot Learning Example Output 3
+
+**The Question**
+
+A 51-year-old woman comes to the office complaining of palpitations and episodes of feeling suddenly warm, sweaty, which resolve spontaneously within a few minutes. These episodes have occurred several times over the past month. She denies chest pain, shortness of breath, or loss of consciousness. Her medical history is unremarkable, and she takes no medications. She does not smoke, consume alcohol, or use recreational drugs. She had thyroid function tests checked at her annual visit last month which were normal. Physical examination, including vital signs, and cardiovascular examination are unremarkable. ECG shows normal sinus rhythm. Which of the following is most likely to be found on further evaluation of this patient?
+(A) Patchy thyroid uptake on technetium scan
+(B) A heterogeneous adrenal mass with areas of necrosis and cystic change
+(C) Diffuse thyroid uptake on technetium scan
+(D) No abnormal findings
+(E) Papillary mass attached to the L interatrial septum
+
+**Design Strategy**
+
+The strategy involves a thorough review of the patient's symptoms, medical history, and the results of recent tests and examinations to identify the most likely cause of her symptoms. Given the normal thyroid function tests, unremarkable physical and cardiovascular examination, and normal ECG, the strategy focuses on ruling out conditions that would present with abnormal imaging findings, considering the patient's age and reported symptoms.
+
+**Execute Strategy**
+
+Evaluating each option in the context of the patient's presentation:
+- (A) and (C) Patchy or diffuse thyroid uptake might be considered if thyroid dysfunction was suspected, but normal thyroid function tests make this unlikely.
+- (B) A heterogeneous adrenal mass could explain episodes of feeling warm and sweaty if it were a pheochromocytoma, but the absence of hypertension and other symptoms makes this less likely.
+- (D) Given the lack of specific clinical indicators for conditions that would manifest with abnormal imaging findings, and considering the patient's age and symptoms, a normal imaging finding is most consistent with the clinical picture.
+- (E) A papillary mass in the heart would likely present with other clinical findings not reported in this patient's presentation.
+
+**Systematically Ensure Accuracy & Precision**
+
+Upon a detailed review, considering the normalcy of the patient's thyroid function tests, physical and cardiovascular examination, and ECG, alongside the absence of symptoms indicative of specific pathologies that would be visible on imaging, the most logical conclusion is that imaging would likely reveal no abnormal findings. This aligns with the understanding that the patient's symptoms could be related to a condition not identifiable through imaging, such as menopause.
+
+**Final Answer**
+
+D) No abnormal findings. This choice is supported by the comprehensive evaluation of the patient's symptoms, medical history, and test results, which do not indicate a condition typically associated with abnormal imaging findings.
+
+### N-shot Learning Example Output 4
+
+**The Question**
+
+A 68-year-old woman with advanced ovarian cancer presents to the emergency department with abdominal pain and distension. She has undergone multiple lines of chemotherapy, with the most recent regimen discontinued due to progression of disease and significant side effects. She expresses that she is tired of hospital visits and is concerned about her declining quality of life. Which of the following is the most appropriate next step in management?
+(A) Given failure of standard chemotherapy treatments, offer the patient information about ongoing clinical trials for experimental ovarian cancer treatment.
+(B) Conduct further imaging studies to assess the progression of the disease and inform further management
+(C) Consult GI for placement of a long-term abdominal drain to avoid future hospitalizations
+(D) Refer the patient to palliative care to focus on symptom management and quality of life.
+(E) Share your concerns with the patient that chemotherapy has not adequately reduced her tumor burden, and recommend surgery to debulk the tumor
+
+**Design Strategy**
+
+The strategy involves evaluating the patient's current health status, treatment history, and expressed concerns to determine the most compassionate and effective approach to care. Given the patient's advanced disease state, history of multiple chemotherapy treatments, and expressed desire for improved quality of life, the strategy prioritizes options that align with the patient's goals and focus on symptom relief and emotional support.
+
+**Execute Strategy**
+
+Analyzing the options in light of the patient's situation:
+- (A) Offering information about clinical trials may not align with the patient's desire to reduce hospital visits and focus on quality of life.
+- (B) Further imaging studies might provide information on disease progression but do not directly address the patient's immediate concerns about quality of life.
+- (C) Consulting GI for a long-term abdominal drain could offer symptom relief but may not fully address the broader concerns of quality of life and frequent hospitalizations.
+- (D) Referral to palliative care specifically addresses the patient's expressed concerns about quality of life and can provide comprehensive support for symptom management.
+- (E) Recommending surgery would involve additional hospital visits and potential complications, which does not align with the patient's expressed wishes.
+
+**Systematically Ensure Accuracy & Precision**
+
+Upon careful reconsideration, the patient's expressed desire for improved quality of life and fewer hospital visits, combined with her advanced disease state and multiple failed chemotherapy lines, strongly suggests that a palliative approach would be most appropriate. Palliative care specializes in symptom management and quality of life improvement, which directly addresses the patient's primary concerns. The other options either involve additional interventions that could potentially worsen quality of life or do not comprehensively address the patient's goals.
+
+**Final Answer**
+
+D) Refer the patient to palliative care to focus on symptom management and quality of life. This approach honors the patient's expressed wishes, acknowledges the advanced state of her disease, and provides the most comprehensive support for her primary concerns about quality of life.
