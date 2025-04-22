@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Refiner</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <header class="mb-4">
+            <h1 class="display-5 mb-2">Prompt Refiner</h1>
+            <p class="lead">Iteratively test and refine your LLM prompts with Vertex AI</p>
+            <hr>
+        </header>
+        
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+        
+        <div class="section-container">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>
+                                System Prompt
+                                <i class="fa-solid fa-circle-info help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Instructions that guide the model's overall behavior."></i>
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <textarea id="system-prompt" class="form-control prompt-textarea" placeholder="Enter your system prompt here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>
+                                Output Prompt
+                                <i class="fa-solid fa-circle-info help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Instructions for how the model should format its output."></i>
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <textarea id="output-prompt" class="form-control prompt-textarea" placeholder="Enter your output prompt here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="show-sample-prompts" class="btn btn-outline-secondary btn-sm mb-4">
+                <i class="fa-solid fa-lightbulb"></i> Load Sample Prompts
+            </button>
+        </div>
+        
+        <div class="section-container">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        Example Data
+                        <i class="fa-solid fa-circle-info help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Enter example data as CSV: each line should be user_input,ground_truth_output"></i>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <textarea id="examples-text" class="form-control examples-textarea" placeholder="Enter your example data as CSV: each line should be user_input,ground_truth_output"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="csv-file" class="form-label custom-file-upload">
+                            <i class="fa-solid fa-upload"></i> Upload CSV File
+                        </label>
+                        <input type="file" class="form-control" id="csv-file" accept=".csv">
+                        <div class="form-text">Upload a CSV file with user_input and ground_truth_output columns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between mb-4">
+            <button id="run-button" class="btn btn-primary">
+                <i class="fa-solid fa-play"></i> Run Evaluation
+            </button>
+            
+            <button id="save-button" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-save"></i> Save Prompts
+            </button>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="spinner" class="spinner-container text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Processing your request...</p>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="results-section" class="section-container" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fa-solid fa-chart-simple"></i> Evaluation Results
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="results-table" class="table table-bordered results-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%">#</th>
+                                    <th style="width: 25%">User Input</th>
+                                    <th style="width: 25%">Ground Truth Output</th>
+                                    <th style="width: 35%">Model Response</th>
+                                    <th style="width: 10%">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-body">
+                                <!-- Results will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bg-dark text-light py-3 mt-4">
+        <div class="container text-center">
+            <p>Prompt Refiner UI - Built with Vertex AI</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

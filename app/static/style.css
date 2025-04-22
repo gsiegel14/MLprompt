@@ -1,0 +1,82 @@
+/* Custom styles for Prompt Refiner UI */
+
+/* Add spacing to textareas */
+.prompt-textarea {
+    min-height: 200px;
+    margin-bottom: 15px;
+    font-family: monospace;
+    resize: vertical;
+}
+
+/* Examples textarea */
+.examples-textarea {
+    min-height: 150px;
+    font-family: monospace;
+    resize: vertical;
+}
+
+/* Results table */
+.results-table {
+    margin-top: 20px;
+}
+
+.results-table th,
+.results-table td {
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.results-table pre {
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+/* Score indicator */
+.score-perfect {
+    color: var(--bs-success);
+    font-weight: bold;
+}
+
+.score-partial {
+    color: var(--bs-warning);
+}
+
+.score-none {
+    color: var(--bs-danger);
+}
+
+/* Loading indicator */
+.spinner-container {
+    display: none;
+    margin: 20px 0;
+}
+
+/* Card headers */
+.card-header {
+    font-weight: bold;
+}
+
+/* Section spacing */
+.section-container {
+    margin-bottom: 30px;
+}
+
+/* Make the file input look nicer */
+.custom-file-upload {
+    cursor: pointer;
+}
+
+/* Response highlighting */
+.highlight-match {
+    background-color: rgba(40, 167, 69, 0.2);
+}
+
+.highlight-partial {
+    background-color: rgba(255, 193, 7, 0.2);
+}
+
+/* Help tooltips */
+.help-icon {
+    cursor: pointer;
+    margin-left: 5px;
+}

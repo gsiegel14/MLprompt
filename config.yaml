@@ -1,0 +1,22 @@
+# Vertex AI Configuration
+vertex_ai:
+  # Google Cloud Project ID
+  # If left empty, the application will use the GCP_PROJECT_ID environment variable
+  project_id: ''
+  
+  # Google Cloud location
+  location: 'us-central1'
+  
+  # Vertex AI model name
+  model_name: 'gemini-1.5-pro-preview-0409'
+
+# Application Configuration
+app:
+  # Maximum number of examples to process in a single request (0 for unlimited)
+  max_examples: 0
+  
+  # Enable caching of model responses (to avoid redundant API calls)
+  enable_caching: true
+  
+  # Debug mode (more verbose logging)
+  debug: true

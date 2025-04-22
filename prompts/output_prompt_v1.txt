@@ -1,0 +1,7 @@
+Please answer the following question:
+[Question]
+{user_input}
+[/Question]
+
+Your answer should be clear, accurate, and helpful.
+Keep your response concise and to the point.
