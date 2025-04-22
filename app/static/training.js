@@ -381,34 +381,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadMedicalPrompts() {
         showSpinner();
         
-        // Fetch system prompt
-        fetch('/prompts/system_prompt_advanced_medical.txt')
-            .then(response => response.text())
+        // Use the nejm_prompts endpoint which already has the logic to load these files
+        fetch('/load_dataset?type=nejm_prompts')
+            .then(response => response.json())
             .then(data => {
-                if (data) {
-                    systemPromptEl.value = data;
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else if (data.prompts) {
+                    systemPromptEl.value = data.prompts.system_prompt || '';
+                    outputPromptEl.value = data.prompts.output_prompt || '';
+                    showAlert('Medical prompts loaded successfully', 'success');
                 } else {
-                    showAlert('Failed to load medical system prompt', 'warning');
+                    showAlert('Failed to load medical prompts', 'warning');
                 }
             })
             .catch(error => {
-                console.error('Error loading medical system prompt:', error);
-                showAlert('Error loading medical system prompt', 'danger');
-            });
-            
-        // Fetch output prompt
-        fetch('/prompts/output_prompt_advanced_medical.txt')
-            .then(response => response.text())
-            .then(data => {
-                if (data) {
-                    outputPromptEl.value = data;
-                } else {
-                    showAlert('Failed to load medical output prompt', 'warning');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading medical output prompt:', error);
-                showAlert('Error loading medical output prompt', 'danger');
+                console.error('Error loading medical prompts:', error);
+                showAlert('Error loading medical prompts', 'danger');
             })
             .finally(() => {
                 hideSpinner();
