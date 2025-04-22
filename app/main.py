@@ -217,8 +217,8 @@ def load_dataset():
         elif dataset_type == 'nejm_prompts':
             # Load NEJM specialized prompts
             try:
-                system_prompt_path = os.path.join('prompts', 'system_prompt_advanced_medical.txt')
-                output_prompt_path = os.path.join('prompts', 'output_prompt_advanced_medical.txt')
+                system_prompt_path = 'prompts/system_prompt_advanced_medical.txt'
+                output_prompt_path = 'prompts/output_prompt_advanced_medical.txt'
                 
                 system_prompt = ""
                 output_prompt = ""
