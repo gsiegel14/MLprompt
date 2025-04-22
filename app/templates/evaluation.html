@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Evaluation - Prompt Refiner AI</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --light-accent: #f8f9fa;
+            --success-color: #4caf50;
+            --bg-gradient: linear-gradient(135deg, #ffffff, #f8f9fa);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            font-family: 'Inter', sans-serif;
+            color: #333;
+        }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .badge {
+            font-weight: 500;
+            padding: 0.5em 1em;
+            border-radius: 30px;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            background-color: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .metric-card {
+            border-left: 4px solid var(--primary-color);
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .metric-title {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4 mb-5">
+        <header class="text-center mb-4">
+            <h1 class="display-4 mb-2">
+                <i class="fa-solid fa-chart-line me-2"></i> Prompt Evaluation
+            </h1>
+            <p class="lead">Test, evaluate and improve your prompts with precision metrics</p>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="badge bg-primary text-white px-3 py-2 me-2">
+                    <i class="fa-solid fa-robot me-1"></i> LLM Powered
+                </div>
+                <div class="badge bg-info text-white px-3 py-2">
+                    <i class="fa-solid fa-chart-simple me-1"></i> Advanced Metrics
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="/" class="btn btn-outline-primary me-2">
+                    <i class="fa-solid fa-home me-1"></i> Home
+                </a>
+                <a href="/training" class="btn btn-outline-secondary me-2">
+                    <i class="fa-solid fa-graduation-cap me-1"></i> Training
+                </a>
+                <a href="/final_prompts" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-check-circle me-1"></i> Final Prompts
+                </a>
+            </div>
+        </header>
+
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Left Column: Evaluation Configuration -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-sliders me-2"></i> Evaluation Configuration
+                    </div>
+                    <div class="card-body">
+                        <form id="evaluation-form">
+                            <div class="mb-3">
+                                <label for="eval-dataset" class="form-label">
+                                    Dataset Selection
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                                       title="Choose which dataset to use for evaluation."></i>
+                                </label>
+                                <select class="form-select" id="eval-dataset">
+                                    <option value="validation" selected>Validation Dataset</option>
+                                    <option value="training">Training Dataset</option>
+                                    <option value="nejm_validation">NEJM Validation</option>
+                                </select>
+                                <div class="form-text">Dataset used for evaluating prompt performance</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="evaluation-system-prompt" class="form-label">
+                                    Evaluation System Prompt
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                                       title="Special prompt for the evaluator LLM that determines how responses are evaluated."></i>
+                                </label>
+                                <textarea class="form-control" id="evaluation-system-prompt" rows="5" placeholder="Enter evaluation system prompt..."></textarea>
+                                <div class="form-text">This prompt tells the Evaluator LLM how to judge responses</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="evaluation-output-prompt" class="form-label">
+                                    Evaluation Output Prompt
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                                       title="Format instructions for how the evaluator should score and explain its reasoning."></i>
+                                </label>
+                                <textarea class="form-control" id="evaluation-output-prompt" rows="5" placeholder="Enter evaluation output prompt..."></textarea>
+                                <div class="form-text">Instructions for how the evaluator should format its scoring</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Metrics Selection
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                                       title="Choose which metrics to include in the evaluation."></i>
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="exact_match" id="metric-exact-match" checked>
+                                    <label class="form-check-label" for="metric-exact-match">
+                                        Exact Match
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="semantic_similarity" id="metric-semantic-similarity" checked>
+                                    <label class="form-check-label" for="metric-semantic-similarity">
+                                        Semantic Similarity
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="keyword_match" id="metric-keyword-match" checked>
+                                    <label class="form-check-label" for="metric-keyword-match">
+                                        Keyword Match
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="llm_evaluation" id="metric-llm-evaluation" checked>
+                                    <label class="form-check-label" for="metric-llm-evaluation">
+                                        LLM-based Evaluation
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="eval-batch-size" class="form-label">
+                                    Batch Size
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                                       title="Number of examples to evaluate. Use 0 to process all available examples."></i>
+                                </label>
+                                <input type="number" min="0" max="100" class="form-control" id="eval-batch-size" value="10">
+                                <div class="form-text">Number of examples to evaluate (0 = all examples)</div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="button" id="run-evaluation-btn" class="btn btn-primary">
+                                    <i class="fa-solid fa-play me-2"></i> Run Evaluation
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prompt Selection -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-list-check me-2"></i> Prompt Selection
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="experiment-select" class="form-label">Select Experiment</label>
+                            <select class="form-select" id="experiment-select">
+                                <option value="" selected>Select an experiment...</option>
+                                <!-- Experiments will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="iteration-select" class="form-label">Select Iteration</label>
+                            <select class="form-select" id="iteration-select" disabled>
+                                <option value="" selected>Select iteration...</option>
+                                <!-- Iterations will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="button" id="load-prompt-btn" class="btn btn-outline-primary" disabled>
+                                <i class="fa-solid fa-download me-2"></i> Load Selected Prompt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column: Prompts & Results -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-keyboard me-2"></i> Primary Prompts
+                            <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip"
+                               title="These are the prompts being evaluated. System Prompt provides context and instructions for the LLM, while Output Prompt defines the format of the response."></i>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="prompt-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-tab-pane" type="button" role="tab" aria-controls="system-tab-pane" aria-selected="true">System Prompt</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-tab-pane" type="button" role="tab" aria-controls="output-tab-pane" aria-selected="false">Output Prompt</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="prompt-tab-content">
+                            <div class="tab-pane fade show active" id="system-tab-pane" role="tabpanel" aria-labelledby="system-tab" tabindex="0">
+                                <div class="mb-3">
+                                    <textarea id="system-prompt" class="form-control prompt-textarea" rows="10" placeholder="Enter system prompt..."></textarea>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="output-tab-pane" role="tabpanel" aria-labelledby="output-tab" tabindex="0">
+                                <div class="mb-3">
+                                    <textarea id="output-prompt" class="form-control prompt-textarea" rows="10" placeholder="Enter output prompt..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Overview -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-gauge-high me-2"></i> Evaluation Overview
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <div class="metric-card">
+                                    <div class="metric-title">Average Score</div>
+                                    <div class="metric-value" id="avg-score">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card">
+                                    <div class="metric-title">Perfect Matches</div>
+                                    <div class="metric-value" id="perfect-matches">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card">
+                                    <div class="metric-title">Total Examples</div>
+                                    <div class="metric-value" id="total-examples">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card">
+                                    <div class="metric-title">Match Rate</div>
+                                    <div class="metric-value" id="match-rate">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <div class="chart-container">
+                                <canvas id="metrics-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Detailed Results -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-list-check me-2"></i> Evaluation Results
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table id="results-table" class="table table-hover results-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%">#</th>
+                                        <th style="width: 20%">User Input</th>
+                                        <th style="width: 20%">Ground Truth</th>
+                                        <th style="width: 25%">Model Response</th>
+                                        <th style="width: 20%">Evaluation</th>
+                                        <th style="width: 10%">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- Results will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Actions
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" id="save-evaluation-btn" class="btn btn-outline-primary">
+                                <i class="fa-solid fa-save me-2"></i> Save Evaluation Results
+                            </button>
+                            <button type="button" id="optimize-from-evaluation-btn" class="btn btn-success">
+                                <i class="fa-solid fa-arrow-up-right-dots me-2"></i> Optimize Prompts
+                            </button>
+                            <button type="button" id="go-to-final-btn" class="btn btn-outline-info">
+                                <i class="fa-solid fa-arrow-right me-2"></i> Go to Final Prompts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="spinner" class="spinner-container text-center" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-primary">Processing your request...</p>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-1">Prompt Refiner AI - Built with Gemini</p>
+            <small class="text-muted">Fine-tune your AI prompts for optimal results</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='evaluation.js') }}"></script>
+</body>
+</html>

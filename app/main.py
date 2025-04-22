@@ -58,6 +58,16 @@ def index():
 def training():
     """Render the ML training interface."""
     return render_template('training.html')
+    
+@app.route('/evaluation')
+def evaluation():
+    """Render the prompt evaluation interface."""
+    return render_template('evaluation.html')
+    
+@app.route('/final_prompts')
+def final_prompts():
+    """Render the final prompts interface."""
+    return render_template('final_prompts.html')
 
 @app.route('/prompts/<path:filename>')
 def serve_prompt_file(filename):
