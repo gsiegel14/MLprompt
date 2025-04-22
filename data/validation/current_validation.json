@@ -1,10 +1,10 @@
 [
   {
-    "user_input": "A 22-year-old female presents with malar rash",
-    "ground_truth_output": "joint pain, fatigue, and photosensitivity. Lab results show positive ANA, anti-dsDNA antibodies, and low complement levels.,Systemic lupus erythematosus"
+    "user_input": "A 70-year-old male with a 40 pack-year smoking history presents with chronic productive cough",
+    "ground_truth_output": "progressive dyspnea, and recurrent respiratory infections. Spirometry shows FEV1/FVC < 0.7.,Chronic obstructive pulmonary disease"
   },
   {
-    "user_input": "A 55-year-old male with history of hypertension and smoking presents with sudden onset of worst headache of his life",
-    "ground_truth_output": "vomiting, and neck stiffness. BP is 180/110, confusion is present on exam.,Subarachnoid hemorrhage"
+    "user_input": "A 30-year-old female presents with episodic palpitations",
+    "ground_truth_output": "tremors, weight loss despite increased appetite, heat intolerance, and anxiety. Examination reveals tachycardia, fine tremor, and exophthalmos.,Graves' disease"
   }
 ]

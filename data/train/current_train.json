@@ -1,23 +1,19 @@
 [
   {
-    "user_input": "A 70-year-old male with a 40 pack-year smoking history presents with chronic productive cough",
-    "ground_truth_output": "progressive dyspnea, and recurrent respiratory infections. Spirometry shows FEV1/FVC < 0.7.,Chronic obstructive pulmonary disease"
-  },
-  {
-    "user_input": "A 68-year-old female with a history of smoking presents with progressive shortness of breath over 3 months",
-    "ground_truth_output": "weight loss, and a persistent cough. Chest X-ray shows a 3 cm mass in the right upper lobe.,Lung cancer"
+    "user_input": "An 8-year-old boy presents with fever",
+    "ground_truth_output": "sore throat, tender cervical lymphadenopathy, and tonsillar exudates. Rapid strep test is positive.,Streptococcal pharyngitis"
   },
   {
     "user_input": "A 45-year-old male presents with sudden onset crushing chest pain radiating to his left arm and jaw. Pain started 2 hours ago while resting. He is diaphoretic with BP 160/95",
     "ground_truth_output": "pulse 110, respirations 22.,Acute myocardial infarction"
   },
   {
-    "user_input": "A 30-year-old female presents with episodic palpitations",
-    "ground_truth_output": "tremors, weight loss despite increased appetite, heat intolerance, and anxiety. Examination reveals tachycardia, fine tremor, and exophthalmos.,Graves' disease"
+    "user_input": "A 68-year-old female with a history of smoking presents with progressive shortness of breath over 3 months",
+    "ground_truth_output": "weight loss, and a persistent cough. Chest X-ray shows a 3 cm mass in the right upper lobe.,Lung cancer"
   },
   {
-    "user_input": "A 50-year-old female with a history of hypertension reports severe headaches",
-    "ground_truth_output": "palpitations, and excessive sweating. BP is 190/110, and plasma metanephrines are elevated.,Pheochromocytoma"
+    "user_input": "A 22-year-old female presents with malar rash",
+    "ground_truth_output": "joint pain, fatigue, and photosensitivity. Lab results show positive ANA, anti-dsDNA antibodies, and low complement levels.,Systemic lupus erythematosus"
   },
   {
     "user_input": "A 60-year-old male with a history of alcoholism presents with confusion",
@@ -28,7 +24,11 @@
     "ground_truth_output": "cold intolerance, weight gain, and constipation for the past 6 months. Physical exam reveals dry skin, brittle hair, and slowed reflexes. TSH is elevated at 12 mIU/L.,Hypothyroidism"
   },
   {
-    "user_input": "An 8-year-old boy presents with fever",
-    "ground_truth_output": "sore throat, tender cervical lymphadenopathy, and tonsillar exudates. Rapid strep test is positive.,Streptococcal pharyngitis"
+    "user_input": "A 50-year-old female with a history of hypertension reports severe headaches",
+    "ground_truth_output": "palpitations, and excessive sweating. BP is 190/110, and plasma metanephrines are elevated.,Pheochromocytoma"
+  },
+  {
+    "user_input": "A 55-year-old male with history of hypertension and smoking presents with sudden onset of worst headache of his life",
+    "ground_truth_output": "vomiting, and neck stiffness. BP is 180/110, confusion is present on exam.,Subarachnoid hemorrhage"
   }
 ]
