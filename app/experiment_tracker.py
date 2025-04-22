@@ -208,7 +208,8 @@ class ExperimentTracker:
                     "metrics": metrics_data.get('metrics', {}),
                     "system_prompt": prompts_data.get('system_prompt', ''),
                     "output_prompt": prompts_data.get('output_prompt', ''),
-                    "reasoning": reasoning
+                    "reasoning": reasoning,
+                    "optimizer_reasoning": reasoning  # Add this for backward compatibility with tests
                 })
             
             # Sort by iteration

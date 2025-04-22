@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "components_tested": 1,
+    "components_passed": 0,
+    "success_rate": 0.0,
+    "timestamp": "2025-04-22 14:55:29"
+  },
+  "results": {
+    "tracker": {
+      "success": false,
+      "error": "'optimizer_reasoning'",
+      "details": {},
+      "memory_usage": {
+        "before": 18.375,
+        "after": 120.4296875,
+        "difference": 102.0546875
+      }
+    }
+  }
+}

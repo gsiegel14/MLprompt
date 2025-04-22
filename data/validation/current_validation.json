@@ -1,10 +1,10 @@
 [
   {
-    "user_input": "Dr. Joshua U. Okonkwo (Neurology): An 80-year-old man was evaluated in the neurology clinic of this hospital because of left foot drop. The patient had been in his usual state of health until 5 years ...",
-    "ground_truth_output": "Facioscapulohumeral muscular dystrophy."
+    "user_input": "A 22-year-old female presents with malar rash",
+    "ground_truth_output": "joint pain, fatigue, and photosensitivity. Lab results show positive ANA, anti-dsDNA antibodies, and low complement levels.,Systemic lupus erythematosus"
   },
   {
-    "user_input": "Dr. Vishwajith Sridharan (Medicine): An 82-year-old woman was admitted to this hospital with pain\\",
-    "ground_truth_output": "swelling\\\\, and ecchymosis of the left arm. The pat..."
+    "user_input": "A 55-year-old male with history of hypertension and smoking presents with sudden onset of worst headache of his life",
+    "ground_truth_output": "vomiting, and neck stiffness. BP is 180/110, confusion is present on exam.,Subarachnoid hemorrhage"
   }
 ]
