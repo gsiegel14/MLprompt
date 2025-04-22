@@ -1513,11 +1513,60 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the model results modal
         showModelResults(modelResultsData);
         
-        // Automatically switch to the Examples tab and Comparison view
+        // Automatically switch to the Comparisons tab
         setTimeout(() => {
-            document.getElementById('examples-tab').click();
-            toggleExampleView('comparison');
+            document.getElementById('comparisons-tab').click();
+            updateComparisonTabView();
         }, 300);
+    }
+    
+    // Update the comparison tab view
+    function updateComparisonTabView() {
+        if (!currentExamples || currentExamples.length === 0) {
+            document.getElementById('comparison-content').style.display = 'none';
+            document.getElementById('no-comparison-examples').style.display = 'block';
+            return;
+        }
+        
+        document.getElementById('comparison-content').style.display = 'block';
+        document.getElementById('no-comparison-examples').style.display = 'none';
+        
+        // Update the navigation counter
+        document.getElementById('comparison-example-counter').textContent = 
+            `Example ${currentExampleIndex + 1} of ${currentExamples.length}`;
+        
+        // Disable/enable navigation buttons as needed
+        document.getElementById('comparison-prev-example').disabled = currentExampleIndex === 0;
+        document.getElementById('comparison-next-example').disabled = currentExampleIndex === currentExamples.length - 1;
+        
+        // Get the current example
+        const example = currentExamples[currentExampleIndex];
+        
+        // Update the comparison view content
+        document.getElementById('comparison-user-input').textContent = example.user_input || '';
+        document.getElementById('comparison-ground-truth').textContent = example.ground_truth_output || '';
+        document.getElementById('comparison-model-response').textContent = example.model_response || '';
+        document.getElementById('comparison-improved-response').textContent = example.improved_response || example.model_response || '';
+        
+        // Update scores
+        const initialScore = example.score ? (example.score * 100).toFixed(1) : '0.0';
+        document.getElementById('comparison-initial-score').textContent = `Score: ${initialScore}%`;
+        
+        // If there's an improved response with a score
+        let improvedScore = initialScore;
+        if (example.improved_score) {
+            improvedScore = (example.improved_score * 100).toFixed(1);
+        }
+        document.getElementById('comparison-improved-score').textContent = `Score: ${improvedScore}%`;
+        
+        // Highlight score improvement
+        if (parseFloat(improvedScore) > parseFloat(initialScore)) {
+            document.getElementById('comparison-improved-score').classList.remove('bg-secondary');
+            document.getElementById('comparison-improved-score').classList.add('bg-success');
+        } else {
+            document.getElementById('comparison-improved-score').classList.remove('bg-success');
+            document.getElementById('comparison-improved-score').classList.add('bg-secondary');
+        }
     }
     
     // Show spinner with safety timeout
