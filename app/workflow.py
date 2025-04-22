@@ -148,6 +148,22 @@ class PromptOptimizationWorkflow:
                 # Process in very small chunks to prevent memory issues
                 max_chunk_size = min(5, len(batch))  # Reduced to 5 examples per chunk for more reliable processing
                 logger.info(f"Processing in chunks of {max_chunk_size} examples")
+                
+                # Create a log file for detailed process tracking
+                from datetime import datetime
+                import traceback
+                
+                log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                process_log_file = f"logs/process_details_{experiment_id}_{log_timestamp}.log"
+                os.makedirs("logs", exist_ok=True)
+                
+                with open(process_log_file, 'w') as log_file:
+                    log_file.write(f"=== TRAINING PROCESS LOG - Experiment {experiment_id} - {log_timestamp} ===\n")
+                    log_file.write(f"System prompt length: {len(current_system_prompt)} chars\n")
+                    log_file.write(f"Output prompt length: {len(current_output_prompt)} chars\n")
+                    log_file.write(f"Batch size: {effective_batch_size}, Chunk size: {max_chunk_size}\n")
+                    log_file.write(f"Total examples: {len(batch)}\n")
+                    log_file.write("="*80 + "\n\n")
                 for chunk_start in range(0, len(batch), max_chunk_size):
                     chunk_end = min(chunk_start + max_chunk_size, len(batch))
                     logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")

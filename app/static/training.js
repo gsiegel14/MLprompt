@@ -1363,45 +1363,147 @@ document.addEventListener('DOMContentLoaded', function() {
             // Detailed error logging and display
             console.error('Error in training:', error);
             
-            // Handle errors without a message property
-            const errorMessage = error.message || "An unknown error occurred with the training process";
+            // Default error information
+            let errorMessage = "An unknown error occurred with the training process";
+            let errorType = "unknown";
+            let errorDetails = "";
             
-            // Create a detailed error message with timestamp
-            const errorTimestamp = new Date().toLocaleTimeString();
-            const errorMsg = `Training failed at ${errorTimestamp}: ${errorMessage}`;
+            // Try to parse error response from the server
+            if (error.json) {
+                // This is a response object
+                error.json().then(errorData => {
+                    // Process the parsed JSON error data
+                    processErrorData(errorData);
+                }).catch(() => {
+                    // If JSON parsing fails, use basic error info
+                    processErrorData({ 
+                        error: error.statusText || error.message || errorMessage,
+                        type: "server"
+                    });
+                });
+            } else if (error.response) {
+                // This is an Error object with a response property
+                try {
+                    const errorData = typeof error.response === 'object' ? error.response : JSON.parse(error.response);
+                    processErrorData(errorData);
+                } catch (e) {
+                    processErrorData({
+                        error: error.message || errorMessage,
+                        type: "parsing"
+                    });
+                }
+            } else {
+                // Generic error without structured data
+                processErrorData({
+                    error: error.message || errorMessage,
+                    type: "general"
+                });
+            }
             
-            // Show prominent error alert
-            showAlert(errorMsg, 'danger');
-            
-            // Add detailed error to logs
-            log(`ERROR: ${errorMessage}`);
-            
-            // Create and append detailed error card to training logs
-            const errorCard = document.createElement('div');
-            errorCard.className = 'card border-danger mb-3 mt-2';
-            errorCard.innerHTML = `
-                <div class="card-header bg-danger text-white">
-                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                    Training Error at ${errorTimestamp}
-                </div>
-                <div class="card-body text-danger">
-                    <h5 class="card-title">Error Details</h5>
-                    <p class="card-text">${errorMessage}</p>
-                    <p class="card-text small">Check the browser console and server logs for more information.</p>
-                    <button class="btn btn-sm btn-outline-danger retry-btn">
-                        <i class="fa-solid fa-rotate me-1"></i> Retry Training
-                    </button>
-                </div>
-            `;
-            
-            // Add retry functionality
-            const retryBtn = errorCard.querySelector('.retry-btn');
-            retryBtn.addEventListener('click', () => {
-                errorCard.remove();
-                startTraining();
-            });
-            
-            trainingLogsEl.appendChild(errorCard);
+            function processErrorData(errorData) {
+                // Extract error information from the parsed data
+                errorMessage = errorData.error || errorMessage;
+                errorType = errorData.type || errorType;
+                errorDetails = errorData.details || "";
+                
+                // Create a detailed error message with timestamp
+                const errorTimestamp = new Date().toLocaleTimeString();
+                const errorMsg = `Training failed at ${errorTimestamp}: ${errorMessage}`;
+                
+                // Show prominent error alert
+                showAlert(errorMsg, 'danger');
+                
+                // Add detailed error to logs
+                log(`ERROR: ${errorMessage} (Type: ${errorType})`);
+                
+                // Create user-friendly recommendations based on error type
+                let recommendations = "";
+                if (errorType === "memory") {
+                    recommendations = `
+                        <strong>Recommendations:</strong>
+                        <ul>
+                            <li>Reduce batch size (try 2-3 examples)</li>
+                            <li>Reduce the number of iterations</li>
+                            <li>Try shorter examples or use fewer examples</li>
+                        </ul>
+                    `;
+                } else if (errorType === "timeout") {
+                    recommendations = `
+                        <strong>Recommendations:</strong>
+                        <ul>
+                            <li>Reduce batch size (try 2-3 examples)</li>
+                            <li>Reduce the number of iterations</li>
+                            <li>Try a simpler optimizer strategy</li>
+                        </ul>
+                    `;
+                } else if (errorType === "api" || errorMessage.includes("API")) {
+                    recommendations = `
+                        <strong>Recommendations:</strong>
+                        <ul>
+                            <li>Check that your API key is valid</li>
+                            <li>The API service might be experiencing high traffic</li>
+                            <li>Wait a few minutes and try again with smaller batch size</li>
+                        </ul>
+                    `;
+                } else {
+                    recommendations = `
+                        <strong>Recommendations:</strong>
+                        <ul>
+                            <li>Try with a smaller batch size (2-3 examples)</li>
+                            <li>Reduce the number of iterations</li>
+                            <li>Check if your examples have the correct format</li>
+                        </ul>
+                    `;
+                }
+                
+                // Create and append detailed error card to training logs
+                const errorCard = document.createElement('div');
+                errorCard.className = 'card border-danger mb-3 mt-2';
+                errorCard.innerHTML = `
+                    <div class="card-header bg-danger text-white">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        Training Error at ${errorTimestamp}
+                    </div>
+                    <div class="card-body text-danger">
+                        <h5 class="card-title">Error Details</h5>
+                        <p class="card-text">${errorMessage}</p>
+                        ${errorDetails ? `<p class="card-text small">${errorDetails}</p>` : ''}
+                        ${recommendations}
+                        <p class="card-text small">Check the browser console and server logs for more information.</p>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-danger retry-btn me-2">
+                                <i class="fa-solid fa-rotate me-1"></i> Retry Training
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary reduce-batch-btn">
+                                <i class="fa-solid fa-arrow-down me-1"></i> Retry with Smaller Batch
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add retry functionality
+                const retryBtn = errorCard.querySelector('.retry-btn');
+                retryBtn.addEventListener('click', () => {
+                    errorCard.remove();
+                    startTraining();
+                });
+                
+                // Add reduce batch and retry functionality
+                const reduceBatchBtn = errorCard.querySelector('.reduce-batch-btn');
+                reduceBatchBtn.addEventListener('click', () => {
+                    errorCard.remove();
+                    // Get current batch size
+                    const batchSizeInput = document.getElementById('batch-size');
+                    const currentBatchSize = parseInt(batchSizeInput.value);
+                    // Set to a smaller value (minimum 2)
+                    const newBatchSize = Math.max(2, Math.min(currentBatchSize - 3, Math.floor(currentBatchSize / 2)));
+                    batchSizeInput.value = newBatchSize;
+                    log(`Reduced batch size from ${currentBatchSize} to ${newBatchSize}`);
+                    startTraining();
+                });
+                
+                trainingLogsEl.appendChild(errorCard);
+            }
         })
         .finally(() => {
             hideSpinner();

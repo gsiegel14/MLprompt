@@ -979,7 +979,22 @@ def two_stage_train():
     from datetime import datetime
     log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file_path = f"logs/two_stage_{log_timestamp}.log"
-    os.makedirs("logs", exist_ok=True)
+    
+    # Ensure all required directories exist
+    required_dirs = [
+        "logs",
+        "data/train",
+        "data/validation",
+        "experiments",
+        "prompts"
+    ]
+    for directory in required_dirs:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Ensuring directory exists: {directory}")
+    
+    # Write to log file
+    with open(log_file_path, 'w') as f:
+        f.write(f"=== TWO-STAGE TRAINING SESSION STARTED AT {log_timestamp} ===\n")
     
     logger.info(f"========== TWO-STAGE TRAINING RUN STARTED AT {log_timestamp} ==========")
     
@@ -1059,21 +1074,84 @@ def two_stage_train():
         # Set early stopping patience from config or use default
         early_stopping_patience = config.get('training', {}).get('early_stopping_patience', 2)
         
-        # Run the training cycle
-        result = prompt_workflow.run_training_cycle(
-            system_prompt=system_prompt,
-            output_prompt=output_prompt,
-            max_iterations=max_iterations,
-            early_stopping_patience=early_stopping_patience,
-            batch_size=batch_size,
-            optimizer_strategy=optimizer_strategy,
-            optimizer_type=optimizer_type
-        )
-        
-        return jsonify(result)
+        # Run the training cycle with enhanced error handling
+        try:
+            # Add memory management monitoring before training starts
+            import psutil
+            process = psutil.Process()
+            initial_memory = process.memory_info().rss / 1024 / 1024
+            logger.info(f"Memory usage before training: {initial_memory:.2f} MB")
+            
+            # Set timeout for the training cycle
+            import signal
+            from contextlib import contextmanager
+            
+            @contextmanager
+            def timeout(time):
+                # Register a function to raise a TimeoutError on the signal
+                signal.signal(signal.SIGALRM, lambda: (_ for _ in ()).throw(TimeoutError("Training cycle timed out")))
+                signal.alarm(time)
+                try:
+                    yield
+                finally:
+                    # Unregister the signal so it won't be triggered
+                    signal.signal(signal.SIGALRM, signal.SIG_IGN)
+                    signal.alarm(0)
+            
+            # Run with timeout protection (30 minutes max)
+            with timeout(1800):  # 30 minutes in seconds
+                result = prompt_workflow.run_training_cycle(
+                    system_prompt=system_prompt,
+                    output_prompt=output_prompt,
+                    max_iterations=max_iterations,
+                    early_stopping_patience=early_stopping_patience,
+                    batch_size=batch_size,
+                    optimizer_strategy=optimizer_strategy,
+                    optimizer_type=optimizer_type
+                )
+                
+                # Record final memory usage
+                final_memory = process.memory_info().rss / 1024 / 1024
+                logger.info(f"Memory usage after training: {final_memory:.2f} MB (change: {final_memory - initial_memory:.2f} MB)")
+                
+                # Force garbage collection at the end
+                import gc
+                gc.collect()
+                logger.info("Forced garbage collection after training")
+                
+                return jsonify(result)
+                
+        except TimeoutError as e:
+            error_message = "Training cycle timed out after 30 minutes. Try reducing batch size or number of iterations."
+            logger.error(f"Timeout error in training: {error_message}")
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_message}\n")
+            return jsonify({'error': error_message, 'type': 'timeout'}), 500
+            
+        except MemoryError as e:
+            error_message = "Out of memory during training. Try reducing batch size or using shorter examples."
+            logger.error(f"Memory error in training: {error_message}")
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_message}\n")
+            # Force garbage collection
+            gc.collect()
+            return jsonify({'error': error_message, 'type': 'memory'}), 500
+            
+        except Exception as e:
+            error_message = f"Error in training cycle: {str(e)}"
+            logger.error(error_message)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_message}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_message, 'type': 'general'}), 500
+            
     except Exception as e:
-        logger.error(f"Error in two-stage training cycle: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Outer try-except to handle any errors in the error handling code itself
+        logger.error(f"Critical error in two-stage training cycle: {e}")
+        logger.error(traceback.format_exc())
+        with open(log_file_path, 'a') as f:
+            f.write(f"CRITICAL ERROR: {str(e)}\n{traceback.format_exc()}\n")
+        return jsonify({'error': f"A critical error occurred: {str(e)}", 'type': 'critical'}), 500
         
 @app.route('/validate_prompts', methods=['POST'])
 def validate_prompts():
