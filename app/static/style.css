@@ -69,6 +69,16 @@ pre, code {
     border-radius: var(--border-radius);
 }
 
+.form-label {
+    color: var(--grey-text-color);
+    background-color: #ffffff;
+}
+
+.form-text {
+    color: var(--grey-text-color);
+    background-color: #ffffff;
+}
+
 .form-control:focus, .form-select:focus {
     background-color: #ffffff;
     border-color: var(--accent-color);
