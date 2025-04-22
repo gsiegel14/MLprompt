@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
     // UI Elements
     const experimentsBodyEl = document.getElementById('experiments-body');
@@ -177,12 +178,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         <div class="mb-3">
                             <h6>System Prompt:</h6>
-                            <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.system_prompt).substring(0, 200)}${iteration.system_prompt.length > 200 ? '...' : ''}</pre>
+                            <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.system_prompt || '').substring(0, 200)}${iteration.system_prompt && iteration.system_prompt.length > 200 ? '...' : ''}</pre>
                         </div>
                         
                         <div class="mb-3">
                             <h6>Output Prompt:</h6>
-                            <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.output_prompt).substring(0, 200)}${iteration.output_prompt.length > 200 ? '...' : ''}</pre>
+                            <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.output_prompt || '').substring(0, 200)}${iteration.output_prompt && iteration.output_prompt.length > 200 ? '...' : ''}</pre>
                         </div>
                         
                         ${index > 0 ? `
@@ -249,14 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('original-iteration').textContent = `Iteration ${original.iteration}`;
         document.getElementById('optimized-iteration').textContent = `Iteration ${optimized.iteration}`;
         
-        document.getElementById('original-system-prompt').textContent = original.system_prompt;
-        document.getElementById('optimized-system-prompt').textContent = optimized.system_prompt;
+        document.getElementById('original-system-prompt').textContent = original.system_prompt || '';
+        document.getElementById('optimized-system-prompt').textContent = optimized.system_prompt || '';
         
-        document.getElementById('original-output-prompt').textContent = original.output_prompt;
-        document.getElementById('optimized-output-prompt').textContent = optimized.output_prompt;
+        document.getElementById('original-output-prompt').textContent = original.output_prompt || '';
+        document.getElementById('optimized-output-prompt').textContent = optimized.output_prompt || '';
         
-        document.getElementById('original-score').textContent = `${(original.metrics?.avg_score * 100 || 0).toFixed(1)}%`;
-        document.getElementById('optimized-score').textContent = `${(optimized.metrics?.avg_score * 100 || 0).toFixed(1)}%`;
+        document.getElementById('original-score').textContent = `${((original.metrics?.avg_score || 0) * 100).toFixed(1)}%`;
+        document.getElementById('optimized-score').textContent = `${((optimized.metrics?.avg_score || 0) * 100).toFixed(1)}%`;
         
         document.getElementById('optimizer-reasoning').textContent = optimized.reasoning || 'No reasoning available';
         
@@ -265,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadExamplesBtn.onclick = () => loadExampleResults(original.iteration, optimized.iteration);
         
         // Reset examples container
-        document.getElementById('examples-container').innerHTML = `
+        document.getElementById('compare-examples-container').innerHTML = `
             <div class="p-4 text-center text-muted">
                 <p>Click "Load Examples" to see detailed results for each test case</p>
             </div>
@@ -278,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function loadExampleResults(originalIterationNumber, optimizedIterationNumber) {
         showSpinner();
-        const examplesContainer = document.getElementById('examples-container');
+        const examplesContainer = document.getElementById('compare-examples-container');
         
         // Get examples for both iterations
         Promise.all([
@@ -319,8 +320,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add filters and statistics summary
             const perfectOriginal = originalExamples.filter(ex => ex.score >= 0.9).length;
             const perfectOptimized = optimizedExamples.filter(ex => ex.score >= 0.9).length;
-            const avgScoreOriginal = originalExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / originalExamples.length;
-            const avgScoreOptimized = optimizedExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / optimizedExamples.length;
+            const avgScoreOriginal = originalExamples.length > 0 ? originalExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / originalExamples.length : 0;
+            const avgScoreOptimized = optimizedExamples.length > 0 ? optimizedExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / optimizedExamples.length : 0;
             
             const summaryEl = document.createElement('div');
             summaryEl.className = 'mb-4 p-3 bg-light border rounded';
@@ -496,120 +497,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function setupHistoryChart() {
-        const ctx = document.getElementById('history-chart').getContext('2d');
-        historyChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    {
-                        label: 'Average Score',
-                        data: [],
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Perfect Match %',
-                        data: [],
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        });
-    }
-    
-    function updateHistoryChart(iterations) {
-        const labels = iterations.map(item => `Iteration ${item.iteration}`);
-        const avgScores = iterations.map(item => (item.metrics?.avg_score || 0) * 100);
-        const perfectMatches = iterations.map(item => item.metrics?.perfect_match_percent || 0);
-        
-        historyChart.data.labels = labels;
-        historyChart.data.datasets[0].data = avgScores;
-        historyChart.data.datasets[1].data = perfectMatches;
-        historyChart.update();
-    }
-    
-    function showExperimentsList() {
-        experimentDetailsEl.style.display = 'none';
-        compareViewEl.style.display = 'none';
-    }
-    
-    function showExperimentDetails() {
-        experimentDetailsEl.style.display = 'block';
-        compareViewEl.style.display = 'none';
-    }
-    
-    function showSpinner() {
-        spinner.style.display = 'flex';
-    }
-    
-    function hideSpinner() {
-        spinner.style.display = 'none';
-    }
-    
-    function showAlert(message, type = 'info') {
-        const alertContainer = document.getElementById('alert-container');
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type} alert-dismissible fade show`;
-        alert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        alertContainer.appendChild(alert);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            const alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
-            alertInstance.close();
-        }, 5000);
-    }
-    
     // Examples handling
     function loadExamplesForIteration(iteration) {
         const examplesContainer = document.getElementById('examples-container');
+        // Check if examplesContainer exists
+        if (!examplesContainer) {
+            console.error('Examples container not found');
+            showAlert('Error: Examples container not found', 'danger');
+            return;
+        }
+        
         const examplesLoading = document.getElementById('examples-loading');
         const noExamplesMessage = document.getElementById('no-examples-message');
+        
+        if (!examplesLoading || !noExamplesMessage) {
+            console.error('Examples loading elements not found');
+            showAlert('Error: Examples loading elements not found', 'danger');
+            return;
+        }
         
         // Reset container and show loading
         const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
         examplesList.forEach(el => el.remove());
         examplesLoading.style.display = 'block';
         noExamplesMessage.style.display = 'none';
+        
+        if (!currentExperimentData || !currentExperimentData.iterations) {
+            console.error('Current experiment data not available');
+            examplesLoading.style.display = 'none';
+            noExamplesMessage.style.display = 'block';
+            showAlert('Error: No experiment data available', 'danger');
+            return;
+        }
         
         // Find the iteration data from the currently loaded experiment
         const iterationData = currentExperimentData.iterations.find(it => it.iteration === iteration);
@@ -657,22 +576,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function renderExamples(examples) {
         const examplesContainer = document.getElementById('examples-container');
+        if (!examplesContainer) {
+            console.error('Examples container not found');
+            return;
+        }
         
         // Clear any existing examples
         const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
         examplesList.forEach(el => el.remove());
         
         // Get current filter
-        const activeFilter = document.querySelector('.filter-examples.active').getAttribute('data-filter');
+        const activeFilter = document.querySelector('.filter-examples.active');
+        if (!activeFilter) {
+            console.error('Active filter not found');
+            return;
+        }
+        
+        const activeFilterValue = activeFilter.getAttribute('data-filter');
         
         // Sort examples by score (highest first)
         examples.sort((a, b) => (b.score || 0) - (a.score || 0));
         
         // Apply filter
         let filteredExamples = examples;
-        if (activeFilter === 'perfect') {
+        if (activeFilterValue === 'perfect') {
             filteredExamples = examples.filter(ex => ex.score >= 0.9);
-        } else if (activeFilter === 'imperfect') {
+        } else if (activeFilterValue === 'imperfect') {
             filteredExamples = examples.filter(ex => ex.score < 0.9);
         }
         
@@ -690,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show metrics summary
         const perfectMatches = examples.filter(ex => ex.score >= 0.9).length;
-        const avgScore = examples.reduce((sum, ex) => sum + (ex.score || 0), 0) / examples.length;
+        const avgScore = examples.length > 0 ? examples.reduce((sum, ex) => sum + (ex.score || 0), 0) / examples.length : 0;
         
         const summaryCard = document.createElement('div');
         summaryCard.className = 'card mb-4';
@@ -810,9 +739,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const activeIteration = document.querySelector('.accordion-collapse.show');
             if (activeIteration) {
                 const iterationId = activeIteration.id.replace('iteration-', '');
-                const iterationData = currentExperimentData.iterations[iterationId];
-                if (iterationData && iterationData.examples) {
-                    renderExamples(iterationData.examples);
+                if (currentExperimentData && currentExperimentData.iterations && iterationId) {
+                    const iterationData = currentExperimentData.iterations[iterationId];
+                    if (iterationData && iterationData.examples) {
+                        renderExamples(iterationData.examples);
+                    }
                 }
             } else if (currentExperimentData && currentExperimentData.iterations && 
                       currentExperimentData.iterations.length > 0 &&
@@ -822,12 +753,139 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
+    
+    function setupHistoryChart() {
+        const ctx = document.getElementById('history-chart');
+        if (!ctx) {
+            console.error('History chart canvas not found');
+            return;
+        }
         
-        function escapeHtml(text) {
+        historyChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Average Score',
+                        data: [],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Perfect Match %',
+                        data: [],
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    }
+    
+    function updateHistoryChart(iterations) {
+        if (!historyChart) {
+            console.error('History chart not initialized');
+            return;
+        }
+        
+        const labels = iterations.map(item => `Iteration ${item.iteration}`);
+        const avgScores = iterations.map(item => (item.metrics?.avg_score || 0) * 100);
+        const perfectMatches = iterations.map(item => item.metrics?.perfect_match_percent || 0);
+        
+        historyChart.data.labels = labels;
+        historyChart.data.datasets[0].data = avgScores;
+        historyChart.data.datasets[1].data = perfectMatches;
+        historyChart.update();
+    }
+    
+    function showExperimentsList() {
+        experimentDetailsEl.style.display = 'none';
+        compareViewEl.style.display = 'none';
+    }
+    
+    function showExperimentDetails() {
+        experimentDetailsEl.style.display = 'block';
+        compareViewEl.style.display = 'none';
+    }
+    
+    function showSpinner() {
+        spinner.style.display = 'flex';
+    }
+    
+    function hideSpinner() {
+        spinner.style.display = 'none';
+    }
+    
+    function showAlert(message, type = 'info') {
+        const alertContainer = document.getElementById('alert-container');
+        if (!alertContainer) {
+            console.error('Alert container not found');
+            return;
+        }
+        
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        alertContainer.appendChild(alert);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            try {
+                const alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
+                alertInstance.close();
+            } catch (error) {
+                console.error('Error auto-dismissing alert:', error);
+                alert.remove();
+            }
+        }, 5000);
+    }
+    
+    function escapeHtml(text) {
         if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        try {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        } catch (error) {
+            console.error('Error escaping HTML:', error);
+            return '';
+        }
     }
 });
