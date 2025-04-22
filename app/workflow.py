@@ -136,8 +136,8 @@ class PromptOptimizationWorkflow:
                 success_count = 0
                 error_count = 0
                 
-                # Limit batch size to prevent memory issues
-                max_batch_size = 100  # Increased limit to 100 examples
+                # Use a smaller, more conservative batch size to prevent memory issues
+                max_batch_size = 25  # Reduced from 100 to 25 examples for more reliable processing
                 if batch_size == 0 or batch_size > max_batch_size:
                     logger.info(f"Limiting batch size to {max_batch_size} examples (original: {batch_size})")
                     effective_batch_size = max_batch_size
@@ -145,8 +145,9 @@ class PromptOptimizationWorkflow:
                 else:
                     effective_batch_size = batch_size
                 
-                # Process in smaller chunks to prevent memory issues while still processing all examples
-                max_chunk_size = min(20, len(batch))  # Increased to 20 examples per chunk
+                # Process in very small chunks to prevent memory issues
+                max_chunk_size = min(5, len(batch))  # Reduced to 5 examples per chunk for more reliable processing
+                logger.info(f"Processing in chunks of {max_chunk_size} examples")
                 for chunk_start in range(0, len(batch), max_chunk_size):
                     chunk_end = min(chunk_start + max_chunk_size, len(batch))
                     logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")
@@ -170,10 +171,21 @@ class PromptOptimizationWorkflow:
                             # Evaluate the response
                             score = calculate_score(model_response, ground_truth)
                             
-                            # Aggressively truncate to reduce memory usage
-                            truncated_input = user_input[:500] + "..." if len(user_input) > 500 else user_input
-                            truncated_ground_truth = ground_truth[:500] + "..." if len(ground_truth) > 500 else ground_truth
-                            truncated_response = model_response[:1000] + "..." if len(model_response) > 1000 else model_response
+                            # More aggressively truncate to reduce memory usage
+                            # For NEJM medical cases which can be very long
+                            max_input_length = 300  # Reduced from 500 to 300
+                            max_ground_truth_length = 300  # Reduced from 500 to 300
+                            max_response_length = 500  # Reduced from 1000 to 500
+                            
+                            truncated_input = user_input[:max_input_length] + "..." if len(user_input) > max_input_length else user_input
+                            truncated_ground_truth = ground_truth[:max_ground_truth_length] + "..." if len(ground_truth) > max_ground_truth_length else ground_truth
+                            truncated_response = model_response[:max_response_length] + "..." if len(model_response) > max_response_length else model_response
+                            
+                            # Log the truncation amounts to monitor memory savings
+                            if len(user_input) > max_input_length or len(ground_truth) > max_ground_truth_length or len(model_response) > max_response_length:
+                                logger.info(f"Truncated example {i+1}: input {len(user_input)} → {len(truncated_input)}, " +
+                                           f"ground truth {len(ground_truth)} → {len(truncated_ground_truth)}, " +
+                                           f"response {len(model_response)} → {len(truncated_response)}")
                             
                             # Store the result
                             chunk_results.append({
@@ -216,10 +228,14 @@ class PromptOptimizationWorkflow:
                 gc.collect()  # Run garbage collection before optimization
                 logger.info("Forced garbage collection before starting optimization")
                 
-                # Use a representative set of examples for optimization, up to 15 examples
-                max_optimization_examples = 15  # Increased from 5 to 15
+                # Use a smaller set of examples for optimization to prevent memory issues
+                max_optimization_examples = 3  # Reduced from 15 to 3 for reliability
                 optimization_examples = results[:max_optimization_examples] if len(results) > max_optimization_examples else results
                 logger.info(f"Using {len(optimization_examples)} examples for optimization")
+                
+                # Add a short pause before optimization to help avoid rate limiting
+                logger.info("Pausing for 2 seconds before optimization to avoid rate limits...")
+                time.sleep(2)
                 
                 # Make a copy of examples for the experiment tracker (up to 15)
                 results_for_tracker = results[:max_optimization_examples] if len(results) > max_optimization_examples else results.copy()

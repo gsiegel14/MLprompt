@@ -1,1 +1,9 @@
-Based on the clinical information provided, determine the most likely diagnosis. Consider the patient's symptoms, medical history, physical examination findings, and any available test results. Provide only the final diagnosis without explanation.
+Analyze the provided medical case.  Provide your response in the following format:
+
+**1. Case Summary:** Briefly summarize the key clinical findings from the provided text.
+
+**2. Differential Diagnoses:** List at least three possible diagnoses, based on the information provided.  For each diagnosis, briefly explain why it is considered.
+
+**3. Diagnostic Reasoning:**  Explain your reasoning process step-by-step, considering the information in the case summary and the differential diagnoses.  Clearly state which diagnosis you believe is most likely and why.  If information is missing to make a definitive diagnosis, explain what information is missing and how its absence impacts your reasoning.
+
+**4. Final Diagnosis:**  State your final diagnosis.

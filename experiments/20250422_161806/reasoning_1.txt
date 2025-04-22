@@ -1,0 +1,14 @@
+Analysis of Existing Prompts:
+The current system prompt relies heavily on role-playing ("expert physician," "master diagnostician") and lengthy, specific instructions for handling various types of inappropriate user input. While the role-playing might seem helpful, it's not directly contributing to improved reasoning. The extensive list of restrictions, while necessary, is cumbersome and might distract from the core task of medical reasoning.  The few-shot examples in the system prompt are redundant, as the output prompt already provides its own few-shot examples.  This redundancy is inefficient and potentially confusing for the LLM.
+
+The current output prompt's structure (The Question, Design Strategy, Execute Strategy, Systematically Ensure Accuracy & Precision, Final Answer) is a good starting point but lacks specific guidance on *how* to execute each step. The few-shot examples in the output prompt demonstrate a structured approach, but they are too long and detailed, potentially overwhelming the LLM and encouraging rote memorization rather than generalization. The instruction to "supercede your pre-training" is vague and unlikely to have a practical effect.
+
+The examples show that the model struggles with:
+
+* **Incomplete Reasoning:** The model often starts the reasoning process but doesn't complete it, leaving out crucial steps or failing to consider all relevant information.
+* **Lack of Precise Explanation:** Even when the model gets to the correct answer, its explanations are often vague and lack the detail necessary to demonstrate a thorough understanding of the medical reasoning process.
+* **Over-reliance on Keywords:** The model seems to latch onto specific keywords in the input, leading to incorrect conclusions if the phrasing is slightly different.
+
+The revised system prompt removes the lengthy role-playing and focuses on clear, concise instructions that emphasize accurate reasoning and adherence to constraints.  The emphasis on avoiding hallucination and bias is crucial for improving the model's performance.  The instruction to decline inappropriate requests is retained but simplified.
+
+The revised output prompt maintains a structured format but simplifies it and provides more specific guidance on each step.  Requiring at least three differential diagnoses encourages a more thorough and systematic approach to diagnostic reasoning.  The explicit instruction to explain the reasoning process step-by-step, along with addressing missing information, directly addresses the identified reasoning deficiencies in the original examples.  The removal of the lengthy few-shot examples prevents the model from relying on memorization rather than generalizing the reasoning process.  The overall aim is to guide the LLM toward a more robust and generalized approach to medical reasoning.

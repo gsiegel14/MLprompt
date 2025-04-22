@@ -1,0 +1,14 @@
+Analysis of Existing Prompts:
+The current prompts, while providing a structured approach, lack explicit guidance on crucial reasoning steps.  The instructions are descriptive rather than prescriptive, leaving room for the model to skip steps or hallucinate details.  The examples highlight two key issues:
+
+1. **Insufficient constraint on information usage:** The model incorporates information not directly stated in the user input, creating hallucinations (e.g., details about surgery in Example 1, specific treatment details in Example 2).  The instruction to "Base your reasoning solely on the provided text" is weak and not effectively enforced.
+
+2. **Lack of explicit reasoning scaffolding:** The prompt encourages a step-by-step approach, but doesn't provide a structured framework to guide the model through the process of elimination and justification. The model jumps to conclusions without adequately exploring and dismissing alternative diagnoses.  The "Differential Diagnoses" section is too open-ended.
+
+The revised prompts address the identified weaknesses:
+
+1. **Stronger constraints on information usage:** The phrase "Use only the provided text" is more assertive than the original "Base your reasoning solely on the provided text."  The added emphasis on textual evidence in the output prompt further reinforces this constraint.
+
+2. **Explicit reasoning scaffolding:** The output prompt now demands specific justifications for each differential diagnosis and a detailed step-by-step reasoning process.  The requirement to show the elimination process forces the model to engage in more thorough reasoning.  The addition of "with justification" in section 2 and the more detailed description of section 3 are key here.  The structure is more prescriptive, leading the model through a logical process.
+
+The changes are minimal but strategically placed to improve the model's adherence to logical reasoning and reduce hallucinations by enforcing stricter constraints on information usage and guiding the model through a more structured reasoning process.
