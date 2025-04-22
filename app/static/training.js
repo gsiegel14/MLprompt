@@ -785,19 +785,44 @@ document.addEventListener('DOMContentLoaded', function() {
         const comparisonContent = document.getElementById('comparison-content');
         
         if (currentExamples && currentExamples.length > 0) {
-            noComparisonExamples.style.display = 'none';
-            comparisonContent.style.display = 'block';
-            
-            // Auto-select the comparisons tab to show it first
-            // This makes the response comparisons more prominent
-            setTimeout(() => {
-                const comparisonsTab = document.getElementById('comparisons-tab');
-                // Create a Bootstrap tab instance and show it
-                const tab = new bootstrap.Tab(comparisonsTab);
-                tab.show();
-                // Also update the comparison view
+            try {
+                console.log(`Setting up comparison view with ${currentExamples.length} examples`);
+                
+                if (noComparisonExamples) {
+                    noComparisonExamples.style.display = 'none';
+                } else {
+                    console.warn("no-comparison-examples element not found");
+                }
+                
+                if (comparisonContent) {
+                    comparisonContent.style.display = 'block';
+                } else {
+                    console.warn("comparison-content element not found");
+                }
+                
+                // First ensure all tabs are properly prepared
                 updateComparisonTabView();
-            }, 300); // Small delay to ensure the modal is fully loaded
+                
+                // Auto-select the comparisons tab to show it first
+                // This makes the response comparisons more prominent
+                setTimeout(() => {
+                    try {
+                        const comparisonsTab = document.getElementById('comparisons-tab');
+                        if (comparisonsTab) {
+                            console.log("Found comparisons tab, activating it...");
+                            // Create a Bootstrap tab instance and show it
+                            const tab = new bootstrap.Tab(comparisonsTab);
+                            tab.show();
+                        } else {
+                            console.error("Could not find comparisons tab element");
+                        }
+                    } catch (err) {
+                        console.error("Error activating comparisons tab:", err);
+                    }
+                }, 300); // Small delay to ensure the modal is fully loaded
+            } catch (error) {
+                console.error("Error setting up comparison view:", error);
+            }
         } else {
             noComparisonExamples.style.display = 'block';
             comparisonContent.style.display = 'none';
@@ -1627,8 +1652,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Automatically switch to the Comparisons tab
             setTimeout(() => {
-                document.querySelector('#comparisons-tab').click();
-                updateComparisonTabView();
+                const comparisonsTab = document.getElementById('comparisons-tab');
+                if (comparisonsTab) {
+                    comparisonsTab.click();
+                    console.log("Clicked on comparisons tab");
+                    updateComparisonTabView();
+                } else {
+                    console.error("Could not find comparisons tab element");
+                    showAlert('Error: Could not find comparisons tab element', 'danger');
+                }
             }, 300);
         } catch (error) {
             console.error("Error in showing comparisons:", error);
