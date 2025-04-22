@@ -167,6 +167,49 @@ def upload_csv():
     else:
         return jsonify({'error': 'File type not allowed. Please upload a CSV file.'}), 400
 
+@app.route('/load_dataset', methods=['GET'])
+def load_dataset():
+    """Load the current training and validation datasets."""
+    try:
+        dataset_type = request.args.get('type', 'train')
+        
+        if dataset_type == 'train':
+            examples = data_module.get_train_examples()
+            if not examples:
+                # Try to load from file
+                try:
+                    with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
+                        examples = json.load(f)
+                except Exception as e:
+                    logger.warning(f"Could not load training examples from file: {e}")
+        elif dataset_type == 'validation':
+            examples = data_module.get_validation_examples()
+            if not examples:
+                # Try to load from file
+                try:
+                    with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
+                        examples = json.load(f)
+                except Exception as e:
+                    logger.warning(f"Could not load validation examples from file: {e}")
+        else:
+            return jsonify({'error': 'Invalid dataset type. Use "train" or "validation"'}), 400
+        
+        # Create a CSV-like string from the examples for display
+        csv_content = "user_input,ground_truth_output\n"
+        for example in examples:
+            user_input = example.get('user_input', '').replace(',', '\\,').replace('\n', ' ')
+            ground_truth = example.get('ground_truth_output', '').replace(',', '\\,').replace('\n', ' ')
+            csv_content += f"{user_input},{ground_truth}\n"
+        
+        return jsonify({
+            'examples': examples,
+            'csv_content': csv_content,
+            'count': len(examples)
+        })
+    except Exception as e:
+        logger.error(f"Error loading dataset: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/save_prompts', methods=['POST'])
 def save_prompts():
     """Save the current prompts to files."""
