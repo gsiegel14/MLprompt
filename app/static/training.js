@@ -83,6 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sample examples data
         examplesTextEl.value = 'What is the capital of France?,Paris\nHow many planets are in our solar system?,8\nWhat is the boiling point of water in Celsius?,100';
         
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
         updateDataStats();
     }
     
