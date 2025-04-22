@@ -1,0 +1,88 @@
+Replit version b78d0834, pid2 version 0.0.1223
+_app-0a75eca5043b602b.js:13 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-0a75eca5043b602b.js:13 [LaunchDarkly] LaunchDarkly client initialized
+PromptRefinement:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+36Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+10Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+10Unrecognized feature: 'battery'.Understand this warning
+10Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+10Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+10Unrecognized feature: 'layout-animations'.Understand this warning
+10Unrecognized feature: 'legacy-image-formats'.Understand this warning
+framework-a1696799120877b7.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-a1696799120877b7.js:1Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+2c7fcc8d-f0f6-4768-ab6d-685102c52822-00-3660tjck0iwqg.riker.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar1rh%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+2c7fcc8d-f0f6-4768-ab6d-685102c52822-00-3660tjck0iwqg.riker.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar1sq%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+2c7fcc8d-f0f6-4768-ab6d-685102c52822-00-3660tjck0iwqg.riker.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar1v9%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+2c7fcc8d-f0f6-4768-ab6d-685102c52822-00-3660tjck0iwqg.riker.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar23h%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+10Unrecognized feature: 'navigation-override'.Understand this warning
+10Unrecognized feature: 'oversized-images'.Understand this warning
+10Unrecognized feature: 'publickey-credentials'.Understand this warning
+10Unrecognized feature: 'speaker-selection'.Understand this warning
+10Unrecognized feature: 'unoptimized-images'.Understand this warning
+10Unrecognized feature: 'unsized-media'.Understand this warning
+framework-a1696799120877b7.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-a1696799120877b7.js:1Understand this warning
+10Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+10Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+11WARNING: Too many active WebGL contexts. Oldest context will be lost.Understand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webglcontextrestored event received
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+96WebGL: INVALID_OPERATION: delete: object does not belong to this contextUnderstand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webglcontextrestored event received
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webgl context not restored; firing onContextLoss
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webglcontextrestored event received
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webgl context not restored; firing onContextLoss
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+_app-0a75eca5043b602b.js:13 webglcontextlost event received
+_app-0a75eca5043b602b.js:13 webglcontextrestored event received
+(anonymous) @ _app-0a75eca5043b602b.js:13Understand this warning
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+history.js:228 Uncaught ReferenceError: loadExamplesForIteration is not defined
+    at HTMLButtonElement.<anonymous> (history.js:228:17)
+(anonymous) @ history.js:228Understand this error
+workspace_iframe.html:145 
+            
+            
+           GET https://2c7fcc8d-f0f6-4768-ab6d-685102c52822-00-3660tjck0iwqg.riker.replit.dev/ 502 (Bad Gateway)
+(anonymous) @ workspace_iframe.html?initialPath=%2F&id=%3Ar1v9%3A:145Understand this error
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
