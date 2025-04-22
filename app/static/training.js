@@ -1075,14 +1075,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 viewResultsBtn.className = 'btn btn-info btn-sm mt-2 mb-2';
                 viewResultsBtn.innerHTML = '<i class="fa-solid fa-chart-line me-1"></i> View Detailed Results';
                 viewResultsBtn.addEventListener('click', function() {
-                    // Prepare the model results data
+                    // Prepare the model results data with robust error handling
                     const modelResultsData = {
                         experiment_id: data.experiment_id,
                         iteration: data.iterations || 0,
                         batch_size: batchSize,
-                        model: config.model || 'gemini-1.5-flash',
-                        optimizer_strategy: optimizerStrategy,
-                        examples: data.initial ? data.initial.examples : []
+                        model: 'gemini-1.5-flash',
+                        optimizer_strategy: optimizerStrategy || 'Unknown strategy',
+                        // Handle missing examples safely
+                        examples: (data.initial && Array.isArray(data.initial.examples)) ? 
+                                  data.initial.examples : []
                     };
                     
                     // Add metrics depending on whether optimization was performed
@@ -1227,11 +1229,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show optimization comparison
     function showOptimizationComparison(before, after) {
+        // Validate input objects and their properties
+        if (!before || !after) {
+            console.warn('Missing before/after data in optimization comparison');
+            return;
+        }
+        
+        // Make sure metrics exist and have required properties
+        const beforeMetrics = before.metrics || { avg_score: 0, perfect_matches: 0, total_examples: 0 };
+        const afterMetrics = after.metrics || { avg_score: 0, perfect_matches: 0, total_examples: 0 };
+        
         optimizationStatusEl.style.display = 'none';
         optimizationResultsEl.style.display = 'block';
         
-        beforeScoreEl.textContent = (before.metrics.avg_score * 100).toFixed(1) + '%';
-        afterScoreEl.textContent = (after.metrics.avg_score * 100).toFixed(1) + '%';
+        // Safely display scores with fallbacks
+        beforeScoreEl.textContent = ((beforeMetrics.avg_score || 0) * 100).toFixed(1) + '%';
+        afterScoreEl.textContent = ((afterMetrics.avg_score || 0) * 100).toFixed(1) + '%';
         
         // Show reasoning if available
         if (after.reasoning) {
@@ -1241,21 +1254,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Add classes for improvement visualization
-        if (after.metrics.avg_score > before.metrics.avg_score) {
+        if ((afterMetrics.avg_score || 0) > (beforeMetrics.avg_score || 0)) {
             afterScoreEl.classList.add('text-success');
-        } else if (after.metrics.avg_score < before.metrics.avg_score) {
+        } else if ((afterMetrics.avg_score || 0) < (beforeMetrics.avg_score || 0)) {
             afterScoreEl.classList.add('text-danger');
         }
         
-        // Store the optimized prompts for comparison
+        // Store the optimized prompts for comparison with fallbacks
         currentComparisonData = {
             original: {
-                system_prompt: before.system_prompt,
-                output_prompt: before.output_prompt
+                system_prompt: before.system_prompt || 'No system prompt available',
+                output_prompt: before.output_prompt || 'No output prompt available'
             },
             optimized: {
-                system_prompt: after.system_prompt,
-                output_prompt: after.output_prompt,
+                system_prompt: after.system_prompt || 'No system prompt available',
+                output_prompt: after.output_prompt || 'No output prompt available',
                 reasoning: after.reasoning || ''
             }
         };
