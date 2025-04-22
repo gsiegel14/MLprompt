@@ -1603,29 +1603,37 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Prepare the model results modal with the current examples
-        const modelResultsData = {
-            experiment_id: currentExperimentId || 'current_session',
-            iteration: 'Latest',
-            batch_size: 'All examples',
-            model: 'gemini-1.5-flash',
-            optimizer_strategy: document.getElementById('optimizer-strategy').value,
-            examples: currentExamples,
-            metrics: {
-                avg_score: parseFloat(document.getElementById('current-score').textContent) / 100 || 0,
-                perfect_matches: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[0],
-                total_examples: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[1] || 0
-            }
-        };
-        
-        // Show the model results modal
-        showModelResults(modelResultsData);
-        
-        // Automatically switch to the Comparisons tab
-        setTimeout(() => {
-            document.getElementById('comparisons-tab').click();
-            updateComparisonTabView();
-        }, 300);
+        try {
+            // Prepare the model results modal with the current examples
+            // Limit to 10 examples max to avoid memory issues
+            const limitedExamples = currentExamples.slice(0, 10);
+            
+            const modelResultsData = {
+                experiment_id: currentExperimentId || 'current_session',
+                iteration: 'Latest',
+                batch_size: 'Up to 10 examples',
+                model: 'gemini-1.5-flash',
+                optimizer_strategy: document.getElementById('optimizer-strategy').value,
+                examples: limitedExamples,
+                metrics: {
+                    avg_score: parseFloat(document.getElementById('current-score').textContent) / 100 || 0,
+                    perfect_matches: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[0],
+                    total_examples: (document.getElementById('perfect-matches').textContent || '0/0').split('/')[1] || 0
+                }
+            };
+            
+            // Show the model results modal
+            showModelResults(modelResultsData);
+            
+            // Automatically switch to the Comparisons tab
+            setTimeout(() => {
+                document.querySelector('#comparisons-tab').click();
+                updateComparisonTabView();
+            }, 300);
+        } catch (error) {
+            console.error("Error in showing comparisons:", error);
+            showAlert('There was an error showing the comparisons. Please check the console for details.', 'danger');
+        }
     }
     
     // Update the comparison tab view
