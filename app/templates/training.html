@@ -654,11 +654,18 @@
                         
                         <!-- Examples Tab -->
                         <div class="tab-pane fade" id="examples-tab-pane" role="tabpanel" aria-labelledby="examples-tab">
-                            <div class="row">
+                            <div class="row mb-3">
                                 <div class="col-md-12">
-                                    <div class="card">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <strong>Example Responses</strong>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="btn-group mb-3" role="group" aria-label="View options">
+                                            <button type="button" class="btn btn-outline-primary active" id="view-accordion" onclick="toggleExampleView('accordion')">
+                                                <i class="fa-solid fa-list me-1"></i> Accordion View
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary" id="view-comparison" onclick="toggleExampleView('comparison')">
+                                                <i class="fa-solid fa-table-columns me-1"></i> Comparison View
+                                            </button>
+                                        </div>
+                                        <div>
                                             <select id="example-filter" class="form-select form-select-sm" style="width: auto;">
                                                 <option value="all">All Examples</option>
                                                 <option value="perfect">Perfect Matches</option>
@@ -666,12 +673,108 @@
                                                 <option value="failed">Failed Matches</option>
                                             </select>
                                         </div>
-                                        <div class="card-body p-0">
-                                            <div class="accordion" id="examplesAccordion">
-                                                <!-- Examples will be inserted here dynamically -->
-                                                <div class="text-center p-5 text-muted" id="no-examples-message">
-                                                    <i class="fa-solid fa-circle-info fa-2x mb-3"></i>
-                                                    <p>No example results available</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Accordion View (Default) -->
+                            <div id="accordion-view">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <strong>Example Responses</strong>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <div class="accordion" id="examplesAccordion">
+                                                    <!-- Examples will be inserted here dynamically -->
+                                                    <div class="text-center p-5 text-muted" id="no-examples-message">
+                                                        <i class="fa-solid fa-circle-info fa-2x mb-3"></i>
+                                                        <p>No example results available</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Comparison View (Side-by-side) -->
+                            <div id="comparison-view" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-primary text-white">
+                                                <strong>Example Comparison</strong>
+                                            </div>
+                                            <div class="comparison-controls bg-light p-2 border-bottom d-flex justify-content-between align-items-center">
+                                                <div class="btn-group">
+                                                    <button class="btn btn-sm btn-outline-secondary" id="prev-example">
+                                                        <i class="fa-solid fa-chevron-left"></i> Previous
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary" id="next-example">
+                                                        Next <i class="fa-solid fa-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                                <span class="example-counter">Example <span id="current-example-num">1</span> of <span id="total-examples">0</span></span>
+                                            </div>
+                                            <div class="card-body">
+                                                <!-- Example Navigation -->
+                                                <div class="row">
+                                                    <div class="col-12 mb-3">
+                                                        <div class="card bg-light">
+                                                            <div class="card-header">
+                                                                <strong>User Input</strong>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre id="comparison-user-input" class="mb-0 p-3 border rounded bg-white" style="max-height: 200px; overflow-y: auto;"></pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="col-12 mb-3">
+                                                        <div class="card bg-light">
+                                                            <div class="card-header">
+                                                                <strong>Ground Truth (Expected Output)</strong>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre id="comparison-ground-truth" class="mb-0 p-3 border rounded bg-white" style="max-height: 200px; overflow-y: auto;"></pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="row mt-4">
+                                                    <div class="col-md-6 mb-3">
+                                                        <div class="card h-100">
+                                                            <div class="card-header bg-info bg-opacity-25 d-flex justify-content-between align-items-center">
+                                                                <strong>Initial LLM Response</strong>
+                                                                <span class="badge bg-info text-dark" id="initial-score-badge">Score: 0%</span>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre id="comparison-initial-response" class="mb-0 p-3 border rounded bg-white" style="height: 300px; overflow-y: auto;"></pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <div class="card h-100">
+                                                            <div class="card-header bg-success bg-opacity-25 d-flex justify-content-between align-items-center">
+                                                                <strong>Optimized LLM Response</strong>
+                                                                <span class="badge bg-success text-dark" id="optimized-score-badge">Score: 0%</span>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <pre id="comparison-optimized-response" class="mb-0 p-3 border rounded bg-white" style="height: 300px; overflow-y: auto;"></pre>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="row mt-2 mb-2">
+                                                    <div class="col-12">
+                                                        <div class="alert alert-info" id="comparison-improvement">
+                                                            <i class="fa-solid fa-arrow-trend-up me-1"></i> <span id="improvement-text">No improvement data available</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
