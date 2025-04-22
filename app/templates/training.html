@@ -298,12 +298,23 @@
                         </div>
                         
                         <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <label for="csv-file" class="custom-file-upload me-2">
+                            <div class="d-flex align-items-center flex-wrap">
+                                <label for="csv-file" class="custom-file-upload me-2 mb-2">
                                     <i class="fa-solid fa-upload me-1"></i> Upload CSV
                                 </label>
                                 <input type="file" id="csv-file" accept=".csv">
                                 <div class="form-text ms-2">CSV with user_input and ground_truth columns</div>
+                            </div>
+                            <div class="d-flex align-items-center mt-2 flex-wrap">
+                                <button type="button" id="load-nejm-train-btn" class="btn btn-outline-success btn-sm me-2 mb-2" data-bs-toggle="tooltip" title="Load NEJM training dataset (79 cases)">
+                                    <i class="fa-solid fa-database me-1"></i> Load NEJM Train
+                                </button>
+                                
+                                <button type="button" id="load-nejm-validation-btn" class="btn btn-outline-info btn-sm me-2 mb-2" data-bs-toggle="tooltip" title="Load NEJM validation dataset (80 cases)">
+                                    <i class="fa-solid fa-vial me-1"></i> Load NEJM Validation
+                                </button>
+                                
+                                <div class="form-text">Pre-loaded New England Journal of Medicine case studies</div>
                             </div>
                         </div>
                         
