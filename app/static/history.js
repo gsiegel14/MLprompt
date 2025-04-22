@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Examples handling
-    function loadExamplesForIteration(iteration) {
+    window.loadExamplesForIteration = function(iteration) {
         const examplesContainer = document.getElementById('examples-container');
         // Check if examplesContainer exists
         if (!examplesContainer) {
