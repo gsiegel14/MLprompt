@@ -21,51 +21,51 @@
             --success-color: #4caf50;
             --bg-gradient: linear-gradient(135deg, #ffffff, #f8f9fa);
         }
-        
+
         body {
             background: var(--bg-gradient);
             font-family: 'Inter', sans-serif;
             color: #333;
         }
-        
+
         .card {
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             border: none;
             transition: all 0.3s ease;
         }
-        
+
         .card:hover {
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
         }
-        
+
         .card-header {
             background-color: white;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             font-weight: 600;
         }
-        
+
         .btn-primary {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
         }
-        
+
         .btn-primary:hover {
             background-color: var(--secondary-color);
             border-color: var(--secondary-color);
         }
-        
+
         .btn-outline-primary {
             color: var(--primary-color);
             border-color: var(--primary-color);
         }
-        
+
         .badge {
             font-weight: 500;
             padding: 0.5em 1em;
             border-radius: 30px;
         }
-        
+
         footer {
             margin-top: 4rem;
             padding: 2rem 0;
@@ -90,10 +90,10 @@
                 </a>
             </div>
         </header>
-        
+
         <!-- Alert Container -->
         <div id="alert-container"></div>
-        
+
         <!-- Experiments List -->
         <div class="card mb-4">
             <div class="card-header">
@@ -119,7 +119,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Experiment Details (hidden by default) -->
         <div id="experiment-details" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -128,7 +128,7 @@
                     <i class="fa-solid fa-arrow-left me-1"></i> Back to List
                 </button>
             </div>
-            
+
             <!-- Metrics Chart -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
@@ -140,7 +140,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Iterations -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -184,7 +184,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Prompt Compare View (hidden by default) -->
         <div id="compare-view" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -193,7 +193,7 @@
                     <i class="fa-solid fa-arrow-left me-1"></i> Back to Details
                 </button>
             </div>
-            
+
             <div class="row g-4">
                 <div class="col-md-6">
                     <div class="card">
@@ -206,17 +206,17 @@
                         <div class="card-body">
                             <h5>System Prompt</h5>
                             <pre id="original-system-prompt" class="p-3 bg-light border rounded mb-4"></pre>
-                            
+
                             <h5>Output Prompt</h5>
                             <pre id="original-output-prompt" class="p-3 bg-light border rounded mb-4"></pre>
-                            
+
                             <div class="metric-pill px-3 py-2 d-inline-block rounded bg-light border">
                                 Score: <span id="original-score" class="text-dark">0%</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
@@ -228,10 +228,10 @@
                         <div class="card-body">
                             <h5>System Prompt</h5>
                             <pre id="optimized-system-prompt" class="p-3 bg-light border rounded mb-4"></pre>
-                            
+
                             <h5>Output Prompt</h5>
                             <pre id="optimized-output-prompt" class="p-3 bg-light border rounded mb-4"></pre>
-                            
+
                             <div class="metric-pill px-3 py-2 d-inline-block rounded bg-light border">
                                 Score: <span id="optimized-score" class="text-dark">0%</span>
                             </div>
@@ -239,7 +239,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="card mt-4">
                 <div class="card-header">
                     <i class="fa-solid fa-lightbulb me-2"></i> Optimizer Reasoning
@@ -248,7 +248,7 @@
                     <pre id="optimizer-reasoning" class="p-3 bg-light border rounded"></pre>
                 </div>
             </div>
-            
+
             <!-- Examples Results Section -->
             <div class="card mt-4">
                 <div class="card-header">
@@ -274,7 +274,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Loading Spinner -->
     <div id="spinner" class="spinner-container text-center">
         <div class="spinner-border text-primary" role="status">

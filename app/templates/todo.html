@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt ML - Todo List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Prompt Engineering ML Platform</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('training') }}">Training</a>
+                <a href="{{ url_for('history') }}">History</a>
+                <a href="{{ url_for('todo') }}" class="active">Todo</a>
+            </nav>
+        </header>
+        
+        <main>
+            <section class="todo-container">
+                <h2>Optimization Tasks</h2>
+                <div class="todo-input-container">
+                    <input type="text" id="todo-input" placeholder="Add a new task...">
+                    <select id="todo-priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                    <button id="add-todo-btn">Add Task</button>
+                </div>
+                
+                <div class="todo-filters">
+                    <label>Filter by: </label>
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="active">Active</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+                
+                <ul id="todo-list">
+                    <!-- Todo items will be added here -->
+                </ul>
+                
+                <div class="todo-summary">
+                    <span id="tasks-left">0 tasks left</span>
+                    <button id="clear-completed">Clear completed</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="{{ url_for('static', filename='todo.js') }}"></script>
+</body>
+</html>

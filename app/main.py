@@ -69,6 +69,11 @@ def history():
     """Render the experiment history page."""
     return render_template('history.html')
 
+@app.route('/todo')
+def todo():
+    """Render the todo list page."""
+    return render_template('todo.html')
+
 @app.route('/run', methods=['POST'])
 def run_evaluation():
     """Process inputs, run the model, and return evaluation results."""
