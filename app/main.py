@@ -497,5 +497,89 @@ def save_optimizer_prompt():
         logger.error(f"Error saving optimizer prompt: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get_optimization_strategies')
+def get_available_strategies():
+    """Get available optimization strategies."""
+    try:
+        strategies = get_optimization_strategies()
+        return jsonify({'strategies': strategies})
+    except Exception as e:
+        logger.error(f"Error getting optimization strategies: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/two_stage_train', methods=['POST'])
+def two_stage_train():
+    """
+    Run the Two-Stage Training Cycle workflow.
+    Phase 1: Primary LLM Inference & Evaluation
+    Phase 2: Optimizer LLM Refinement
+    """
+    try:
+        data = request.json
+        system_prompt = data.get('system_prompt', '')
+        output_prompt = data.get('output_prompt', '')
+        examples = data.get('examples', [])
+        max_iterations = int(data.get('max_iterations', 1))
+        optimizer_strategy = data.get('optimizer_strategy', 'full_rewrite')
+        optimizer_type = data.get('optimizer_type', 'general')
+        
+        if not system_prompt or not output_prompt:
+            return jsonify({'error': 'System prompt and output prompt are required'}), 400
+        
+        if not examples:
+            # If examples are not directly provided, we'll look for them in the data module
+            if data_module.get_train_examples():
+                logger.info("Using examples from data module")
+            else:
+                # Try to convert examples from the text content
+                examples_content = data.get('examples_content', '')
+                if examples_content:
+                    examples = parse_text_examples(examples_content)
+                    
+                    # Split and save to data module
+                    train_examples, validation_examples = data_module.split_examples(examples)
+                    data_module._save_examples(train_examples, os.path.join('data', 'train', 'examples.json'))
+                    data_module._save_examples(validation_examples, os.path.join('data', 'validation', 'examples.json'))
+                else:
+                    return jsonify({'error': 'No examples found. Please provide examples directly or load a dataset.'}), 400
+        
+        # Set early stopping patience from config or use default
+        early_stopping_patience = config.get('training', {}).get('early_stopping_patience', 2)
+        
+        # Run the training cycle
+        result = prompt_workflow.run_training_cycle(
+            system_prompt=system_prompt,
+            output_prompt=output_prompt,
+            max_iterations=max_iterations,
+            early_stopping_patience=early_stopping_patience,
+            optimizer_strategy=optimizer_strategy,
+            optimizer_type=optimizer_type
+        )
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in two-stage training cycle: {e}")
+        return jsonify({'error': str(e)}), 500
+        
+@app.route('/validate_prompts', methods=['POST'])
+def validate_prompts():
+    """
+    Run validation to compare different prompt versions on unseen data.
+    """
+    try:
+        data = request.json
+        prompt_versions = data.get('prompt_versions', [])
+        
+        if not prompt_versions:
+            return jsonify({'error': 'Please specify which prompt versions to validate'}), 400
+        
+        # Run validation
+        result = prompt_workflow.run_validation(prompt_versions)
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in validation: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -87,8 +87,12 @@ class PromptOptimizationWorkflow:
         # Load optimizer prompt based on type
         optimizer_prompt = load_optimizer_prompt(optimizer_type)
         
+        # Initialize the iteration counter
+        final_iteration = 0
+        
         # Training loop
         for iteration in range(1, max_iterations + 1):
+            final_iteration = iteration
             logger.info(f"Starting iteration {iteration} of {max_iterations}")
             
             # ----- PHASE 1: Primary LLM Inference & Evaluation -----
@@ -189,7 +193,7 @@ class PromptOptimizationWorkflow:
         # Return the final results
         return {
             "experiment_id": experiment_id,
-            "iterations": iteration,
+            "iterations": final_iteration,
             "best_iteration": best_iteration,
             "best_score": best_score,
             "final_system_prompt": current_system_prompt,
