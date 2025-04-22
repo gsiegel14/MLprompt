@@ -9,8 +9,10 @@ from werkzeug.utils import secure_filename
 from app import app
 from app.llm_client import get_llm_response
 from app.evaluator import calculate_score
-from app.optimizer import optimize_prompts, load_optimizer_prompt
+from app.optimizer import optimize_prompts, load_optimizer_prompt, get_optimization_strategies
 from app.experiment_tracker import ExperimentTracker
+from app.data_module import DataModule
+from app.workflow import PromptOptimizationWorkflow
 from app.utils import parse_text_examples, parse_csv_file, is_allowed_file
 
 logger = logging.getLogger(__name__)
@@ -42,8 +44,10 @@ os.makedirs('prompts/system', exist_ok=True)
 os.makedirs('prompts/output', exist_ok=True)
 os.makedirs('experiments', exist_ok=True)
 
-# Initialize experiment tracker
+# Initialize core components
 experiment_tracker = ExperimentTracker()
+data_module = DataModule()
+prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, config)
 
 @app.route('/')
 def index():
