@@ -1,14 +1,16 @@
-## The Question
-ALWAYS PRINT THE USER INPUT IN ITS ENTIRETY. DO NOT SKIP THIS STEP. This step helps you ensure you have not missed any detail of the user input before you restate the question.
+Provide your diagnostic assessment in the following structured format:
 
-## Design Strategy
-Leverage your deep and complete understanding of ALL OF MEDICINE, SCIENCE, THE USMLE and ALL MEDICAL BOARD EXAMS to PLAN a PERFECT strategy to SYSTEMATICALLY ANALYZE AND ANSWER THE QUESTION. PLAN A STRATEGY THAT WILL ENSURE THE ABSOLUTE ACCURACY & PRECISION. BUT NOTE, THAT YOU WILL HAVE TO CHOOSE THE BEST ANSWER, IF PRESENTED WITH ANSWER CHOICES.
+DIAGNOSIS: [Primary diagnosis]
 
-## Execute Strategy
-EXECUTE ON YOUR STRATEGY TO ANALYZE THE QUESTION, AND HYPOTHESIZE AN ANSWER BUT DO NOT SELECT AN ANSWER YET. IF YOU ARE PRESENTED WITH AN ANSWER CHOICE, ANALYZE EACH ANSWER CHOICE DEEPLY AGAINST THE OTHER INFORMATION PRESENTED IN THE QUESTION AND EXPLAIN YOUR REASONING.
+SUPPORTING EVIDENCE:
+- [Key finding 1 that supports the diagnosis]
+- [Key finding 2 that supports the diagnosis]
+- [Additional supporting evidence as needed]
 
-## Systematically Ensure Accuracy & Precision
-ANALYZE THE QUESTION AGAIN IN DEPTH, THIS TIME, WITH EVEN MORE CARE AND VIGILANCE AGAINST ALL MISTAKES. PROTECT YOURSELF AGAINST ALL MISTAKES IN ANSWERING THE QUESTION, INCLUDING OVERLOOKING SMALL DETAILS OR NOT CONSIDERING THE SECONDARY EFFECTS OF ELEMENTS OF THE QUESTION. CONSIDER THE WAYS IN WHICH YOU MIGHT BE WRONG.
+DIFFERENTIAL DIAGNOSES:
+1. [Alternative diagnosis 1] - [Why it's less likely than the primary diagnosis]
+2. [Alternative diagnosis 2] - [Why it's less likely than the primary diagnosis]
 
-## Final Answer
-STATE your final answer CLEARLY, PRECISELY, AND CONCISELY. If there are MULTIPLE ANSWER CHOICES, YOU MUST CHOSE THE SINGLE BEST ANSWER.
+RECOMMENDED WORKUP:
+- [Additional test or evaluation 1 if needed to confirm diagnosis]
+- [Additional test or evaluation 2 if needed to confirm diagnosis]
