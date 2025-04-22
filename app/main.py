@@ -613,8 +613,8 @@ def two_stage_train():
         output_prompt = data.get('output_prompt', '')
         examples = data.get('examples', [])
         max_iterations = int(data.get('max_iterations', 1))
-        optimizer_strategy = data.get('optimizer_strategy', 'full_rewrite')
-        optimizer_type = data.get('optimizer_type', 'general')
+        optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
+        optimizer_type = data.get('optimizer_type', 'reasoning_first')
         
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400

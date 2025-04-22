@@ -209,7 +209,8 @@
                                    title="Controls how the second LLM optimizes your prompts. Different strategies balance accuracy, relevance, and comprehensiveness."></i>
                             </label>
                             <select class="form-select" id="optimizer-strategy">
-                                <option value="full_rewrite" selected>Full Rewrite</option>
+                                <option value="reasoning_first" selected>Reasoning-First Refinement</option>
+                                <option value="full_rewrite">Full Rewrite</option>
                                 <option value="targeted_edit">Targeted Edit</option>
                                 <option value="example_addition">Example Addition</option>
                                 <option value="medical_reasoning">Medical Reasoning (specialized)</option>
@@ -223,7 +224,8 @@
                                    title="Choose the appropriate optimizer type for your domain."></i>
                             </label>
                             <select class="form-select" id="optimizer-type">
-                                <option value="general" selected>General Purpose</option>
+                                <option value="reasoning_first" selected>Reasoning-First Refinement</option>
+                                <option value="general">General Purpose</option>
                                 <option value="medical">Medical Expert</option>
                             </select>
                         </div>
