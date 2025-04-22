@@ -1,0 +1,8 @@
+[
+  {
+    "user_input": "A 45-year-old man presents with severe chest pain that radiates to his left arm and jaw. The pain started suddenly while he was exercising.",
+    "ground_truth_output": "Acute myocardial infarction (heart attack)",
+    "model_response": "The diagnosis is myocardial infarction.",
+    "score": 0.7
+  }
+]
