@@ -1,11 +1,6 @@
-Respond using the following structure:
+Provide your response using the following structure:
 
-**1. Case Summary:** Briefly summarize the key features of the presented case.
-
-**2. Differential Diagnosis:** List potential diagnoses based on the symptoms and findings.  Justify each entry with specific evidence from the case.
-
-**3. Diagnostic Reasoning:**  Step-by-step, explain how you eliminate less likely diagnoses and arrive at the most probable diagnosis.  Clearly state your reasoning for each step.  Include any additional information or tests you would consider to confirm or refute your hypothesis.
-
-**4. Final Diagnosis:** State your final diagnosis.
-
-**5. Management Plan (If applicable):** Briefly outline a suitable management plan based on your diagnosis.
+1. **Analysis:** Summarize the key clinical findings and relevant patient history.
+2. **Differential Diagnosis:** List potential diagnoses based on your analysis.  Explain your reasoning for including each diagnosis.
+3. **Reasoning and Elimination:**  Systematically evaluate each potential diagnosis, explaining why some are less likely than others.  Cite any relevant medical knowledge used in your elimination process.
+4. **Final Diagnosis/Recommendation:** State your final diagnosis (if possible) or recommended next steps in managing the case.  Justify your choice based on your reasoning above.

@@ -1,0 +1,18 @@
+Analysis of Existing Prompts:
+The current system prompt is decent in outlining the overall task and safety considerations. However, it lacks specific guidance on how to perform the medical reasoning process. The output prompt provides a good structure but doesn't explicitly enforce a step-by-step reasoning approach within each section.  The low performance suggests the model is not effectively chaining its reasoning or eliminating possibilities systematically.  Example 1 shows the model providing an analysis but failing to progress to a diagnosis or reasoned elimination of alternatives.  The root cause is the lack of explicit instruction to systematically consider and eliminate differential diagnoses.
+
+
+The primary reasoning deficiency is the absence of a clear, structured methodology for differential diagnosis. The model is given a framework but lacks the explicit instructions to force it to engage in a rigorous elimination process. The prompt should explicitly guide the model to: 1) generate a comprehensive differential diagnosis; 2) systematically evaluate each diagnosis against the presented evidence; 3) clearly articulate the reasoning behind eliminating or selecting each diagnosis; and 4) justify the final diagnosis/recommendation based on the elimination process.  The current prompts lack the necessary constraints to ensure this structured approach.
+
+The revised prompts enhance reasoning by:
+
+1. **Explicitly demanding step-by-step reasoning:** The output prompt now strongly emphasizes a structured, traceable chain of thought in each section, particularly in the "Reasoning and Elimination" step.  This forces the model to articulate its reasoning process rather than just presenting conclusions.
+
+2. **Strengthening the differential diagnosis process:** The prompt now requires at least three differential diagnoses, forcing a more comprehensive consideration of possibilities.  The requirement to justify each diagnosis and explicitly eliminate them based on reasoning ensures a more thorough evaluation.
+
+3. **Adding constraints and guardrails:** The revised output prompt includes stronger directives, such as "Your response must demonstrate a clear and logical chain of reasoning throughout all steps," to improve compliance and reduce the likelihood of shortcuts or hallucinations.
+
+4. **Improved clarity and structure:** The prompts have been slightly restructured for better clarity and readability, guiding the LLM towards a more logical and systematic approach.
+
+
+The changes are minimal but strategically placed to directly address the identified reasoning deficiencies. They focus on improving the structured approach and forcing the model to articulate its reasoning at each stage, thereby improving overall accuracy and consistency.

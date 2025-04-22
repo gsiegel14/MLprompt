@@ -1,0 +1,8 @@
+[
+  {
+    "user_input": "Dr. Annabelle Anandappa (Medicine): A 25-year-old man with a history of B-cell acute lymphoblastic leukemia was evaluated in the emergency department of this hospital because of vision changes.\nTen months before this presentation, the patient was evaluated for fatigue and dyspnea on exertion. Labora...",
+    "ground_truth_output": "Plasma-cell myeloma post-transplantation lymphoproliferative disorder.",
+    "model_response": "**The Question**\n\nDr. Annabelle Anandappa (Medicine): A 25-year-old man with a history of B-cell acute lymphoblastic leukemia was evaluated in the emergency department of this hospital because of vision changes.  The provided text details the patient's medical history, including leukemia treatment, allogeneic hematopoietic-cell transplantation, and recent onset of vision changes, lymphadenopathy, rash, and other symptoms.  Laboratory and imaging results are also included.  The question implicitl...",
+    "score": 0.024045801526717557
+  }
+]

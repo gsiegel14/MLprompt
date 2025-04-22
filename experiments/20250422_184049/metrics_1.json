@@ -1,0 +1,10 @@
+{
+  "iteration": 1,
+  "timestamp": 1745347261.208901,
+  "metrics": {
+    "avg_score": 0.12302284710017575,
+    "perfect_matches": 0,
+    "total_examples": 1,
+    "perfect_match_percent": 0.0
+  }
+}
