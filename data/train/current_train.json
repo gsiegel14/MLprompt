@@ -1,26 +1,22 @@
 [
   {
-    "user_input": "Dr. Yousef R. Badran: A 72-year-old man was transferred to this hospital because of heartburn\\",
-    "ground_truth_output": "nausea\\\\\\, and the inability to eat solid and liqui..."
+    "user_input": "Dr. Zoe N. Memel (Medicine): A 60-year-old man presented to this hospital because of fevers\\",
+    "ground_truth_output": "fatigue\\\\\\\\, arthralgias\\\\\\\\, a mouth ulcer\\\\\\\\, and ..."
   },
   {
     "user_input": "Dr. Ian D. Cooley (Medicine): A 68-year-old man was admitted to this hospital because of painful mouth ulcers and weight loss. The patient had been well until 6 weeks before the current admission\\",
-    "ground_truth_output": "whe...\\\\,Eosinophilic leukemia."
+    "ground_truth_output": "whe...\\\\\\,Eosinophilic leukemia."
   },
   {
     "user_input": "user_input",
     "ground_truth_output": "ground_truth_output"
+  },
+  {
+    "user_input": "Dr. Yousef R. Badran: A 72-year-old man was transferred to this hospital because of heartburn\\",
+    "ground_truth_output": "nausea\\\\\\\\, and the inability to eat solid and liqu..."
   },
   {
     "user_input": "Dr. Christopher V. Radcliffe (Medicine): A 46-year-old man was evaluated in the rheumatology clinic of this hospital because of arthritis and rash. One week before the current presentation\\",
-    "ground_truth_output": "an episode...\\\\,Secondary syphilis."
-  },
-  {
-    "user_input": "user_input",
-    "ground_truth_output": "ground_truth_output"
-  },
-  {
-    "user_input": "Dr. Zoe N. Memel (Medicine): A 60-year-old man presented to this hospital because of fevers\\",
-    "ground_truth_output": "fatigue\\\\\\, arthralgias\\\\\\, a mouth ulcer\\\\\\, and a r..."
+    "ground_truth_output": "an episode...\\\\\\,Secondary syphilis."
   }
 ]

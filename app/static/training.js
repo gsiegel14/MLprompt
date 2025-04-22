@@ -573,6 +573,54 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
+    // Reset NEJM data cache
+    function resetNejmCache() {
+        showSpinner();
+        log('Resetting NEJM data cache...');
+        
+        fetch('/reset_nejm_cache', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showAlert(data.error, 'danger');
+                log(`Error: ${data.error}`);
+            } else {
+                log(data.message);
+                showAlert(data.message, 'success');
+                
+                // Run the fix_nejm_data.py script to regenerate the datasets
+                log('Regenerating NEJM datasets...');
+                return fetch('/regenerate_nejm_data', {
+                    method: 'POST'
+                });
+            }
+        })
+        .then(response => {
+            if (response) return response.json();
+        })
+        .then(data => {
+            if (data) {
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                    log(`Error: ${data.error}`);
+                } else {
+                    log(data.message);
+                    showAlert(data.message + '. Try loading the NEJM datasets again.', 'success');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error resetting NEJM cache:', error);
+            showAlert('Error resetting NEJM cache', 'danger');
+            log(`Error resetting NEJM cache: ${error.message}`);
+        })
+        .finally(() => {
+            hideSpinner();
+        });
+    }
+    
     // Show experiment modal
     function showExperimentModal() {
         // Fetch experiments
