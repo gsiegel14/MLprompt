@@ -62,14 +62,14 @@ pre, code {
 
 /* Form Styles */
 .form-control, .form-select {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border: 1px solid var(--border-color);
-    color: var(--text-color);
+    color: #333333;
     border-radius: var(--border-radius);
 }
 
 .form-control:focus, .form-select:focus {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #ffffff;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
 }
@@ -113,14 +113,15 @@ input[type="file"] {
     display: inline-block;
     padding: 0.5rem 1rem;
     cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     transition: all var(--transition-speed) ease;
+    color: #333333;
 }
 
 .custom-file-upload:hover {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #f8f9fa;
     border-color: var(--accent-color);
 }
 
@@ -156,44 +157,53 @@ input[type="file"] {
 .logs-container {
     max-height: 200px;
     overflow-y: auto;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #ffffff;
     border-radius: 0 0 var(--border-radius) var(--border-radius);
+    border: 1px solid var(--border-color);
 }
 
 .logs {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #a3a3a3;
+    color: #333333;
     white-space: pre-wrap;
 }
 
 /* Metrics and Cards */
 .metric-card {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border-radius: var(--border-radius);
     transition: all var(--transition-speed) ease;
+    border: 1px solid var(--border-color);
+    color: #333333;
 }
 
 .metric-card:hover {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #f8f9fa;
     transform: translateY(-2px);
 }
 
 .data-stats {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    color: #333333;
 }
 
 /* Optimization Results */
 .comparison-container {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border-radius: var(--border-radius);
     padding: 1rem;
+    border: 1px solid var(--border-color);
+    color: #333333;
 }
 
 .before, .after {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border-radius: var(--border-radius);
     min-width: 80px;
+    border: 1px solid var(--border-color);
+    color: #333333;
 }
 
 .change {
@@ -203,10 +213,12 @@ input[type="file"] {
 }
 
 .reasoning-box {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
     border-radius: var(--border-radius);
     max-height: 200px;
     overflow-y: auto;
+    border: 1px solid var(--border-color);
+    color: #333333;
 }
 
 /* Badge Styles */
