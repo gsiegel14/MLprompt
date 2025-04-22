@@ -1,0 +1,11 @@
+user_input,ground_truth_output
+"A 45-year-old man presents with severe chest pain that radiates to his left arm and jaw. The pain started suddenly while he was exercising.","Acute myocardial infarction (heart attack)"
+"A 35-year-old woman with progressively worsening headaches over the past month, now accompanied by early morning vomiting and blurred vision.","Brain tumor"
+"A 62-year-old man with a history of smoking presents with a persistent cough, blood in sputum, weight loss, and fatigue for the past 3 months.","Lung cancer"
+"A 28-year-old woman presents with a rash that started on her face and has spread to her chest and arms. She also reports joint pain and fatigue.","Systemic lupus erythematosus"
+"A 50-year-old man with a history of alcohol abuse presents with yellowing of the skin and eyes, abdominal swelling, and confusion.","Liver cirrhosis"
+"A 7-year-old child with a high fever, sore throat, and a bright red rash that feels like sandpaper. The rash started on the neck and chest.","Scarlet fever"
+"A 68-year-old woman with gradually worsening memory problems, confusion, and difficulty performing familiar tasks.","Alzheimer's disease"
+"A 40-year-old man with recurrent episodes of severe abdominal pain, especially after fatty meals, with pain radiating to the back.","Gallstones"
+"A 30-year-old woman experiencing excessive thirst, frequent urination, increased hunger, and unexplained weight loss.","Type 1 diabetes mellitus"
+"A 55-year-old man with progressive shortness of breath, chronic cough with sputum production, and decreased exercise tolerance over several years.","Chronic obstructive pulmonary disease (COPD)"
