@@ -1363,15 +1363,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Detailed error logging and display
             console.error('Error in training:', error);
             
+            // Handle errors without a message property
+            const errorMessage = error.message || "An unknown error occurred with the training process";
+            
             // Create a detailed error message with timestamp
             const errorTimestamp = new Date().toLocaleTimeString();
-            const errorMsg = `Training failed at ${errorTimestamp}: ${error.message}`;
+            const errorMsg = `Training failed at ${errorTimestamp}: ${errorMessage}`;
             
             // Show prominent error alert
             showAlert(errorMsg, 'danger');
             
             // Add detailed error to logs
-            log(`ERROR: ${error.message}`);
+            log(`ERROR: ${errorMessage}`);
             
             // Create and append detailed error card to training logs
             const errorCard = document.createElement('div');
@@ -1383,7 +1386,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="card-body text-danger">
                     <h5 class="card-title">Error Details</h5>
-                    <p class="card-text">${error.message}</p>
+                    <p class="card-text">${errorMessage}</p>
                     <p class="card-text small">Check the browser console and server logs for more information.</p>
                     <button class="btn btn-sm btn-outline-danger retry-btn">
                         <i class="fa-solid fa-rotate me-1"></i> Retry Training

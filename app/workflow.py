@@ -137,15 +137,16 @@ class PromptOptimizationWorkflow:
                 error_count = 0
                 
                 # Limit batch size to prevent memory issues
-                if batch_size == 0 or batch_size > 50:  # Increased limit from 20 to 50
-                    logger.info(f"Limiting batch size to 50 examples (original: {batch_size})")
-                    effective_batch_size = 50
-                    batch = batch[:50] if len(batch) > 50 else batch
+                max_batch_size = 100  # Increased limit to 100 examples
+                if batch_size == 0 or batch_size > max_batch_size:
+                    logger.info(f"Limiting batch size to {max_batch_size} examples (original: {batch_size})")
+                    effective_batch_size = max_batch_size
+                    batch = batch[:max_batch_size] if len(batch) > max_batch_size else batch
                 else:
                     effective_batch_size = batch_size
                 
-                # Process in even smaller chunks to prevent memory issues
-                max_chunk_size = min(10, len(batch))  # Increased from 5 to 10  # Process at most 5 at a time, reduced from 10
+                # Process in smaller chunks to prevent memory issues while still processing all examples
+                max_chunk_size = min(20, len(batch))  # Increased to 20 examples per chunk
                 for chunk_start in range(0, len(batch), max_chunk_size):
                     chunk_end = min(chunk_start + max_chunk_size, len(batch))
                     logger.info(f"Processing examples {chunk_start+1}-{chunk_end} of {len(batch)}")
@@ -215,17 +216,19 @@ class PromptOptimizationWorkflow:
                 gc.collect()  # Run garbage collection before optimization
                 logger.info("Forced garbage collection before starting optimization")
                 
-                # Use only the first 5 examples for optimization to reduce memory usage (reduced from 10)
-                optimization_examples = results[:5] if len(results) > 5 else results
+                # Use a representative set of examples for optimization, up to 15 examples
+                max_optimization_examples = 15  # Increased from 5 to 15
+                optimization_examples = results[:max_optimization_examples] if len(results) > max_optimization_examples else results
                 logger.info(f"Using {len(optimization_examples)} examples for optimization")
                 
-                # Make a copy of the first 5 examples for the experiment tracker
-                results_for_tracker = results[:5] if len(results) > 5 else results.copy()
+                # Make a copy of examples for the experiment tracker (up to 15)
+                results_for_tracker = results[:max_optimization_examples] if len(results) > max_optimization_examples else results.copy()
                 logger.info(f"Saved {len(results_for_tracker)} examples for experiment tracker")
                 
                 # Free up original results array to save memory if it's large
-                if len(results) > 5:
-                    # Clear the full results array
+                if len(results) > max_optimization_examples:
+                    # Make sure we've extracted what we need before clearing
+                    logger.info(f"Clearing full results array after saving {len(optimization_examples)} examples for optimization")
                     results = None
                     gc.collect()
                     logger.info("Cleared full results array to save memory")
