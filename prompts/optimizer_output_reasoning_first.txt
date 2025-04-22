@@ -1,0 +1,12 @@
+Return exactly one JSON object with *no* additional commentary:
+
+{
+  "system_prompt": "<REVISED full system prompt here>",
+  "output_prompt": "<REVISED full output prompt here>",
+  "reasoning":     "<≤150‑word justification of changes, focusing on reasoning improvement and avoiding overfitting>"
+}
+
+**Additional constraints for the Optimizer's reply:**
+1.  Do **not** include markdown fences.
+2.  Do **not** add keys beyond the three specified.
+3.  Ensure the JSON is syntactically valid (`"` quotes, commas, braces).

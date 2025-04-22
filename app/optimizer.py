@@ -57,17 +57,47 @@ def load_config() -> Dict[str, Any]:
             }
         }
 
-def load_optimizer_prompt(optimizer_type: str = 'general') -> str:
+def load_optimizer_prompt(optimizer_type: str = 'reasoning_first') -> str:
     """
     Load the optimizer prompt from file or use default.
     
     Args:
-        optimizer_type (str): Type of optimizer to load ('general', 'medical')
+        optimizer_type (str): Type of optimizer to load ('reasoning_first', 'general', 'medical')
     
     Returns:
         str: The optimizer prompt
     """
-    if optimizer_type == 'medical':
+    if optimizer_type == 'reasoning_first':
+        # Use the new Reasoning-First Refinement prompt pack
+        system_prompt_path = os.path.join('prompts', 'optimizer_prompt_reasoning_first.txt')
+        output_prompt_path = os.path.join('prompts', 'optimizer_output_reasoning_first.txt')
+        
+        try:
+            system_prompt = ""
+            output_prompt = ""
+            
+            if os.path.exists(system_prompt_path):
+                with open(system_prompt_path, 'r') as f:
+                    system_prompt = f.read()
+            else:
+                logger.warning(f"Reasoning-First system prompt file not found: {system_prompt_path}")
+                system_prompt = DEFAULT_OPTIMIZER_PROMPT
+                
+            if os.path.exists(output_prompt_path):
+                with open(output_prompt_path, 'r') as f:
+                    output_prompt = f.read()
+            else:
+                logger.warning(f"Reasoning-First output prompt file not found: {output_prompt_path}")
+                output_prompt = ""
+            
+            # Combine the system prompt and output prompt
+            combined_prompt = system_prompt + "\n\n" + output_prompt
+            return combined_prompt
+            
+        except Exception as e:
+            logger.error(f"Error loading Reasoning-First prompt pack: {e}")
+            return DEFAULT_OPTIMIZER_PROMPT
+    elif optimizer_type == 'medical':
         prompt_path = os.path.join('prompts', 'optimizer', 'medical_reasoning_improver.txt')
     else:
         prompt_path = os.path.join('prompts', 'optimizer', 'reasoning_improver.txt')
@@ -523,6 +553,11 @@ def extract_section(text: str, section_name: str) -> str:
 def get_optimization_strategies() -> List[Dict[str, str]]:
     """Get available optimization strategies with descriptions."""
     strategies = [
+        {
+            "id": "reasoning_first",
+            "name": "Reasoning-First Refinement",
+            "description": "Advanced prompt optimization focusing on logical reasoning and instruction compliance"
+        },
         {
             "id": "full_rewrite",
             "name": "Complete Rewrite",
