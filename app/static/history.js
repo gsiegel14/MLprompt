@@ -498,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Examples handling
     window.loadExamplesForIteration = function(iteration) {
+        console.log(`Loading examples for iteration: ${iteration}`);
         const examplesContainer = document.getElementById('examples-container');
         // Check if examplesContainer exists
         if (!examplesContainer) {
@@ -624,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
         summaryCard.className = 'card mb-4';
         summaryCard.innerHTML = `
             <div class="card-body p-3">
-                <h5 class="card-title">Examples Summary</h5>
+                <h5 class="card-title">Examples Summary - Iteration ${currentExperimentData.iterations.find(it => it.iteration === iteration)?.iteration || iteration}</h5>
                 <div class="row g-3">
                     <div class="col-md-4">
                         <div class="d-flex align-items-center">
