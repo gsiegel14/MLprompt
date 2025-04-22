@@ -1213,8 +1213,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.error) {
                 // Log detailed error information
                 console.error("Error in training:", data.error);
-                showAlert(`Training error: ${data.error}`, 'danger');
-                log(`ERROR: ${data.error}`);
+                
+                // Handle empty error objects
+                const errorMessage = data.error && typeof data.error === 'object' && Object.keys(data.error).length === 0 
+                    ? "An unknown error occurred during training. Check server logs for details."
+                    : data.error || "Unknown training error";
+                    
+                showAlert(`Training error: ${errorMessage}`, 'danger');
+                log(`ERROR: ${errorMessage}`);
                 
                 // Add error details to training logs with timestamp
                 const timestamp = new Date().toLocaleTimeString();
@@ -1222,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorDetails.className = 'alert alert-danger mt-2 mb-2';
                 errorDetails.innerHTML = `
                     <strong>Training Error at ${timestamp}</strong><br>
-                    ${data.error}
+                    ${errorMessage}
                 `;
                 trainingLogsEl.appendChild(errorDetails);
             } else {
