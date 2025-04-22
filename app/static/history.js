@@ -1,14 +1,479 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // UI Elements
-    const experimentsBodyEl = document.getElementById('experiments-body');
-    const experimentDetailsEl = document.getElementById('experiment-details');
-    const compareViewEl = document.getElementById('compare-view');
-    const backToListBtn = document.getElementById('back-to-list');
-    const backToDetailsBtn = document.getElementById('back-to-details');
-    const currentExperimentIdEl = document.getElementById('current-experiment-id');
-    const iterationsAccordionEl = document.getElementById('iterations-accordion');
-    const spinner = document.getElementById('spinner');
+document.addEventListener("DOMContentLoaded", function() {
+    // If experiments and iterations are loaded from server-side, display them
+    if (typeof initialData !== 'undefined' && initialData.experiments) {
+        displayExperiments(initialData.experiments);
+    } else {
+        fetchExperiments();
+    }
+});
 
+function fetchExperiments() {
+    fetch('/api/experiments')
+        .then(response => response.json())
+        .then(data => {
+            displayExperiments(data.experiments);
+        })
+        .catch(error => {
+            console.error('Error fetching experiments:', error);
+            document.getElementById('loading-spinner').style.display = 'none';
+            document.getElementById('error-message').textContent = 'Failed to load experiments. Please try again later.';
+            document.getElementById('error-message').style.display = 'block';
+        });
+}
+
+function displayExperiments(experiments) {
+    const experimentsTable = document.getElementById('experiments-table');
+    const loadingSpinner = document.getElementById('loading-spinner');
+
+    if (loadingSpinner) {
+        loadingSpinner.style.display = 'none';
+    }
+
+    if (!experiments || experiments.length === 0) {
+        document.getElementById('no-experiments').style.display = 'block';
+        return;
+    }
+
+    const tbody = experimentsTable.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    experiments.forEach((experiment, index) => {
+        const row = document.createElement('tr');
+
+        const dateCell = document.createElement('td');
+        dateCell.textContent = formatDate(experiment.id);
+
+        const iterationsCell = document.createElement('td');
+        iterationsCell.textContent = experiment.iterations ? experiment.iterations.length : 0;
+
+        const scoreCell = document.createElement('td');
+        if (experiment.best_score !== undefined) {
+            scoreCell.textContent = (experiment.best_score * 100).toFixed(1) + '%';
+        } else {
+            scoreCell.textContent = 'N/A';
+        }
+
+        const actionsCell = document.createElement('td');
+        const viewButton = document.createElement('button');
+        viewButton.textContent = 'View';
+        viewButton.className = 'btn btn-sm btn-primary view-experiment';
+        viewButton.setAttribute('data-id', experiment.id);
+        viewButton.onclick = function() {
+            showExperimentDetails(experiment.id);
+        };
+        actionsCell.appendChild(viewButton);
+
+        row.appendChild(dateCell);
+        row.appendChild(iterationsCell);
+        row.appendChild(scoreCell);
+        row.appendChild(actionsCell);
+
+        tbody.appendChild(row);
+    });
+
+    experimentsTable.style.display = 'table';
+}
+
+function formatDate(experimentId) {
+    // Assuming experimentId format is YYYYMMDD_HHMMSS
+    if (!experimentId || typeof experimentId !== 'string' || experimentId.length < 15) {
+        return experimentId;
+    }
+
+    try {
+        const year = experimentId.substring(0, 4);
+        const month = experimentId.substring(4, 6);
+        const day = experimentId.substring(6, 8);
+        const hour = experimentId.substring(9, 11);
+        const minute = experimentId.substring(11, 13);
+
+        return `${year}-${month}-${day} ${hour}:${minute}`;
+    } catch (e) {
+        return experimentId;
+    }
+}
+
+function showExperimentDetails(experimentId) {
+    // Clear previous content and show loading indicator
+    document.getElementById('experiment-details').style.display = 'block';
+    document.getElementById('experiment-details-loading').style.display = 'block';
+    document.getElementById('iterations-container').style.display = 'none';
+    document.getElementById('breadcrumb-experiment').textContent = experimentId;
+
+    // Scroll to experiment details
+    document.getElementById('experiment-details').scrollIntoView({
+        behavior: 'smooth'
+    });
+
+    fetch(`/api/experiments/${experimentId}`)
+        .then(response => response.json())
+        .then(data => {
+            displayIterations(experimentId, data.iterations);
+        })
+        .catch(error => {
+            console.error('Error fetching experiment details:', error);
+            document.getElementById('experiment-details-loading').style.display = 'none';
+            document.getElementById('experiment-details-error').textContent = 'Failed to load experiment details. Please try again later.';
+            document.getElementById('experiment-details-error').style.display = 'block';
+        });
+}
+
+function displayIterations(experimentId, iterations) {
+    const container = document.getElementById('iterations-accordion');
+    container.innerHTML = '';
+
+    if (!iterations || iterations.length === 0) {
+        document.getElementById('experiment-details-loading').style.display = 'none';
+        document.getElementById('no-iterations').style.display = 'block';
+        return;
+    }
+
+    iterations.forEach((iteration, index) => {
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'card-header d-flex justify-content-between align-items-center';
+        cardHeader.id = `heading-${iteration.iteration}`;
+
+        const headerButton = document.createElement('button');
+        headerButton.className = 'btn btn-link';
+        headerButton.setAttribute('data-toggle', 'collapse');
+        headerButton.setAttribute('data-target', `#collapse-${iteration.iteration}`);
+        headerButton.setAttribute('aria-expanded', 'false');
+        headerButton.setAttribute('aria-controls', `collapse-${iteration.iteration}`);
+
+        let headerText = `Iteration ${iteration.iteration}`;
+        if (iteration.metrics && iteration.metrics.avg_score !== undefined) {
+            headerText += ` - Score: ${(iteration.metrics.avg_score * 100).toFixed(1)}%`;
+        }
+        headerButton.textContent = headerText;
+
+        const headerActions = document.createElement('div');
+
+        const viewExamplesBtn = document.createElement('button');
+        viewExamplesBtn.className = 'btn btn-sm btn-outline-primary view-examples';
+        viewExamplesBtn.setAttribute('data-iteration', iteration.iteration);
+        viewExamplesBtn.setAttribute('onclick', `window.loadExamplesForIteration(${iteration.iteration})`);
+        viewExamplesBtn.textContent = 'View Examples';
+
+        headerActions.appendChild(viewExamplesBtn);
+        cardHeader.appendChild(headerButton);
+        cardHeader.appendChild(headerActions);
+
+        const cardCollapse = document.createElement('div');
+        cardCollapse.id = `collapse-${iteration.iteration}`;
+        cardCollapse.className = 'collapse';
+        cardCollapse.setAttribute('aria-labelledby', `heading-${iteration.iteration}`);
+        cardCollapse.setAttribute('data-parent', '#iterations-accordion');
+
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        // System Prompt
+        const systemPromptSection = document.createElement('div');
+        systemPromptSection.className = 'mb-4';
+
+        const systemPromptHeader = document.createElement('h5');
+        systemPromptHeader.textContent = 'System Prompt';
+
+        const systemPromptContent = document.createElement('pre');
+        systemPromptContent.className = 'prompt-content';
+        systemPromptContent.textContent = iteration.system_prompt || 'No system prompt available';
+
+        systemPromptSection.appendChild(systemPromptHeader);
+        systemPromptSection.appendChild(systemPromptContent);
+
+        // Output Prompt
+        const outputPromptSection = document.createElement('div');
+        outputPromptSection.className = 'mb-4';
+
+        const outputPromptHeader = document.createElement('h5');
+        outputPromptHeader.textContent = 'Output Prompt';
+
+        const outputPromptContent = document.createElement('pre');
+        outputPromptContent.className = 'prompt-content';
+        outputPromptContent.textContent = iteration.output_prompt || 'No output prompt available';
+
+        outputPromptSection.appendChild(outputPromptHeader);
+        outputPromptSection.appendChild(outputPromptContent);
+
+        // Metrics
+        const metricsSection = document.createElement('div');
+        metricsSection.className = 'mb-4';
+
+        const metricsHeader = document.createElement('h5');
+        metricsHeader.textContent = 'Metrics';
+
+        const metricsContent = document.createElement('div');
+        metricsContent.className = 'metrics-content';
+
+        if (iteration.metrics) {
+            const metrics = iteration.metrics;
+
+            const metricsList = document.createElement('ul');
+            metricsList.className = 'list-group';
+
+            for (const [key, value] of Object.entries(metrics)) {
+                const metricItem = document.createElement('li');
+                metricItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                const metricKey = document.createElement('span');
+                metricKey.textContent = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                const metricValue = document.createElement('span');
+                if (typeof value === 'number') {
+                    if (key.includes('percent') || key.includes('score')) {
+                        metricValue.textContent = `${(value * 100).toFixed(1)}%`;
+                    } else {
+                        metricValue.textContent = value;
+                    }
+                } else {
+                    metricValue.textContent = value;
+                }
+
+                metricItem.appendChild(metricKey);
+                metricItem.appendChild(metricValue);
+                metricsList.appendChild(metricItem);
+            }
+
+            metricsContent.appendChild(metricsList);
+        } else {
+            metricsContent.textContent = 'No metrics available';
+        }
+
+        metricsSection.appendChild(metricsHeader);
+        metricsSection.appendChild(metricsContent);
+
+        // Optimizer Reasoning
+        if (iteration.optimizer_reasoning) {
+            const reasoningSection = document.createElement('div');
+            reasoningSection.className = 'mb-4';
+
+            const reasoningHeader = document.createElement('h5');
+            reasoningHeader.textContent = 'Optimizer Reasoning';
+
+            const reasoningContent = document.createElement('pre');
+            reasoningContent.className = 'prompt-content';
+            reasoningContent.textContent = iteration.optimizer_reasoning;
+
+            reasoningSection.appendChild(reasoningHeader);
+            reasoningSection.appendChild(reasoningContent);
+
+            cardBody.appendChild(reasoningSection);
+        }
+
+        cardBody.appendChild(systemPromptSection);
+        cardBody.appendChild(outputPromptSection);
+        cardBody.appendChild(metricsSection);
+
+        cardCollapse.appendChild(cardBody);
+
+        card.appendChild(cardHeader);
+        card.appendChild(cardCollapse);
+
+        container.appendChild(card);
+    });
+
+    document.getElementById('experiment-details-loading').style.display = 'none';
+    document.getElementById('iterations-container').style.display = 'block';
+
+    // Add examples container if it doesn't exist
+    if (!document.getElementById('examples-container')) {
+        const examplesContainer = document.createElement('div');
+        examplesContainer.id = 'examples-container';
+        examplesContainer.className = 'mt-4';
+        examplesContainer.style.display = 'none';
+
+        const examplesTitle = document.createElement('h4');
+        examplesTitle.textContent = 'Examples';
+
+        const examplesLoading = document.createElement('div');
+        examplesLoading.id = 'examples-loading';
+        examplesLoading.className = 'text-center my-4';
+        examplesLoading.style.display = 'none';
+
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner-border';
+        spinner.setAttribute('role', 'status');
+
+        const spinnerText = document.createElement('span');
+        spinnerText.className = 'sr-only';
+        spinnerText.textContent = 'Loading...';
+
+        spinner.appendChild(spinnerText);
+        examplesLoading.appendChild(spinner);
+
+        const examplesContent = document.createElement('div');
+        examplesContent.id = 'examples-content';
+
+        examplesContainer.appendChild(examplesTitle);
+        examplesContainer.appendChild(examplesLoading);
+        examplesContainer.appendChild(examplesContent);
+
+        document.getElementById('experiment-details').appendChild(examplesContainer);
+    }
+
+    // Update breadcrumb
+    document.getElementById('breadcrumb-experiment').textContent = experimentId;
+}
+
+// Make sure this function is available in the global scope (window)
+window.loadExamplesForIteration = function(iteration) {
+    const experimentId = document.getElementById('breadcrumb-experiment').textContent;
+
+    // Show examples container and loading indicator
+    const examplesContainer = document.getElementById('examples-container');
+    const examplesLoading = document.getElementById('examples-loading');
+    const examplesContent = document.getElementById('examples-content');
+
+    examplesContainer.style.display = 'block';
+    examplesLoading.style.display = 'block';
+    examplesContent.innerHTML = '';
+
+    // Update breadcrumb
+    document.getElementById('breadcrumb-iteration').textContent = iteration;
+
+    // Scroll to examples container
+    examplesContainer.scrollIntoView({
+        behavior: 'smooth'
+    });
+
+    fetch(`/api/experiments/${experimentId}/iterations/${iteration}/examples`)
+        .then(response => response.json())
+        .then(data => {
+            displayExamples(data.examples);
+        })
+        .catch(error => {
+            console.error('Error fetching examples:', error);
+            examplesLoading.style.display = 'none';
+            examplesContent.innerHTML = '<div class="alert alert-danger">Failed to load examples. Please try again later.</div>';
+        });
+};
+
+function displayExamples(examples) {
+    const examplesLoading = document.getElementById('examples-loading');
+    const examplesContent = document.getElementById('examples-content');
+
+    examplesLoading.style.display = 'none';
+
+    if (!examples || examples.length === 0) {
+        examplesContent.innerHTML = '<div class="alert alert-info">No examples available for this iteration.</div>';
+        return;
+    }
+
+    const examplesGrid = document.createElement('div');
+    examplesGrid.className = 'row';
+
+    examples.forEach((example, index) => {
+        const exampleCol = document.createElement('div');
+        exampleCol.className = 'col-md-6 mb-4';
+
+        const exampleCard = document.createElement('div');
+        exampleCard.className = 'card example-card';
+
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        // Example number and score
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'd-flex justify-content-between align-items-center mb-3';
+
+        const exampleNumber = document.createElement('h5');
+        exampleNumber.className = 'card-title mb-0';
+        exampleNumber.textContent = `Example ${index + 1}`;
+
+        const scoreContainer = document.createElement('div');
+        scoreContainer.className = 'score-container';
+
+        const scoreValue = document.createElement('span');
+        scoreValue.className = 'score badge ' + (example.score >= 0.9 ? 'badge-success' : (example.score >= 0.7 ? 'badge-warning' : 'badge-danger'));
+
+        if (example.score !== undefined) {
+            scoreValue.textContent = `Score: ${(example.score * 100).toFixed(1)}%`;
+        } else {
+            scoreValue.textContent = 'No Score';
+            scoreValue.className = 'score badge badge-secondary';
+        }
+
+        scoreContainer.appendChild(scoreValue);
+        cardHeader.appendChild(exampleNumber);
+        cardHeader.appendChild(scoreContainer);
+
+        // User Input
+        const userInputSection = document.createElement('div');
+        userInputSection.className = 'mb-3';
+
+        const userInputLabel = document.createElement('h6');
+        userInputLabel.textContent = 'User Input';
+
+        const userInputContent = document.createElement('div');
+        userInputContent.className = 'user-input p-2 bg-light border rounded';
+        userInputContent.textContent = example.user_input || 'No user input available';
+
+        userInputSection.appendChild(userInputLabel);
+        userInputSection.appendChild(userInputContent);
+
+        // Ground Truth
+        const groundTruthSection = document.createElement('div');
+        groundTruthSection.className = 'mb-3';
+
+        const groundTruthLabel = document.createElement('h6');
+        groundTruthLabel.textContent = 'Ground Truth';
+
+        const groundTruthContent = document.createElement('div');
+        groundTruthContent.className = 'ground-truth p-2 bg-light border rounded';
+        groundTruthContent.textContent = example.ground_truth_output || 'No ground truth available';
+
+        groundTruthSection.appendChild(groundTruthLabel);
+        groundTruthSection.appendChild(groundTruthContent);
+
+        // Model Response
+        const modelResponseSection = document.createElement('div');
+        modelResponseSection.className = 'mb-3';
+
+        const modelResponseLabel = document.createElement('h6');
+        modelResponseLabel.textContent = 'Model Response';
+
+        const modelResponseContent = document.createElement('div');
+        modelResponseContent.className = 'model-response p-2 bg-light border rounded';
+        modelResponseContent.textContent = example.model_response || 'No model response available';
+
+        modelResponseSection.appendChild(modelResponseLabel);
+        modelResponseSection.appendChild(modelResponseContent);
+
+        // Optimized Response (if available)
+        if (example.optimized_response) {
+            const optimizedResponseSection = document.createElement('div');
+            optimizedResponseSection.className = 'mb-3';
+
+            const optimizedResponseLabel = document.createElement('h6');
+            optimizedResponseLabel.textContent = 'Optimized Response';
+
+            const optimizedResponseContent = document.createElement('div');
+            optimizedResponseContent.className = 'optimized-response p-2 bg-light border rounded';
+            optimizedResponseContent.textContent = example.optimized_response;
+
+            optimizedResponseSection.appendChild(optimizedResponseLabel);
+            optimizedResponseSection.appendChild(optimizedResponseContent);
+
+            cardBody.appendChild(optimizedResponseSection);
+        }
+
+        cardBody.appendChild(cardHeader);
+        cardBody.appendChild(userInputSection);
+        cardBody.appendChild(groundTruthSection);
+        cardBody.appendChild(modelResponseSection);
+
+        exampleCard.appendChild(cardBody);
+        exampleCol.appendChild(exampleCard);
+        examplesGrid.appendChild(exampleCol);
+    });
+
+    examplesContent.appendChild(examplesGrid);
+}
+
+//This part is unchanged from original
     // Setup Chart.js
     let historyChart;
     setupHistoryChart();
@@ -17,45 +482,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentExperimentId = null;
     let currentExperimentData = null;
 
-    // Load all experiments
-    loadExperiments();
-
     // Event listeners
     backToListBtn.addEventListener('click', showExperimentsList);
     backToDetailsBtn.addEventListener('click', showExperimentDetails);
 
+
     // Functions
-    function loadExperiments() {
-        showSpinner();
-        fetch('/experiments')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showAlert(data.error, 'danger');
-                } else if (data.experiments && data.experiments.length > 0) {
-                    populateExperimentsTable(data.experiments);
-                } else {
-                    experimentsBodyEl.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <div class="text-muted">
-                                    <i class="fa-solid fa-folder-open me-2 fs-4"></i>
-                                    <p class="mb-1">No experiments found</p>
-                                    <small>Start a new experiment in the Training interface</small>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading experiments:', error);
-                showAlert('Error loading experiments', 'danger');
-            })
-            .finally(() => {
-                hideSpinner();
-            });
-    }
 
     function populateExperimentsTable(experiments) {
         experimentsBodyEl.innerHTML = '';
@@ -200,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fa-solid fa-code-compare me-1"></i> Compare with Previous
                             </button>
                             ` : ''}
-                            <button class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}" onclick="loadExamplesForIteration(${iteration.iteration})">
+                            <button class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}" onclick="window.loadExamplesForIteration(${iteration.iteration})">
                                 <i class="fa-solid fa-magnifying-glass me-1"></i> View Examples
                             </button>
                         </div>
@@ -397,8 +829,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Calculate score improvement
                 const scoreImprovement = optimizedScore - originalScore;
-                const scoreClass = scoreImprovement > 0 ? 'text-success' : 
-                                  scoreImprovement < 0 ? 'text-danger' : 'text-muted';
+                const scoreClass = scoreImprovement > 0 ? 'text-success' :
+                                      scoreImprovement < 0 ? 'text-danger' : 'text-muted';
                 const scoreSign = scoreImprovement > 0 ? '+' : '';
 
                 // Create example card

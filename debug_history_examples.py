@@ -310,10 +310,13 @@ def check_history_js_file():
             
         if "window.loadExamplesForIteration" in content:
             logger.info("✅ Found 'window.loadExamplesForIteration' in history.js")
+            return True
+        elif "function loadExamplesForIteration" in content:
+            logger.warning("⚠️ Found 'loadExamplesForIteration' but not properly assigned to window object")
+            return False
         else:
-            logger.error("❌ 'window.loadExamplesForIteration' NOT found in history.js")
-            
-        return "window.loadExamplesForIteration" in content
+            logger.error("❌ 'loadExamplesForIteration' function NOT found in history.js")
+            return False
     except Exception as e:
         logger.error(f"❌ Error reading history.js: {str(e)}")
         return False
