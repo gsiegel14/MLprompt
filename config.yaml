@@ -20,6 +20,7 @@ optimizer:
   temperature: 0.7  # Higher temperature for more creative prompt improvements
   max_output_tokens: 2048
   strategies:
+    - "reasoning_first"  # Reasoning-First Refinement approach
     - "full_rewrite"  # Complete prompt rewrite
     - "targeted_edit"  # Specific changes to problematic sections
     - "example_addition"  # Add few-shot examples to prompts

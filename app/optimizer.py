@@ -381,6 +381,49 @@ Your detailed reasoning for adding these examples
 [/REASONING]
 """
     
+    elif strategy == 'reasoning_first':
+        # Use a format that focuses on reasoning-first refinement
+        return f"""I need your help optimizing my prompts with a focus on enhancing reasoning capabilities.
+
+Current System Prompt:
+```
+{current_system_prompt}
+```
+
+Current Output Prompt:
+```
+{current_output_prompt}
+```
+
+Performance Metrics:
+- Average Score: {metrics['avg_score']:.2f}
+- Perfect Matches: {metrics['perfect_matches']}/{metrics['total_examples']} ({metrics['perfect_match_percent']:.1f}%)
+
+Examples (focus on improving these):
+{formatted_examples}
+
+Please analyze the current prompts and examples with a reasoning-first approach:
+1. First analyze the reasoning patterns in the current prompts
+2. Identify specific reasoning deficiencies in the examples
+3. Create improved prompts that enhance logical structure and diagnostic reasoning
+
+Format your response as:
+[ANALYSIS]
+Your detailed analysis of current prompts and their reasoning limitations
+[/ANALYSIS]
+
+[SYSTEM_PROMPT]
+Your new system prompt here
+[/SYSTEM_PROMPT]
+
+[OUTPUT_PROMPT]
+Your new output prompt here
+[/OUTPUT_PROMPT]
+
+[REASONING]
+Your detailed reasoning for the changes made to enhance reasoning capabilities
+[/REASONING]
+"""
     else:
         # Default to full rewrite
         return generate_optimization_prompt(
@@ -413,8 +456,11 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
     
     # Set default values if not provided
     if optimizer_system_prompt is None:
+        # Check if this is using the reasoning-first strategy
+        if strategy == 'reasoning_first':
+            optimizer_system_prompt = load_optimizer_prompt('reasoning_first')
         # Check if this is a medical diagnostic prompt by looking for keywords
-        if current_system_prompt and ('medicine' in current_system_prompt.lower() or 
+        elif current_system_prompt and ('medicine' in current_system_prompt.lower() or 
                                      'medical' in current_system_prompt.lower() or 
                                      'diagnosis' in current_system_prompt.lower() or
                                      'clinical' in current_system_prompt.lower()):
@@ -482,6 +528,15 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
             few_shot_examples = extract_section(response, "FEW_SHOT_EXAMPLES")
             if few_shot_examples:
                 reasoning = f"Added Few-Shot Examples:\n{few_shot_examples}\n\n{reasoning}"
+                
+        elif strategy == 'reasoning_first':
+            system_prompt = extract_section(response, "SYSTEM_PROMPT")
+            output_prompt = extract_section(response, "OUTPUT_PROMPT")
+            reasoning = extract_section(response, "REASONING")
+            # Look for detailed reasoning analysis sections specific to reasoning_first
+            analysis = extract_section(response, "ANALYSIS")
+            if analysis:
+                reasoning = f"Analysis of Existing Prompts:\n{analysis}\n\n{reasoning}"
         
         else:
             # Default parsing
@@ -543,7 +598,8 @@ def extract_section(text: str, section_name: str) -> str:
         elif in_section and any(s.lower() in line.lower() for s in ["SYSTEM_PROMPT", "OUTPUT_PROMPT", 
                                                                    "REASONING", "MODIFIED_SYSTEM_PROMPT", 
                                                                    "MODIFIED_OUTPUT_PROMPT", "SYSTEM_PROMPT_EDITS",
-                                                                   "OUTPUT_PROMPT_EDITS", "FEW_SHOT_EXAMPLES"]) and section_name.lower() not in line.lower():
+                                                                   "OUTPUT_PROMPT_EDITS", "FEW_SHOT_EXAMPLES",
+                                                                   "ANALYSIS"]) and section_name.lower() not in line.lower():
             break
         elif in_section:
             section_content.append(line)
