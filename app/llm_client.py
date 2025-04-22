@@ -32,7 +32,7 @@ def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, co
         config = {}
     
     # Default configuration
-    model_name = config.get('model_name', 'gemini-1.5-pro')
+    model_name = config.get('model_name', 'gemini-1.0-pro')  # Using free tier model
     temperature = config.get('temperature', 0.0)
     top_p = config.get('top_p', 0.95)
     top_k = config.get('top_k', 40)

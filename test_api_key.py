@@ -19,7 +19,7 @@ def test_gemini_api():
         genai.configure(api_key=api_key)
         
         # Test prompt
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel('gemini-1.0-pro')  # Using free tier model
         response = model.generate_content("Hello, please respond with 'API is working!'")
         
         logger.info(f"API Test Response: {response.text}")
