@@ -713,6 +713,53 @@ def get_available_strategies():
         logger.error(f"Error getting optimization strategies: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/reset_nejm_cache', methods=['POST'])
+def reset_nejm_cache():
+    """Reset the NEJM dataset cache."""
+    try:
+        # Clear the cached datasets if they exist
+        if hasattr(app, 'nejm_train_cache'):
+            delattr(app, 'nejm_train_cache')
+            logger.info("Cleared NEJM training dataset cache")
+            
+        if hasattr(app, 'nejm_validation_cache'):
+            delattr(app, 'nejm_validation_cache')
+            logger.info("Cleared NEJM validation dataset cache")
+            
+        return jsonify({'message': 'NEJM dataset cache cleared successfully'})
+    except Exception as e:
+        logger.error(f"Error clearing NEJM cache: {e}")
+        return jsonify({'error': f"Error clearing NEJM cache: {str(e)}"}), 500
+
+@app.route('/regenerate_nejm_data', methods=['POST'])
+def regenerate_nejm_data():
+    """Regenerate NEJM datasets by running the fix_nejm_data.py script."""
+    try:
+        # Import and run fix_nejm_data.py to regenerate datasets
+        import sys
+        import importlib.util
+        
+        logger.info("Loading fix_nejm_data.py module")
+        
+        spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
+        
+        if spec and spec.loader:
+            fix_nejm_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(fix_nejm_module)
+            
+            logger.info("Running fix_nejm_data.fix_nejm_data()")
+            fix_nejm_module.fix_nejm_data()
+            
+            logger.info("NEJM datasets regenerated successfully")
+            return jsonify({'message': 'NEJM datasets regenerated successfully'})
+        else:
+            logger.error("Could not load fix_nejm_data module")
+            return jsonify({'error': 'Could not load fix_nejm_data module'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error regenerating NEJM datasets: {e}")
+        return jsonify({'error': f"Error regenerating NEJM datasets: {str(e)}"}), 500
+
 @app.route('/two_stage_train', methods=['POST'])
 def two_stage_train():
     """
