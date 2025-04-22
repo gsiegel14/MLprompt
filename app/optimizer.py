@@ -574,37 +574,102 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
         }
 
 def extract_section(text: str, section_name: str) -> str:
-    """Extract a section from the response text."""
-    start_tag = f"[{section_name}]"
-    end_tag = f"[/{section_name}]"
+    """
+    Extract a section from the response text.
+    Handles multiple formats including:
+    - [SECTION_NAME]...[/SECTION_NAME]
+    - SECTION_NAME: ...
+    - ## SECTION_NAME ##
+    - SECTION_NAME
+    """
+    # First, try with explicit tags
+    patterns = [
+        # [SECTION_NAME]content[/SECTION_NAME]
+        (f"\\[{section_name}\\](.*?)\\[\\/{section_name}\\]", 1),
+        # ```SECTION_NAME\ncontent\n```
+        (f"```{section_name}\\s*(.*?)\\s*```", 1),
+        # SECTION_NAME:\ncontent
+        (f"{section_name}:\\s*(.*?)(?:\\n\\s*(?:[A-Z_]+:|#{2,3}\\s*[A-Z_]+|\\[\\/?[A-Z_]+\\])|$)", 1),
+        # ## SECTION_NAME ##\ncontent
+        (f"#{2,3}\\s*{section_name}\\s*#{0,3}\\s*(.*?)(?:#{2,3}|$)", 1),
+        # SECTION_NAME\ncontent
+        (f"^{section_name}\\s*$(.*?)(?:^[A-Z_\\s]+$|$)", 1)
+    ]
     
-    start_pos = text.find(start_tag)
-    end_pos = text.find(end_tag)
+    import re
     
-    if start_pos != -1 and end_pos != -1:
-        # Extract the content between the tags
-        content = text[start_pos + len(start_tag):end_pos].strip()
-        return content
+    # Try each pattern
+    for pattern, group in patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
+        if matches and matches[0].strip():
+            return matches[0].strip()
     
-    # If not found in the expected format, try to find the section another way
+    # If still not found, try a more generic approach
     lines = text.split('\n')
     section_content = []
     in_section = False
+    section_headers = ["SYSTEM_PROMPT", "OUTPUT_PROMPT", "REASONING", "MODIFIED_SYSTEM_PROMPT", 
+                      "MODIFIED_OUTPUT_PROMPT", "SYSTEM_PROMPT_EDITS", "OUTPUT_PROMPT_EDITS", 
+                      "FEW_SHOT_EXAMPLES", "ANALYSIS"]
+    
+    section_name_variants = [
+        section_name,
+        section_name.replace("_", " "),
+        section_name.title(),
+        section_name.replace("_", " ").title()
+    ]
     
     for line in lines:
-        if section_name.lower() in line.lower() and not in_section:
-            in_section = True
-            continue
-        elif in_section and any(s.lower() in line.lower() for s in ["SYSTEM_PROMPT", "OUTPUT_PROMPT", 
-                                                                   "REASONING", "MODIFIED_SYSTEM_PROMPT", 
-                                                                   "MODIFIED_OUTPUT_PROMPT", "SYSTEM_PROMPT_EDITS",
-                                                                   "OUTPUT_PROMPT_EDITS", "FEW_SHOT_EXAMPLES",
-                                                                   "ANALYSIS"]) and section_name.lower() not in line.lower():
+        # Check if this line starts a section
+        if not in_section:
+            for variant in section_name_variants:
+                if variant.lower() in line.lower() and not any(s.lower() in line.lower() and s.lower() != variant.lower() for s in section_headers):
+                    in_section = True
+                    # If the section name is at the beginning of the line and followed by a colon,
+                    # include everything after the colon on this line
+                    if ":" in line:
+                        content_after_colon = line.split(":", 1)[1].strip()
+                        if content_after_colon:
+                            section_content.append(content_after_colon)
+                    break
+            if in_section:
+                continue
+                
+        # Check if this line ends the current section
+        elif any(s.lower() in line.lower() and all(variant.lower() not in line.lower() for variant in section_name_variants) 
+                for s in section_headers):
             break
+        # Add content if we're in the right section
         elif in_section:
             section_content.append(line)
     
-    return '\n'.join(section_content).strip()
+    content = '\n'.join(section_content).strip()
+    
+    # If we found something, return it
+    if content:
+        return content
+        
+    # Last resort: look for text between "SECTION_NAME" and the next section header
+    section_marker = None
+    for i, line in enumerate(lines):
+        if any(variant.lower() in line.lower() for variant in section_name_variants):
+            section_marker = i
+            break
+    
+    if section_marker is not None:
+        next_section = len(lines)
+        for i in range(section_marker + 1, len(lines)):
+            if any(s.lower() in lines[i].lower() for s in section_headers):
+                next_section = i
+                break
+        
+        # Extract everything between the markers
+        content = '\n'.join(lines[section_marker+1:next_section]).strip()
+        if content:
+            return content
+    
+    # If all else fails, return empty string
+    return ""
 
 def get_optimization_strategies() -> List[Dict[str, str]]:
     """Get available optimization strategies with descriptions."""
