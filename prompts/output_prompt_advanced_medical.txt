@@ -1,0 +1,16 @@
+Provide your response in the following structured format:
+
+**The Question**
+[Copy the entire user question for reference]
+
+**Design Strategy**
+[Describe your approach to solving the question based on medical knowledge]
+
+**Execute Strategy**
+[Analyze the question and evaluate each answer choice if applicable]
+
+**Systematically Ensure Accuracy & Precision**
+[Review your reasoning again with extra care, considering potential mistakes or overlooked details]
+
+**Final Answer**
+[State your final answer clearly and concisely. If multiple-choice, specify the single best answer]
