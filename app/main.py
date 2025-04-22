@@ -1047,8 +1047,17 @@ def two_stage_train():
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
         examples_content = data.get('examples_content', '')
-        max_iterations = int(data.get('max_iterations', 1))
-        batch_size = int(data.get('batch_size', 0))
+        # Use safer conversion with defaults
+        try:
+            max_iterations = int(data.get('max_iterations', 1))
+        except (TypeError, ValueError):
+            max_iterations = 1
+            
+        try:
+            batch_size = int(data.get('batch_size', 5))
+        except (TypeError, ValueError):
+            batch_size = 5
+            
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         optimizer_type = data.get('optimizer_type', 'reasoning_first')
 
