@@ -152,6 +152,37 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Examples with scores -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-list-check me-2"></i> Test Examples</span>
+                        <div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-light filter-examples active" data-filter="all">All</button>
+                                <button type="button" class="btn btn-light filter-examples" data-filter="perfect">Perfect Matches</button>
+                                <button type="button" class="btn btn-light filter-examples" data-filter="imperfect">Needs Improvement</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="examples-container" class="examples-list">
+                        <!-- Will be populated dynamically -->
+                        <div class="text-center py-4 text-muted" id="examples-loading">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            Loading examples...
+                        </div>
+                        <div class="text-center py-4 text-muted" id="no-examples-message" style="display: none;">
+                            <i class="fa-solid fa-inbox me-2"></i>
+                            No examples available for this iteration
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Prompt Compare View (hidden by default) -->

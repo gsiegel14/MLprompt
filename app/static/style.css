@@ -375,3 +375,22 @@ textarea, .results-section {
         margin-bottom: 0.25rem;
     }
 }
+
+/* Examples Styling */
+.examples-list {
+    max-height: 800px;
+    overflow-y: auto;
+}
+
+.example-card {
+    transition: all 0.2s ease;
+}
+
+.example-card:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.filter-examples.active {
+    background-color: #4361ee;
+    color: white;
+}

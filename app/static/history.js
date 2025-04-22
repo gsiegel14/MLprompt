@@ -200,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fa-solid fa-code-compare me-1"></i> Compare with Previous
                             </button>
                             ` : ''}
+                            <button class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}">
+                                <i class="fa-solid fa-magnifying-glass me-1"></i> View Examples
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -215,6 +218,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const previousIndex = parseInt(this.getAttribute('data-previous'));
                 
                 showPromptComparison(previousIndex, currentIndex);
+            });
+        });
+        
+        // Add event listeners to view examples buttons
+        document.querySelectorAll('.view-examples').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const iteration = parseInt(this.getAttribute('data-iteration'));
+                loadExamplesForIteration(iteration);
+                
+                // Scroll to examples section
+                document.getElementById('examples-container').scrollIntoView({
+                    behavior: 'smooth'
+                });
             });
         });
     }
@@ -344,6 +360,188 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
         alertContainer.appendChild(alert);
+
+    
+    // Examples handling
+    function loadExamplesForIteration(iteration) {
+        const examplesContainer = document.getElementById('examples-container');
+        const examplesLoading = document.getElementById('examples-loading');
+        const noExamplesMessage = document.getElementById('no-examples-message');
+        
+        // Reset container and show loading
+        const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
+        examplesList.forEach(el => el.remove());
+        examplesLoading.style.display = 'block';
+        noExamplesMessage.style.display = 'none';
+        
+        // Find the iteration data from the currently loaded experiment
+        const iterationData = currentExperimentData.iterations.find(it => it.iteration === iteration);
+        
+        if (!iterationData || !iterationData.examples) {
+            // Need to fetch examples from the server
+            fetch(`/experiments/${currentExperimentId}/iterations/${iteration}/examples`)
+                .then(response => response.json())
+                .then(data => {
+                    examplesLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        showAlert(data.error, 'danger');
+                        noExamplesMessage.style.display = 'block';
+                    } else if (data.examples && data.examples.length > 0) {
+                        // Store examples in the iteration data for reuse
+                        const currentIteration = currentExperimentData.iterations.find(it => it.iteration === iteration);
+                        if (currentIteration) {
+                            currentIteration.examples = data.examples;
+                        }
+                        
+                        // Display examples
+                        renderExamples(data.examples);
+                    } else {
+                        noExamplesMessage.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading examples:', error);
+                    examplesLoading.style.display = 'none';
+                    noExamplesMessage.style.display = 'block';
+                    showAlert('Error loading examples', 'danger');
+                });
+        } else {
+            // We already have the examples data
+            examplesLoading.style.display = 'none';
+            
+            if (iterationData.examples.length > 0) {
+                renderExamples(iterationData.examples);
+            } else {
+                noExamplesMessage.style.display = 'block';
+            }
+        }
+    }
+    
+    function renderExamples(examples) {
+        const examplesContainer = document.getElementById('examples-container');
+        
+        // Clear any existing examples
+        const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
+        examplesList.forEach(el => el.remove());
+        
+        // Get current filter
+        const activeFilter = document.querySelector('.filter-examples.active').getAttribute('data-filter');
+        
+        // Sort examples by score (highest first)
+        examples.sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        // Apply filter
+        let filteredExamples = examples;
+        if (activeFilter === 'perfect') {
+            filteredExamples = examples.filter(ex => ex.score >= 0.9);
+        } else if (activeFilter === 'imperfect') {
+            filteredExamples = examples.filter(ex => ex.score < 0.9);
+        }
+        
+        if (filteredExamples.length === 0) {
+            // No examples match the filter
+            const noMatchMessage = document.createElement('div');
+            noMatchMessage.className = 'text-center py-4 text-muted';
+            noMatchMessage.innerHTML = `
+                <i class="fa-solid fa-filter-circle-xmark me-2"></i>
+                No examples match the current filter
+            `;
+            examplesContainer.appendChild(noMatchMessage);
+            return;
+        }
+        
+        // Render examples
+        filteredExamples.forEach((example, index) => {
+            const score = example.score || 0;
+            const isPerfectMatch = score >= 0.9;
+            
+            const exampleCard = document.createElement('div');
+            exampleCard.className = 'example-card border-bottom';
+            exampleCard.setAttribute('data-score', score);
+            
+            // Determine score badge color based on score
+            let badgeClass = 'bg-danger';
+            if (score >= 0.9) {
+                badgeClass = 'bg-success';
+            } else if (score >= 0.7) {
+                badgeClass = 'bg-warning text-dark';
+            } else if (score >= 0.5) {
+                badgeClass = 'bg-info';
+            }
+            
+            exampleCard.innerHTML = `
+                <div class="p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Example ${index + 1}</h6>
+                        <span class="badge ${badgeClass}">${(score * 100).toFixed(1)}%</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold text-muted small mb-1">USER INPUT:</div>
+                        <div class="p-2 bg-light border rounded user-input">
+                            ${escapeHtml(example.user_input)}
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="fw-bold text-muted small mb-1">EXPECTED OUTPUT:</div>
+                            <div class="p-2 bg-light border rounded expected-output">
+                                ${escapeHtml(example.ground_truth_output)}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="fw-bold text-muted small mb-1">MODEL RESPONSE:</div>
+                            <div class="p-2 border rounded model-response ${isPerfectMatch ? 'border-success bg-success bg-opacity-10' : 'border-danger bg-danger bg-opacity-10'}">
+                                ${escapeHtml(example.model_response)}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="fw-bold text-muted small mb-1">HOW SCORE IS CALCULATED:</div>
+                        <div class="p-2 bg-light border rounded small">
+                            <p class="mb-1">The score is calculated using:</p>
+                            <ul class="mb-1">
+                                <li>Sequence similarity (70%): How similar the text sequences are</li>
+                                <li>Keyword matching (30%): How many important keywords match</li>
+                            </ul>
+                            <p class="mb-0">A score ≥ 90% is considered a perfect match.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            examplesContainer.appendChild(exampleCard);
+        });
+    }
+    
+    // Set up filter buttons for examples
+    document.querySelectorAll('.filter-examples').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active state
+            document.querySelectorAll('.filter-examples').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Get currently loaded examples
+            const activeIteration = document.querySelector('.accordion-collapse.show');
+            if (activeIteration) {
+                const iterationId = activeIteration.id.replace('iteration-', '');
+                const iterationData = currentExperimentData.iterations[iterationId];
+                if (iterationData && iterationData.examples) {
+                    renderExamples(iterationData.examples);
+                }
+            } else if (currentExperimentData && currentExperimentData.iterations && 
+                      currentExperimentData.iterations.length > 0 &&
+                      currentExperimentData.iterations[currentExperimentData.iterations.length - 1].examples) {
+                // If no iteration is open, but we have examples, render the last iteration's examples
+                renderExamples(currentExperimentData.iterations[currentExperimentData.iterations.length - 1].examples);
+            }
+        });
+    });
+
         
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
