@@ -1,0 +1,17 @@
+Analysis of Existing Prompts:
+The current system prompt is too general and lacks specific instructions to guide reasoning.  It focuses on safety and politeness rather than the logical process. The output prompt mentions showing reasoning steps but doesn't enforce it or provide a structure for doing so.
+
+Example 1 fails because, while the answer is correct, the model doesn't show its reasoning.  The prompt doesn't require this.  Example 2 succeeds, but again, without showing reasoning. The lack of a reasoning requirement allows the model to take shortcuts, leading to inconsistent performance.  The root cause is the absence of explicit instructions to perform and demonstrate a step-by-step reasoning process.
+
+The changes enhance reasoning capabilities by:
+
+1. **Explicitly requiring a step-by-step reasoning process:** The revised system prompt mandates that the model always shows its work. This forces the model to engage in a more structured and deliberate reasoning process, rather than relying on pattern matching or shortcuts.
+
+2. **Providing a clear structure for reasoning:** The output prompt provides a numbered list of instructions, making the expectation for reasoning clear and unambiguous.  This eliminates vagueness and encourages a more methodical approach.
+
+3. **Enforcing intermediate steps:** The output prompt specifically requests the display of intermediate calculations or logical deductions. This prevents the model from skipping steps or making implicit assumptions.
+
+4. **Handling cases where reasoning is impossible:** The addition of  "If you cannot provide a reasoned answer, state this explicitly" in the system prompt encourages the model to acknowledge its limitations rather than hallucinating an answer.
+
+
+These changes aim to improve consistency and accuracy by forcing the model to articulate its reasoning, making its thought process transparent and easier to evaluate.  The minimal changes focus on adding explicit instructions for reasoning rather than fundamentally altering the prompt's core function.

@@ -446,7 +446,27 @@ def train():
     Run a training iteration (evaluate -> optimize -> evaluate).
     """
     try:
+        # Create a training log file for this session
+        import traceback
+        from datetime import datetime
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f"logs/training_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        # Log start of training with detailed request info
+        logger.info(f"========== TRAINING RUN STARTED AT {log_timestamp} ==========")
+        
+        # Step 0: Parse and validate request data
+        logger.info("STEP 0: Parsing and validating request data")
         data = request.json
+        if not data:
+            error_msg = "No JSON data received in request"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+        
+        # Extract request parameters with detailed logging
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
         examples_format = data.get('examples_format', 'text')
@@ -454,37 +474,82 @@ def train():
         optimizer_prompt = data.get('optimizer_prompt', None)
         experiment_id = data.get('experiment_id', None)
         iteration = data.get('iteration', 0)
+        optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         
+        # Log request details
+        logger.info(f"Request details: format={examples_format}, strategy={optimizer_strategy}, iteration={iteration}")
+        logger.info(f"System prompt length: {len(system_prompt)} chars")
+        logger.info(f"Output prompt length: {len(output_prompt)} chars")
+        
+        # Validate required parameters
         if not system_prompt or not output_prompt:
-            return jsonify({'error': 'System prompt and output prompt are required'}), 400
+            error_msg = "System prompt and output prompt are required"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
         
         if not examples_content:
-            return jsonify({'error': 'Example data is required'}), 400
+            error_msg = "Example data is required"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
         
-        # Start a new experiment if needed
+        # Create a new experiment if needed
+        logger.info("STEP 1: Creating or loading experiment")
         if not experiment_id:
             experiment_id = experiment_tracker.start_experiment()
             iteration = 0
-        
-        # Parse examples
-        if examples_format == 'text':
-            examples = parse_text_examples(examples_content)
+            logger.info(f"Created new experiment with ID: {experiment_id}")
         else:
-            return jsonify({'error': 'Invalid examples format'}), 400
+            logger.info(f"Using existing experiment ID: {experiment_id}")
+        
+        # Parse examples with detailed error handling
+        logger.info("STEP 2: Parsing example data")
+        try:
+            if examples_format == 'text':
+                examples = parse_text_examples(examples_content)
+                logger.info(f"Successfully parsed {len(examples)} examples from text")
+            else:
+                error_msg = "Invalid examples format"
+                logger.error(error_msg)
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n")
+                return jsonify({'error': error_msg}), 400
+        except Exception as e:
+            error_msg = f"Failed to parse examples: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_msg}), 400
         
         if not examples:
-            return jsonify({'error': 'No valid examples found'}), 400
+            error_msg = "No valid examples found in input"
+            logger.error(error_msg)
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
         
-        # Step 1: Evaluate current prompts on examples
+        # Step 3: Initial evaluation of current prompts
+        logger.info(f"STEP 3: Evaluating initial prompts on {len(examples)} examples")
         evaluation_results = []
-        for example in examples:
+        success_count = 0
+        error_count = 0
+        
+        for i, example in enumerate(examples):
             user_input = example.get('user_input', '')
             ground_truth = example.get('ground_truth_output', '')
             
             if not user_input:
+                logger.warning(f"Skipping example {i+1}: No user input")
                 continue
             
+            logger.info(f"Processing example {i+1}/{len(examples)}")
             try:
+                # Call LLM API with detailed logging
+                logger.info(f"Calling LLM API for example {i+1}")
                 model_response = get_llm_response(
                     system_prompt, 
                     user_input, 
@@ -492,157 +557,299 @@ def train():
                     config.get('gemini', {})
                 )
                 
+                # Calculate score
+                logger.info(f"Calculating score for example {i+1}")
                 score = calculate_score(model_response, ground_truth)
                 
+                # Record result
                 evaluation_results.append({
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
                     'model_response': model_response,
                     'score': score
                 })
+                
+                # Log brief summary of result
+                logger.info(f"Example {i+1} processed with score: {score:.4f}")
+                success_count += 1
+                
             except Exception as e:
-                logger.error(f"Error in evaluation: {e}")
+                error_msg = f"Error processing example {i+1}: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                
                 evaluation_results.append({
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
                     'model_response': f"Error: {str(e)}",
                     'score': 0
                 })
+                error_count += 1
         
-        # Calculate metrics
-        total_score = sum(r.get('score', 0) for r in evaluation_results)
-        perfect_matches = sum(1 for r in evaluation_results if r.get('score', 0) >= 0.9)
-        total = len(evaluation_results)
+        logger.info(f"Initial evaluation complete: {success_count} successful, {error_count} errors")
         
-        initial_metrics = {
-            "avg_score": total_score / total if total > 0 else 0,
-            "perfect_matches": perfect_matches,
-            "total_examples": total,
-            "perfect_match_percent": (perfect_matches / total * 100) if total > 0 else 0
-        }
-        
-        # Save the initial iteration
-        experiment_tracker.save_iteration(
-            experiment_id=experiment_id,
-            iteration=iteration,
-            system_prompt=system_prompt,
-            output_prompt=output_prompt,
-            metrics=initial_metrics,
-            examples=evaluation_results
-        )
-        
-        # Step 2: Optimize prompts if there's room for improvement
-        if initial_metrics["perfect_match_percent"] < 100:
-            if not optimizer_prompt:
-                optimizer_prompt = load_optimizer_prompt()
+        # Calculate metrics with detailed logging
+        logger.info("STEP 4: Calculating initial metrics")
+        try:
+            total_score = sum(r.get('score', 0) for r in evaluation_results)
+            perfect_matches = sum(1 for r in evaluation_results if r.get('score', 0) >= 0.9)
+            total = len(evaluation_results)
             
-            optimization_result = optimize_prompts(
-                system_prompt,
-                output_prompt,
-                evaluation_results,
-                optimizer_prompt
-            )
+            if total == 0:
+                error_msg = "No examples were successfully processed"
+                logger.error(error_msg)
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n")
+                return jsonify({'error': error_msg}), 500
             
-            new_system_prompt = optimization_result.get('system_prompt', system_prompt)
-            new_output_prompt = optimization_result.get('output_prompt', output_prompt)
-            reasoning = optimization_result.get('reasoning', '')
-            
-            # Step 3: Evaluate the optimized prompts
-            optimized_results = []
-            for example in examples:
-                user_input = example.get('user_input', '')
-                ground_truth = example.get('ground_truth_output', '')
-                
-                if not user_input:
-                    continue
-                
-                try:
-                    model_response = get_llm_response(
-                        new_system_prompt, 
-                        user_input, 
-                        new_output_prompt,
-                        config.get('gemini', {})
-                    )
-                    
-                    score = calculate_score(model_response, ground_truth)
-                    
-                    optimized_results.append({
-                        'user_input': user_input,
-                        'ground_truth_output': ground_truth,
-                        'model_response': model_response,
-                        'score': score
-                    })
-                except Exception as e:
-                    logger.error(f"Error in evaluation: {e}")
-                    optimized_results.append({
-                        'user_input': user_input,
-                        'ground_truth_output': ground_truth,
-                        'model_response': f"Error: {str(e)}",
-                        'score': 0
-                    })
-            
-            # Calculate new metrics
-            new_total_score = sum(r.get('score', 0) for r in optimized_results)
-            new_perfect_matches = sum(1 for r in optimized_results if r.get('score', 0) >= 0.9)
-            new_total = len(optimized_results)
-            
-            optimized_metrics = {
-                "avg_score": new_total_score / new_total if new_total > 0 else 0,
-                "perfect_matches": new_perfect_matches,
-                "total_examples": new_total,
-                "perfect_match_percent": (new_perfect_matches / new_total * 100) if new_total > 0 else 0
+            initial_metrics = {
+                "avg_score": total_score / total if total > 0 else 0,
+                "perfect_matches": perfect_matches,
+                "total_examples": total,
+                "perfect_match_percent": (perfect_matches / total * 100) if total > 0 else 0
             }
             
-            # Save the optimized iteration
+            logger.info(f"Initial metrics: avg_score={initial_metrics['avg_score']:.4f}, "
+                       f"perfect_matches={perfect_matches}/{total}")
+        except Exception as e:
+            error_msg = f"Error calculating metrics: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_msg}), 500
+        
+        # Save the initial iteration with detailed logging
+        logger.info("STEP 5: Saving initial iteration")
+        try:
             experiment_tracker.save_iteration(
                 experiment_id=experiment_id,
-                iteration=iteration + 1,
-                system_prompt=new_system_prompt,
-                output_prompt=new_output_prompt,
-                metrics=optimized_metrics,
-                examples=optimized_results,
-                optimizer_reasoning=reasoning
+                iteration=iteration,
+                system_prompt=system_prompt,
+                output_prompt=output_prompt,
+                metrics=initial_metrics,
+                examples=evaluation_results
             )
-            
-            # Prepare the response
-            response = {
-                'experiment_id': experiment_id,
-                'initial_iteration': iteration,
-                'optimized_iteration': iteration + 1,
-                'initial': {
-                    'system_prompt': system_prompt,
-                    'output_prompt': output_prompt,
-                    'metrics': initial_metrics,
-                    'results': evaluation_results
-                },
-                'optimized': {
-                    'system_prompt': new_system_prompt,
-                    'output_prompt': new_output_prompt,
-                    'metrics': optimized_metrics,
-                    'results': optimized_results,
-                    'reasoning': reasoning
-                },
-                'improvement': optimized_metrics["avg_score"] - initial_metrics["avg_score"]
-            }
-        else:
-            # No optimization needed
-            response = {
-                'experiment_id': experiment_id,
-                'initial_iteration': iteration,
-                'optimized_iteration': iteration,
-                'initial': {
-                    'system_prompt': system_prompt,
-                    'output_prompt': output_prompt,
-                    'metrics': initial_metrics,
-                    'results': evaluation_results
-                },
-                'message': 'Perfect score achieved, no optimization needed.'
-            }
+            logger.info(f"Successfully saved iteration {iteration} for experiment {experiment_id}")
+        except Exception as e:
+            error_msg = f"Error saving initial iteration: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            # Continue despite error to try to complete the process
         
+        # Step 6: Optimize prompts if there's room for improvement
+        logger.info("STEP 6: Optimizing prompts")
+        try:
+            if initial_metrics["perfect_match_percent"] < 100:
+                logger.info(f"Room for improvement: {initial_metrics['perfect_match_percent']:.2f}% perfect matches")
+                
+                # Load optimizer prompt if not provided
+                if not optimizer_prompt:
+                    logger.info(f"Loading optimizer prompt with strategy: {optimizer_strategy}")
+                    optimizer_prompt = load_optimizer_prompt(optimizer_strategy)
+                    logger.info(f"Loaded optimizer prompt: {len(optimizer_prompt)} chars")
+                
+                # Call optimizer with detailed logging
+                logger.info("Calling optimize_prompts function")
+                logger.info(f"Using optimization strategy: {optimizer_strategy}")
+                optimization_result = optimize_prompts(
+                    system_prompt,
+                    output_prompt,
+                    evaluation_results,
+                    optimizer_prompt,
+                    optimizer_strategy
+                )
+                
+                # Extract optimization results
+                new_system_prompt = optimization_result.get('system_prompt', system_prompt)
+                new_output_prompt = optimization_result.get('output_prompt', output_prompt)
+                reasoning = optimization_result.get('reasoning', '')
+                
+                logger.info("Optimization complete")
+                logger.info(f"New system prompt length: {len(new_system_prompt)} chars")
+                logger.info(f"New output prompt length: {len(new_output_prompt)} chars")
+                
+                # Step 7: Evaluate the optimized prompts
+                logger.info("STEP 7: Evaluating optimized prompts")
+                optimized_results = []
+                opt_success_count = 0
+                opt_error_count = 0
+                
+                for i, example in enumerate(examples):
+                    user_input = example.get('user_input', '')
+                    ground_truth = example.get('ground_truth_output', '')
+                    
+                    if not user_input:
+                        continue
+                    
+                    logger.info(f"Processing example {i+1}/{len(examples)} with optimized prompts")
+                    try:
+                        # Call LLM with optimized prompts
+                        model_response = get_llm_response(
+                            new_system_prompt, 
+                            user_input, 
+                            new_output_prompt,
+                            config.get('gemini', {})
+                        )
+                        
+                        # Calculate score
+                        score = calculate_score(model_response, ground_truth)
+                        
+                        # Record result
+                        optimized_results.append({
+                            'user_input': user_input,
+                            'ground_truth_output': ground_truth,
+                            'model_response': model_response,
+                            'score': score
+                        })
+                        
+                        logger.info(f"Optimized example {i+1} processed with score: {score:.4f}")
+                        opt_success_count += 1
+                        
+                    except Exception as e:
+                        error_msg = f"Error processing optimized example {i+1}: {str(e)}"
+                        logger.error(error_msg)
+                        logger.error(traceback.format_exc())
+                        with open(log_file_path, 'a') as f:
+                            f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                        
+                        optimized_results.append({
+                            'user_input': user_input,
+                            'ground_truth_output': ground_truth,
+                            'model_response': f"Error: {str(e)}",
+                            'score': 0
+                        })
+                        opt_error_count += 1
+                
+                logger.info(f"Optimized evaluation complete: {opt_success_count} successful, {opt_error_count} errors")
+                
+                # Calculate new metrics
+                logger.info("STEP 8: Calculating optimized metrics")
+                new_total_score = sum(r.get('score', 0) for r in optimized_results)
+                new_perfect_matches = sum(1 for r in optimized_results if r.get('score', 0) >= 0.9)
+                new_total = len(optimized_results)
+                
+                optimized_metrics = {
+                    "avg_score": new_total_score / new_total if new_total > 0 else 0,
+                    "perfect_matches": new_perfect_matches,
+                    "total_examples": new_total,
+                    "perfect_match_percent": (new_perfect_matches / new_total * 100) if new_total > 0 else 0
+                }
+                
+                logger.info(f"Optimized metrics: avg_score={optimized_metrics['avg_score']:.4f}, "
+                           f"perfect_matches={new_perfect_matches}/{new_total}")
+                
+                # Compare metrics
+                improvement = optimized_metrics["avg_score"] - initial_metrics["avg_score"]
+                logger.info(f"Score improvement: {improvement:.4f} ({improvement*100:.2f}%)")
+                
+                # Step 9: Save the optimized iteration
+                logger.info("STEP 9: Saving optimized iteration")
+                try:
+                    experiment_tracker.save_iteration(
+                        experiment_id=experiment_id,
+                        iteration=iteration + 1,
+                        system_prompt=new_system_prompt,
+                        output_prompt=new_output_prompt,
+                        metrics=optimized_metrics,
+                        examples=optimized_results,
+                        optimizer_reasoning=reasoning
+                    )
+                    logger.info(f"Successfully saved optimized iteration {iteration+1} for experiment {experiment_id}")
+                except Exception as e:
+                    error_msg = f"Error saving optimized iteration: {str(e)}"
+                    logger.error(error_msg)
+                    logger.error(traceback.format_exc())
+                    with open(log_file_path, 'a') as f:
+                        f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                
+                # Step 10: Prepare the response
+                logger.info("STEP 10: Preparing response")
+                response = {
+                    'experiment_id': experiment_id,
+                    'initial_iteration': iteration,
+                    'optimized_iteration': iteration + 1,
+                    'initial': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt,
+                        'metrics': initial_metrics,
+                        'results': evaluation_results
+                    },
+                    'optimized': {
+                        'system_prompt': new_system_prompt,
+                        'output_prompt': new_output_prompt,
+                        'metrics': optimized_metrics,
+                        'results': optimized_results,
+                        'reasoning': reasoning
+                    },
+                    'improvement': improvement
+                }
+            else:
+                # No optimization needed
+                logger.info("Perfect score achieved, no optimization needed")
+                response = {
+                    'experiment_id': experiment_id,
+                    'initial_iteration': iteration,
+                    'optimized_iteration': iteration,
+                    'initial': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt,
+                        'metrics': initial_metrics,
+                        'results': evaluation_results
+                    },
+                    'message': 'Perfect score achieved, no optimization needed.'
+                }
+        except Exception as e:
+            error_msg = f"Error in optimization process: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            
+            # Return partial results if we at least have initial evaluation
+            if 'initial_metrics' in locals():
+                response = {
+                    'experiment_id': experiment_id,
+                    'initial_iteration': iteration,
+                    'initial': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt,
+                        'metrics': initial_metrics,
+                        'results': evaluation_results
+                    },
+                    'error': f"Optimization failed: {str(e)}"
+                }
+            else:
+                return jsonify({'error': error_msg}), 500
+        
+        # Log completion of training run
+        logger.info(f"========== TRAINING RUN COMPLETED SUCCESSFULLY ==========")
+        with open(log_file_path, 'a') as f:
+            f.write(f"Training run completed successfully at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Experiment ID: {experiment_id}\n")
+            if 'improvement' in response:
+                f.write(f"Improvement: {response['improvement']:.4f}\n")
+            
         return jsonify(response)
     except Exception as e:
-        logger.error(f"Error in training: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Catch-all error handler with detailed traceback
+        error_msg = f"Critical error in training process: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        
+        # Try to write to log file if not already done
+        try:
+            with open(log_file_path, 'a') as f:
+                f.write(f"CRITICAL ERROR: {error_msg}\n{traceback.format_exc()}\n")
+        except:
+            # If log file writing fails, just continue
+            pass
+            
+        return jsonify({'error': error_msg}), 500
 
 @app.route('/experiments', methods=['GET'])
 def get_experiments():
@@ -767,19 +974,71 @@ def two_stage_train():
     Phase 1: Primary LLM Inference & Evaluation
     Phase 2: Optimizer LLM Refinement
     """
+    # Create a training log file for this session
+    import traceback
+    from datetime import datetime
+    log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file_path = f"logs/two_stage_{log_timestamp}.log"
+    os.makedirs("logs", exist_ok=True)
+    
+    logger.info(f"========== TWO-STAGE TRAINING RUN STARTED AT {log_timestamp} ==========")
+    
     try:
+        # Step 0: Parse request data
+        logger.info("STEP 0: Parsing and validating request data")
+        
+        if not request.json:
+            error_msg = "No JSON data received in request"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+            
         data = request.json
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
-        examples = data.get('examples', [])
+        examples_content = data.get('examples_content', '')
         max_iterations = int(data.get('max_iterations', 1))
         batch_size = int(data.get('batch_size', 0))
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         optimizer_type = data.get('optimizer_type', 'reasoning_first')
         
-        if not system_prompt or not output_prompt:
-            return jsonify({'error': 'System prompt and output prompt are required'}), 400
+        # Log request parameters
+        logger.info(f"Request parameters:")
+        logger.info(f"  - max_iterations: {max_iterations}")
+        logger.info(f"  - batch_size: {batch_size}")
+        logger.info(f"  - optimizer_strategy: {optimizer_strategy}")
+        logger.info(f"  - optimizer_type: {optimizer_type}")
+        logger.info(f"  - system_prompt length: {len(system_prompt)} chars")
+        logger.info(f"  - output_prompt length: {len(output_prompt)} chars")
+        logger.info(f"  - examples_content length: {len(examples_content)} chars")
         
+        # Validate required parameters
+        if not system_prompt or not output_prompt:
+            error_msg = "System prompt and output prompt are required"
+            logger.error(error_msg)
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+        
+        # Parse examples from content
+        logger.info("STEP 1: Parsing examples")
+        examples = []
+        try:
+            if examples_content:
+                examples = parse_text_examples(examples_content)
+                logger.info(f"Successfully parsed {len(examples)} examples from text content")
+            else:
+                examples = data.get('examples', [])
+                logger.info(f"Using {len(examples)} examples from direct input")
+        except Exception as e:
+            error_msg = f"Failed to parse examples: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_msg}), 400
+            
         if not examples:
             # If examples are not directly provided, we'll look for them in the data module
             if data_module.get_train_examples():

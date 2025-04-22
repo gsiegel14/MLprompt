@@ -1,14 +1,6 @@
 [
   {
-    "user_input": "Dr. Elizabeth A. Perzanowski (Pediatrics): A 16-year-old boy was seen in the infectious disease clinic at this hospital for consideration of preexposure prophylaxis (PrEP) against human immunodeficien...",
-    "ground_truth_output": "Risk of acquiring human immunodeficiency virus inf..."
-  },
-  {
-    "user_input": "user_input",
-    "ground_truth_output": "ground_truth_output"
-  },
-  {
-    "user_input": "Dr. Peiyun Ni (Medicine): A 63-year-old woman was admitted to this hospital because of fever\\",
-    "ground_truth_output": "headache\\, sore throat\\, and confusion. The patient had been well until 2 weeks before this admission\\, when ...,Acute human immunodeficiency virus type 1 infectio..."
+    "user_input": "What is the boiling point of water in Celsius?",
+    "ground_truth_output": "100"
   }
 ]

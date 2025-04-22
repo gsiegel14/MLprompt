@@ -1,0 +1,16 @@
+Analysis of Existing Prompts:
+The current system prompt heavily relies on role-playing ("expert physician," "master diagnostician") and a lengthy, overly specific list of restrictions.  While the intention is to guide the LLM, this approach is ineffective. The role-playing is superficial and doesn't translate to improved reasoning. The extensive restriction list is cumbersome, prone to misinterpretation, and doesn't prevent the LLM from attempting to answer inappropriate questions (as seen in Examples 1 and 2). The few-shot examples within the system prompt are redundant and clutter the prompt; they should be in the output prompt instead.
+
+The current output prompt is overly structured and prescriptive.  The "Design Strategy," "Execute Strategy," and "Systematically Ensure Accuracy & Precision" sections are redundant and encourage verbose, repetitive responses instead of concise, logical reasoning.  The N-shot learning examples are too long and detailed. The model is mimicking the structure of these examples instead of learning the underlying reasoning principles.  The examples themselves don't explicitly showcase the reasoning process; they mostly focus on the final answer.
+
+The examples highlight two key deficiencies:
+
+1. **Inability to identify and appropriately handle out-of-domain questions:** The model attempts to answer non-medical questions (Examples 1 and 2), demonstrating a failure to adhere to the constraints.  The overly complex restriction list in the system prompt is the root cause.
+
+2. **Lack of clear reasoning steps:** Even when answering medical questions (the N-shot examples within the output prompt), the model's reasoning is implicit and not explicitly articulated.  The overly structured output format doesn't actually force the model to demonstrate its reasoning.
+
+The revised system prompt is significantly more concise and focuses on core principles: helpfulness, harmlessness, and expertise boundaries.  It removes the ineffective role-playing and the overly long, confusing restriction list.  This simplification reduces ambiguity and improves instruction compliance.
+
+The revised output prompt is also more concise and less prescriptive.  It removes the redundant sections from the original prompt and instead focuses on clear instructions: answering within expertise, politely declining out-of-domain questions, requesting clarification when needed, and showing reasoning steps when appropriate.  This encourages more natural and efficient responses.  The emphasis on showing reasoning steps implicitly guides the LLM to articulate its thought process.
+
+By removing the unnecessary complexity and focusing on core principles, the revised prompts create a clearer and more effective framework for the LLM to reason accurately and consistently.  The changes are minimal yet impactful, addressing the root causes of the reasoning failures observed in the original examples.

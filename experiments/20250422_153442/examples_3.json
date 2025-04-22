@@ -1,0 +1,14 @@
+[
+  {
+    "user_input": "How many planets are in our solar system?",
+    "ground_truth_output": "8",
+    "model_response": "Here's how I'll determine the number of planets in our solar system:\n\n1. **Define \"planet\":**  The International Astronomical Union (IAU) defines a planet as a celestial body that: (a) is in orbit around the Sun, (b) has sufficient mass for its self-gravity to overcome rigid body forces so that it assumes a hydrostatic equilibrium (nearly round) shape, and (c) has cleared the neighbourhood around its orbit.\n\n2. **Identify celestial bodies meeting the IAU definition:**  Based on the IAU definition, we need to consider the celestial bodies orbiting our Sun and assess whether they meet criteria (b) and (c).\n\n3. **List the celestial bodies generally considered planets:**  These include Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune.\n\n4. **Assess each body against the IAU criteria:** All eight bodies listed above are in orbit around the Sun and are massive enough to be nearly round.  They have also cleared, or are in the process of clearing, their orbital neighborhoods.  ...",
+    "score": 0.0
+  },
+  {
+    "user_input": "What is the capital of France?",
+    "ground_truth_output": "Paris",
+    "model_response": "1. **Identify the question:** The question asks for the capital city of France.\n\n2. **Access relevant knowledge:** My internal knowledge base contains geographical information, including the capital cities of various countries.\n\n3. **Retrieve information:** I access the information about France from my knowledge base.\n\n4. **Identify the capital:**  My knowledge base indicates that Paris is the capital city of France.\n\n5. **Formulate the answer:** Based on the retrieved information, the capital of France is Paris.\n\n**Final Answer:** The capital of France is Paris.\n",
+    "score": 0.3123239436619718
+  }
+]

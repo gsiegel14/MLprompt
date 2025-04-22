@@ -1,0 +1,16 @@
+Analysis of Existing Prompts:
+The current prompts encourage a step-by-step reasoning process, but they lack specific guidance on *how* to structure that reasoning, leading to inconsistencies.  Example 1 shows excessive detail while Example 2 is overly simplistic.  Both lack explicit checks for the validity of intermediate steps. The current prompts are also too permissive, allowing the model to hallucinate details (Example 1's lengthy explanation of planetary definitions is unnecessary for answering the question).  The instructions are vague regarding what constitutes a "reasoned answer"—the model might believe it's providing reasoning even if it's just restating the question in multiple steps.
+
+The key deficiencies are:
+
+1. **Lack of constraint on reasoning depth:** The prompts don't specify the appropriate level of detail for reasoning.
+2. **Absence of validation checks:**  The model doesn't verify its intermediate conclusions or check for contradictions.
+3. **Ambiguous definition of "reasoned answer":** The current definition allows for superficial reasoning steps.
+
+The revised prompts address the identified deficiencies:
+
+1.  **Constraint on reasoning depth:** The new system prompt emphasizes conciseness and directness, discouraging excessive detail. The output prompt explicitly instructs the model to keep steps concise and relevant.
+2.  **Validation checks (implicit):** By requiring a direct link between reasoning steps and the final answer, the prompts implicitly encourage the model to verify its intermediate conclusions.  An incorrect step would lead to an incorrect final answer, making the inconsistency more apparent.
+3.  **Clear definition of "reasoned answer":** The revised prompts explicitly link reasoning steps to the final answer, eliminating the ambiguity of what constitutes a "reasoned answer".  The requirement for concise, directly relevant steps discourages superficial reasoning.
+
+The changes are minimal but targeted, focusing on improving the structure and clarity of the instructions rather than adding specific examples or facts.  The goal is to improve the model's general reasoning abilities, not just its performance on the provided examples.

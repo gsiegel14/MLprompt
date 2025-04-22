@@ -1,34 +1,10 @@
 [
   {
-    "user_input": "Dr. D. Curtis Wegener (Neurology): A 68-year-old woman was admitted to this hospital because of worsening confusion and abnormal movements of the face\\",
-    "ground_truth_output": "arms\\, and legs. The patient had been in her usua...,Chorea due to antiphospholipid syndrome and underl..."
+    "user_input": "How many planets are in our solar system?",
+    "ground_truth_output": "8"
   },
   {
-    "user_input": "Dr. Joshua U. Okonkwo (Neurology): An 80-year-old man was evaluated in the neurology clinic of this hospital because of left foot drop. The patient had been in his usual state of health until 5 years ...",
-    "ground_truth_output": "Facioscapulohumeral muscular dystrophy."
-  },
-  {
-    "user_input": "Dr. Ian D. Cooley (Medicine): A 68-year-old man was admitted to this hospital because of painful mouth ulcers and weight loss. The patient had been well until 6 weeks before the current admission\\",
-    "ground_truth_output": "whe...,Eosinophilic leukemia."
-  },
-  {
-    "user_input": "Dr. David M. Dudzinski: A 60-year-old man was transferred to this hospital for evaluation of new dyspnea\\",
-    "ground_truth_output": "cough\\, neck swelling\\, and a lung mass. Three days before the current admission\\, the patient wa...,Poorly differentiated adenocarcinoma of the lung c..."
-  },
-  {
-    "user_input": "Dr. Suma Babu: A 67-year-old man was evaluated in the sleep clinic at this hospital because of odd behaviors during sleep\\",
-    "ground_truth_output": "daytime sleepiness\\, and apnea detected on a home sleep study. Three years bef...,Anti-IgLON5 IgG\u2013associated neurologic disorder."
-  },
-  {
-    "user_input": "Dr. Yousef R. Badran: A 72-year-old man was transferred to this hospital because of heartburn\\",
-    "ground_truth_output": "nausea\\, and the inability to eat solid and liquid food. The patient had a history of gastroesophageal ref...,Linitis plastica (invasive gastric adenocarcinoma)..."
-  },
-  {
-    "user_input": "Dr. Vishwajith Sridharan (Medicine): An 82-year-old woman was admitted to this hospital with pain\\",
-    "ground_truth_output": "swelling\\, and ecchymosis of the left arm. The patient had been in her usual state of health until 4 d...,Acquired factor VIII inhibitor."
-  },
-  {
-    "user_input": "Dr. Aaron R. Kaufman (Ophthalmology\\",
-    "ground_truth_output": "Massachusetts Eye and Ear): A 31-year-old man was evaluated in the emergency department of this hospital because of redness of the right eye. The patient had been ...,Mpox conjunctivitis."
+    "user_input": "What is the capital of France?",
+    "ground_truth_output": "Paris"
   }
 ]

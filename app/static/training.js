@@ -1200,11 +1200,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 optimizer_type: optimizerType
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is OK before trying to parse JSON
+            if (!response.ok) {
+                return response.text().then(errorText => {
+                    throw new Error(`Server error (${response.status}): ${errorText}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.error) {
-                showAlert(data.error, 'danger');
-                log(`Error: ${data.error}`);
+                // Log detailed error information
+                console.error("Error in training:", data.error);
+                showAlert(`Training error: ${data.error}`, 'danger');
+                log(`ERROR: ${data.error}`);
+                
+                // Add error details to training logs with timestamp
+                const timestamp = new Date().toLocaleTimeString();
+                const errorDetails = document.createElement('div');
+                errorDetails.className = 'alert alert-danger mt-2 mb-2';
+                errorDetails.innerHTML = `
+                    <strong>Training Error at ${timestamp}</strong><br>
+                    ${data.error}
+                `;
+                trainingLogsEl.appendChild(errorDetails);
             } else {
                 // Update experiment ID and iteration
                 currentExperimentId = data.experiment_id;
@@ -1334,9 +1354,45 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .catch(error => {
+            // Detailed error logging and display
             console.error('Error in training:', error);
-            showAlert('Error during training', 'danger');
-            log(`Error: ${error.message}`);
+            
+            // Create a detailed error message with timestamp
+            const errorTimestamp = new Date().toLocaleTimeString();
+            const errorMsg = `Training failed at ${errorTimestamp}: ${error.message}`;
+            
+            // Show prominent error alert
+            showAlert(errorMsg, 'danger');
+            
+            // Add detailed error to logs
+            log(`ERROR: ${error.message}`);
+            
+            // Create and append detailed error card to training logs
+            const errorCard = document.createElement('div');
+            errorCard.className = 'card border-danger mb-3 mt-2';
+            errorCard.innerHTML = `
+                <div class="card-header bg-danger text-white">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                    Training Error at ${errorTimestamp}
+                </div>
+                <div class="card-body text-danger">
+                    <h5 class="card-title">Error Details</h5>
+                    <p class="card-text">${error.message}</p>
+                    <p class="card-text small">Check the browser console and server logs for more information.</p>
+                    <button class="btn btn-sm btn-outline-danger retry-btn">
+                        <i class="fa-solid fa-rotate me-1"></i> Retry Training
+                    </button>
+                </div>
+            `;
+            
+            // Add retry functionality
+            const retryBtn = errorCard.querySelector('.retry-btn');
+            retryBtn.addEventListener('click', () => {
+                errorCard.remove();
+                startTraining();
+            });
+            
+            trainingLogsEl.appendChild(errorCard);
         })
         .finally(() => {
             hideSpinner();
