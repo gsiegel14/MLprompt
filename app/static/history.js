@@ -260,9 +260,148 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('optimizer-reasoning').textContent = optimized.reasoning || 'No reasoning available';
         
+        // Set up load examples button
+        const loadExamplesBtn = document.getElementById('load-examples-btn');
+        loadExamplesBtn.onclick = () => loadExampleResults(original.iteration, optimized.iteration);
+        
+        // Reset examples container
+        document.getElementById('examples-container').innerHTML = `
+            <div class="p-4 text-center text-muted">
+                <p>Click "Load Examples" to see detailed results for each test case</p>
+            </div>
+        `;
+        
         // Show comparison view
         experimentDetailsEl.style.display = 'none';
         compareViewEl.style.display = 'block';
+    }
+    
+    function loadExampleResults(originalIterationNumber, optimizedIterationNumber) {
+        showSpinner();
+        const examplesContainer = document.getElementById('examples-container');
+        
+        // Get examples for both iterations
+        Promise.all([
+            fetch(`/experiments/${currentExperimentId}/examples/${originalIterationNumber}`),
+            fetch(`/experiments/${currentExperimentId}/examples/${optimizedIterationNumber}`)
+        ])
+        .then(responses => Promise.all(responses.map(r => r.json())))
+        .then(([originalData, optimizedData]) => {
+            if (originalData.error || optimizedData.error) {
+                showAlert('Error loading examples', 'danger');
+                return;
+            }
+            
+            const originalExamples = originalData.examples || [];
+            const optimizedExamples = optimizedData.examples || [];
+            
+            if (originalExamples.length === 0 && optimizedExamples.length === 0) {
+                examplesContainer.innerHTML = `
+                    <div class="p-4 text-center text-muted">
+                        <p>No example results available for these iterations</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Use optimized examples as the base list if available, otherwise use original
+            const baseExamples = optimizedExamples.length > 0 ? optimizedExamples : originalExamples;
+            
+            // Clear container
+            examplesContainer.innerHTML = '';
+            
+            // Create a map for quick lookup of original examples by user input
+            const originalExamplesMap = {};
+            originalExamples.forEach(ex => {
+                originalExamplesMap[ex.user_input] = ex;
+            });
+            
+            // Display examples
+            baseExamples.forEach((example, index) => {
+                const userInput = example.user_input;
+                const groundTruth = example.ground_truth_output;
+                const optimizedResponse = example.model_response;
+                const optimizedScore = example.score;
+                
+                // Try to find matching original example
+                const originalExample = originalExamplesMap[userInput];
+                const originalResponse = originalExample ? originalExample.model_response : 'Not available';
+                const originalScore = originalExample ? originalExample.score : 0;
+                
+                // Calculate score improvement
+                const scoreImprovement = optimizedScore - originalScore;
+                const scoreClass = scoreImprovement > 0 ? 'text-success' : 
+                                  scoreImprovement < 0 ? 'text-danger' : 'text-muted';
+                const scoreSign = scoreImprovement > 0 ? '+' : '';
+                
+                // Create example card
+                const exampleEl = document.createElement('div');
+                exampleEl.className = 'accordion-item';
+                exampleEl.innerHTML = `
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#example-${index}">
+                            <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                <span><strong>Example ${index + 1}</strong></span>
+                                <span class="badge bg-primary ms-2">${(optimizedScore * 100).toFixed(1)}% Score</span>
+                                <span class="${scoreClass}">${scoreSign}${(scoreImprovement * 100).toFixed(1)}%</span>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="example-${index}" class="accordion-collapse collapse">
+                        <div class="accordion-body">
+                            <div class="mb-3">
+                                <h6>User Input:</h6>
+                                <div class="p-3 bg-light border rounded">
+                                    ${escapeHtml(userInput)}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Ground Truth Output:</h6>
+                                <div class="p-3 bg-light border rounded">
+                                    ${escapeHtml(groundTruth)}
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <h6>Original Response: 
+                                        <span class="badge bg-secondary">${(originalScore * 100).toFixed(1)}%</span>
+                                    </h6>
+                                    <div class="p-3 bg-light border rounded">
+                                        ${escapeHtml(originalResponse)}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6>Optimized Response: 
+                                        <span class="badge bg-primary">${(optimizedScore * 100).toFixed(1)}%</span>
+                                    </h6>
+                                    <div class="p-3 bg-light border rounded">
+                                        ${escapeHtml(optimizedResponse)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                examplesContainer.appendChild(exampleEl);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading example results:', error);
+            showAlert('Error loading example results', 'danger');
+            examplesContainer.innerHTML = `
+                <div class="p-4 text-center text-danger">
+                    <p>Error loading examples: ${error.message}</p>
+                </div>
+            `;
+        })
+        .finally(() => {
+            hideSpinner();
+        });
     }
     
     function setupHistoryChart() {
