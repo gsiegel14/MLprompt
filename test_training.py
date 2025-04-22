@@ -65,8 +65,8 @@ def run_small_test():
             json.dump(test_examples, f)
             
         # Set the data module to use these test files
-        data_module._train_examples = test_examples
-        data_module._validation_examples = test_examples
+        data_module.train_examples = test_examples
+        data_module.validation_examples = test_examples
         
         logger.info(f"Test running with {len(test_examples)} examples")
         
