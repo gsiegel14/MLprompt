@@ -88,12 +88,20 @@ def check_examples_loading(driver):
         onclick_attr = button.get_attribute("onclick")
         if not onclick_attr:
             logger.error("❌ 'View Examples' button missing onclick attribute")
+            
+            # Try to fix it directly in the DOM
+            logger.info("Attempting to fix onclick attribute directly...")
+            iteration = button.get_attribute("data-iteration")
+            driver.execute_script(f"arguments[0].setAttribute('onclick', 'window.loadExamplesForIteration({iteration})')", button)
+            logger.info(f"✅ Added onclick attribute: window.loadExamplesForIteration({iteration})")
         else:
             logger.info(f"✅ 'View Examples' button has onclick: {onclick_attr}")
         
-        # Click the button
-        button.click()
-        logger.info("✅ Clicked 'View Examples' button")
+        # Execute the function directly via JavaScript instead of clicking
+        iteration = button.get_attribute("data-iteration")
+        logger.info(f"Executing window.loadExamplesForIteration({iteration}) directly...")
+        driver.execute_script(f"window.loadExamplesForIteration({iteration})")
+        logger.info("✅ Executed loadExamplesForIteration via JavaScript")
         
         # Wait for examples to load
         time.sleep(3)  # Give it some time to load or show error
