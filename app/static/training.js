@@ -774,16 +774,52 @@ document.addEventListener('DOMContentLoaded', function() {
                     // No optimization (perfect score or other reason)
                     log(data.message || 'No optimization performed');
                     
-                    // Update metrics display
-                    updateMetricsDisplay(data.initial.metrics);
+                    // Update metrics display if we have the data
+                    if (data.initial && data.initial.metrics) {
+                        updateMetricsDisplay(data.initial.metrics);
+                    } else if (data.best_score) {
+                        // Create a minimal metrics object if we don't have proper metrics
+                        const basicMetrics = {
+                            avg_score: data.best_score,
+                            perfect_matches: 0,
+                            total_examples: 1,
+                            perfect_match_percent: 0
+                        };
+                        updateMetricsDisplay(basicMetrics);
+                    }
                     
-                    // Add to training history for chart
-                    trainingHistory.push({
-                        iteration: data.initial_iteration,
-                        metrics: data.initial.metrics,
-                        system_prompt: data.initial.system_prompt,
-                        output_prompt: data.initial.output_prompt
-                    });
+                    // Make sure we have valid metrics and system/output prompts
+                    if (data.initial && data.initial.metrics) {
+                        // Add to training history for chart with proper data
+                        trainingHistory.push({
+                            iteration: data.initial_iteration || 0,
+                            metrics: data.initial.metrics,
+                            system_prompt: data.initial.system_prompt || system_prompt,
+                            output_prompt: data.initial.output_prompt || output_prompt
+                        });
+                    } else {
+                        // Fallback - create a basic entry with the input prompts if data structure is unexpected
+                        console.warn('Unexpected data structure in response:', data);
+                        log('Warning: Received unexpected data structure from server');
+                        
+                        // Use whatever metrics we have available or create a placeholder
+                        const fallbackMetrics = {
+                            avg_score: data.best_score || 0,
+                            perfect_matches: 0,
+                            total_examples: 1,
+                            perfect_match_percent: 0
+                        };
+                        
+                        trainingHistory.push({
+                            iteration: 0,
+                            metrics: fallbackMetrics,
+                            system_prompt: system_prompt,
+                            output_prompt: output_prompt
+                        });
+                        
+                        // Just update the metrics display with our fallback data
+                        updateMetricsDisplay(fallbackMetrics);
+                    }
                 }
                 
                 // Update chart
