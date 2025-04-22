@@ -44,7 +44,7 @@ pre, code {
 
 /* Card Styles */
 .card {
-    background-color: var(--card-bg-color);
+    background-color: #ffffff;
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     box-shadow: var(--card-shadow);
@@ -55,10 +55,14 @@ pre, code {
     border-bottom: 1px solid var(--border-color);
     padding: 1rem;
     font-weight: 600;
+    background-color: #ffffff;
+    color: var(--grey-text-color);
 }
 
 .card-body {
     padding: 1rem;
+    background-color: #ffffff;
+    color: var(--grey-text-color);
 }
 
 /* Form Styles */
