@@ -622,6 +622,7 @@ def two_stage_train():
         output_prompt = data.get('output_prompt', '')
         examples = data.get('examples', [])
         max_iterations = int(data.get('max_iterations', 1))
+        batch_size = int(data.get('batch_size', 0))
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         optimizer_type = data.get('optimizer_type', 'reasoning_first')
         
@@ -654,6 +655,7 @@ def two_stage_train():
             output_prompt=output_prompt,
             max_iterations=max_iterations,
             early_stopping_patience=early_stopping_patience,
+            batch_size=batch_size,
             optimizer_strategy=optimizer_strategy,
             optimizer_type=optimizer_type
         )

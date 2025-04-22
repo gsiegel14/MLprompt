@@ -643,6 +643,9 @@ document.addEventListener('DOMContentLoaded', function() {
         metricsChart.update();
         
         // Start the training process with the two-stage workflow
+        const batchSize = parseInt(document.getElementById('batch-size').value);
+        log(`Batch size: ${batchSize === 0 ? 'All examples' : batchSize}`);
+        
         showSpinner();
         fetch('/two_stage_train', {
             method: 'POST',
@@ -654,6 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 output_prompt: outputPrompt,
                 examples_content: examplesTextEl.value,
                 max_iterations: parseInt(maxIterationsEl.value),
+                batch_size: batchSize,
                 optimizer_strategy: optimizerStrategy,
                 optimizer_type: optimizerType
             })
