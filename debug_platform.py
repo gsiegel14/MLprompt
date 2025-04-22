@@ -407,12 +407,12 @@ def test_optimizer():
             )
             end_time = time.time()
             
-            if not result or "new_system_prompt" not in result:
-                logger.error(f"❌ Missing new_system_prompt in optimization result: {result}")
+            if not result or "system_prompt" not in result:
+                logger.error(f"❌ Missing system_prompt in optimization result: {result}")
                 return False
                 
             logger.info(f"✅ Prompt optimization successful in {end_time - start_time:.2f} seconds")
-            logger.info(f"New system prompt preview: {result['new_system_prompt'][:100]}...")
+            logger.info(f"New system prompt preview: {result['system_prompt'][:100]}...")
         else:
             logger.warning("⚠️ Skipping optimizer test due to API connection failure")
         
