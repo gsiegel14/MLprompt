@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt ML Platform - Training</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container-fluid mt-4 mb-5">
+        <header class="text-center mb-4">
+            <h1 class="display-4 mb-2">
+                <i class="fa-solid fa-brain me-2"></i> Prompt ML Platform
+            </h1>
+            <p class="lead">Train and optimize your prompts with ML-style iterations</p>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="badge bg-dark text-light px-3 py-2 me-2">
+                    <i class="fa-solid fa-robot me-1"></i> Gemini Powered
+                </div>
+                <div class="badge bg-dark text-light px-3 py-2">
+                    <i class="fa-solid fa-code-branch me-1"></i> Version Control
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="/" class="btn btn-outline-light me-2">
+                    <i class="fa-solid fa-home me-1"></i> Basic Mode
+                </a>
+                <a href="/history" class="btn btn-outline-light">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> History
+                </a>
+            </div>
+        </header>
+        
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+        
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Left Column: Configuration -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-sliders me-2"></i> Training Configuration
+                    </div>
+                    <div class="card-body">
+                        <form id="training-form">
+                            <div class="mb-3">
+                                <label for="experiment-id" class="form-label">Experiment</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="experiment-id" readonly placeholder="New experiment will be created">
+                                    <button class="btn btn-outline-secondary" type="button" id="load-experiment-btn">
+                                        <i class="fa-solid fa-folder-open"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="iteration" class="form-label">Current Iteration</label>
+                                <input type="number" min="0" class="form-control" id="iteration" value="0" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="max-iterations" class="form-label">Max Iterations</label>
+                                <input type="number" min="1" max="10" class="form-control" id="max-iterations" value="3">
+                                <div class="form-text">Maximum number of optimization rounds</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="early-stopping" class="form-label">Early Stopping</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="early-stopping">
+                                        <option value="none">None</option>
+                                        <option value="no-improvement" selected>No Improvement</option>
+                                        <option value="perfect">Perfect Score</option>
+                                    </select>
+                                    <input type="number" class="form-control" id="patience" value="1" min="1" max="5">
+                                </div>
+                                <div class="form-text">Stop training if no improvement after N iterations</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="use-validation" checked>
+                                    <label class="form-check-label" for="use-validation">Use Validation Split</label>
+                                </div>
+                                <div class="input-group mt-2">
+                                    <span class="input-group-text">Train</span>
+                                    <input type="range" class="form-range pt-1 px-2" id="train-percent" min="50" max="90" value="80">
+                                    <span class="input-group-text"><span id="train-percent-display">80</span>%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="button" id="start-training-btn" class="btn btn-primary">
+                                    <i class="fa-solid fa-play me-2"></i> Start Training
+                                </button>
+                                <button type="button" id="stop-training-btn" class="btn btn-danger" disabled>
+                                    <i class="fa-solid fa-stop me-2"></i> Stop Training
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Optimizer Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Optimizer Configuration
+                        </span>
+                        <button class="btn btn-sm btn-outline-secondary" id="show-optimizer-btn">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="optimizer-preset" class="form-label">Optimization Strategy</label>
+                            <select class="form-select" id="optimizer-preset">
+                                <option value="default" selected>Default (Balanced)</option>
+                                <option value="precision">Precision-focused</option>
+                                <option value="recall">Recall-focused</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="optimizer-prompt-preview" class="form-label">Optimizer Instructions Preview</label>
+                            <textarea class="form-control" id="optimizer-prompt-preview" rows="3" readonly></textarea>
+                            <div class="form-text">These instructions guide the second LLM in optimizing prompts</div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="button" id="edit-optimizer-btn" class="btn btn-outline-primary btn-sm">
+                                <i class="fa-solid fa-pen-to-square me-1"></i> Edit Optimizer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Middle Column: Prompt Editor -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-keyboard me-2"></i> Prompt Editor
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="prompt-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-tab-pane" type="button" role="tab" aria-controls="system-tab-pane" aria-selected="true">System Prompt</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-tab-pane" type="button" role="tab" aria-controls="output-tab-pane" aria-selected="false">Output Prompt</button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="prompt-tab-content">
+                            <div class="tab-pane fade show active" id="system-tab-pane" role="tabpanel" aria-labelledby="system-tab" tabindex="0">
+                                <textarea id="system-prompt" class="form-control prompt-textarea" placeholder="Enter your system prompt here..."></textarea>
+                            </div>
+                            <div class="tab-pane fade" id="output-tab-pane" role="tabpanel" aria-labelledby="output-tab" tabindex="0">
+                                <textarea id="output-prompt" class="form-control prompt-textarea" placeholder="Enter your output prompt here..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            <button id="show-sample-prompts" class="btn btn-outline-secondary btn-sm">
+                                <i class="fa-solid fa-lightbulb me-1"></i> Load Sample
+                            </button>
+                            <button id="save-prompts-btn" class="btn btn-outline-primary btn-sm">
+                                <i class="fa-solid fa-save me-1"></i> Save Prompts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Training Data -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-database me-2"></i> Training Data
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <textarea id="examples-text" class="form-control examples-textarea" placeholder="Enter your example data as CSV: each line should be user_input,ground_truth_output"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <label for="csv-file" class="custom-file-upload me-2">
+                                    <i class="fa-solid fa-upload me-1"></i> Upload CSV
+                                </label>
+                                <input type="file" id="csv-file" accept=".csv">
+                                <div class="form-text ms-2">CSV with user_input and ground_truth columns</div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-stats bg-dark p-2 rounded mb-3" id="data-stats">
+                            <div class="row text-center">
+                                <div class="col">
+                                    <div class="fs-5">0</div>
+                                    <div class="small text-muted">Examples</div>
+                                </div>
+                                <div class="col">
+                                    <div class="fs-5">0</div>
+                                    <div class="small text-muted">Train</div>
+                                </div>
+                                <div class="col">
+                                    <div class="fs-5">0</div>
+                                    <div class="small text-muted">Validation</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Results and Visualization -->
+            <div class="col-lg-4">
+                <!-- Progress and Metrics -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fa-solid fa-chart-line me-2"></i> Training Progress
+                    </div>
+                    <div class="card-body">
+                        <!-- Training progress bar -->
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div id="training-progress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%;" 
+                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        </div>
+                        
+                        <!-- Metrics chart -->
+                        <div class="chart-container" style="position: relative; height:200px;">
+                            <canvas id="metrics-chart"></canvas>
+                        </div>
+                        
+                        <!-- Current metrics -->
+                        <div class="row mt-3 text-center">
+                            <div class="col">
+                                <div class="metric-card p-2 rounded mb-2">
+                                    <div class="fs-4 font-weight-bold" id="current-score">-</div>
+                                    <div class="small text-muted">Average Score</div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="metric-card p-2 rounded mb-2">
+                                    <div class="fs-4 font-weight-bold" id="perfect-matches">-</div>
+                                    <div class="small text-muted">Perfect Matches</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Latest Optimization -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fa-solid fa-code-compare me-2"></i> Latest Optimization
+                    </div>
+                    <div class="card-body">
+                        <div class="optimization-status text-center py-3 mb-3" id="optimization-status">
+                            <i class="fa-solid fa-hourglass text-muted fs-4 mb-2"></i>
+                            <p>No optimization has been performed yet</p>
+                        </div>
+                        
+                        <!-- Before/After comparison will appear here -->
+                        <div id="optimization-results" style="display: none;">
+                            <div class="comparison-container mb-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-secondary">Before</span>
+                                    <span class="badge bg-success">After</span>
+                                </div>
+                                <div class="comparison-metrics d-flex justify-content-between mb-3">
+                                    <div class="before text-center p-2 rounded">
+                                        <div class="fs-5" id="before-score">0.0</div>
+                                        <div class="small text-muted">Score</div>
+                                    </div>
+                                    <div class="change text-center">
+                                        <i class="fa-solid fa-arrow-right"></i>
+                                    </div>
+                                    <div class="after text-center p-2 rounded">
+                                        <div class="fs-5" id="after-score">0.0</div>
+                                        <div class="small text-muted">Score</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Optimizer Reasoning</label>
+                                <div class="reasoning-box p-3 rounded" id="optimizer-reasoning">
+                                    <p class="text-muted">No reasoning available</p>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button class="btn btn-sm btn-outline-secondary" id="view-details-btn">
+                                    <i class="fa-solid fa-magnifying-glass-plus me-1"></i> View Full Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Training Logs -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-terminal me-2"></i> Training Logs</span>
+                <button class="btn btn-sm btn-outline-secondary" id="clear-logs-btn">
+                    <i class="fa-solid fa-broom"></i> Clear
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="logs-container">
+                    <pre id="training-logs" class="logs p-3 m-0"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Optimizer Editor Modal -->
+    <div class="modal fade" id="optimizer-modal" tabindex="-1" aria-labelledby="optimizer-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="optimizer-modal-label">Edit Optimizer Instructions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="optimizer-prompt-full" class="form-label">Optimizer System Prompt</label>
+                        <textarea class="form-control" id="optimizer-prompt-full" rows="15"></textarea>
+                        <div class="form-text">
+                            These instructions guide the second LLM in how to optimize your prompts.
+                            Use the special tags <code>{current_system_prompt}</code>, <code>{current_output_prompt}</code>,
+                            and <code>{examples}</code> to reference the current state.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-optimizer-btn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Experiment Browser Modal -->
+    <div class="modal fade" id="experiment-modal" tabindex="-1" aria-labelledby="experiment-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="experiment-modal-label">Load Experiment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="experiments-table">
+                            <thead>
+                                <tr>
+                                    <th>Experiment ID</th>
+                                    <th>Iterations</th>
+                                    <th>Last Score</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Experiments will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div id="spinner" class="spinner-container text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-light">Processing...</p>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='training.js') }}"></script>
+</body>
+</html>

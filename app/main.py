@@ -50,6 +50,16 @@ def index():
     """Render the main page of the application."""
     return render_template('index.html')
 
+@app.route('/training')
+def training():
+    """Render the ML training interface."""
+    return render_template('training.html')
+
+@app.route('/history')
+def history():
+    """Render the experiment history page."""
+    return render_template('history.html')
+
 @app.route('/run', methods=['POST'])
 def run_evaluation():
     """Process inputs, run the model, and return evaluation results."""
