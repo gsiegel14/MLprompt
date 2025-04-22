@@ -1,0 +1,8 @@
+[
+  {
+    "user_input": "Dr. John H. Stone: A 45-year-old woman was referred to the rheumatology clinic of this hospital because of retroperitoneal fibrosis and the possibility of IgG4-related disease.\nSeven years before the current presentation, the patient had undergone a bone marrow biopsy at another hospital because of ...",
+    "ground_truth_output": "Rosai\u2013Dorfman\u2013Destombes disease.",
+    "model_response": "**The Question**\nDr. John H. Stone: A 45-year-old woman was referred to the rheumatology clinic of this hospital because of retroperitoneal fibrosis and the possibility of IgG4-related disease.  The detailed medical history, imaging studies, and lab results are provided in the user input.  What is the diagnosis and management plan?\n\n\n**Design Strategy**\nThis case presents a complex diagnostic challenge requiring a systematic review of the patient's history, imaging findings, and laboratory data ...",
+    "score": 0.1548870636550308
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "user_input": "Dr. David M. Dudzinski: A 76-year-old man was evaluated in the intensive care unit of this hospital for persistent postoperative cardiogenic shock and new diffuse rash after undergoing mitral-valve replacement.\nTwo months before this evaluation, the patient was admitted to another hospital with anor...",
+    "ground_truth_output": "Eosinophilic myocarditis and drug reaction with eosinophilia and systemic symptoms (DRESS).",
+    "model_response": "**1. Problem Representation:**\n\nThis case presents a 76-year-old male with a complex clinical picture.  Key features include:\n\n* **History of infective endocarditis (IE):** Two months prior, he presented with symptoms suggestive of IE (anorexia, weakness, fatigue, edema, decreased breath sounds, basilar crackles, elevated NT-proBNP), confirmed by positive blood cultures for MSSA and transesophageal echocardiography (TEE) showing mitral valve vegetation.  He received four weeks of intravenous oxa...",
+    "score": 0.13866666666666666
+  }
+]

@@ -1,0 +1,12 @@
+Analysis of Existing Prompts:
+The current system prompt attempts to establish the LLM as an expert physician, providing a strong persona. However, the extensive restriction module, while necessary for safety, might overwhelm the model and hinder its reasoning process.  The few-shot examples within the system prompt are redundant as the output prompt already provides examples.  The output prompt's structure is overly prescriptive and might stifle natural reasoning. The "N-shot learning examples" are too long and detailed, potentially leading to rote memorization rather than genuine reasoning. The examples show the model struggles with complex medical cases requiring nuanced interpretation and synthesis of information, not just simple recall. The model tends to restate the question rather than truly analyze and reason through the problem.
+
+The root cause of the failure is not a lack of medical knowledge (the persona is well-defined) but a lack of clear instructions on *how* to use that knowledge to reason through complex medical scenarios. The overly structured output prompt and the lengthy few-shot examples hinder the development of flexible reasoning strategies.  The model is being told *what* to do, not *how* to think.
+
+The revised prompts focus on enhancing the reasoning process rather than prescribing a rigid output format.
+
+* **System Prompt Changes:** The persona is simplified to "medical reasoning assistant," removing the potentially overwhelming expert physician persona and the redundant restriction module (which should be handled separately by a safety filter). The focus is shifted to the process of medical reasoning.
+
+* **Output Prompt Changes:** The structured format is simplified and focuses on the key steps in medical reasoning: problem representation, differential diagnosis, diagnostic approach, and management plan. This encourages a more natural and flexible reasoning process.  Each section requires justification, forcing the model to explain its reasoning explicitly. The emphasis on the importance of consulting qualified medical professionals is retained to maintain ethical considerations.
+
+The revised prompts aim to guide the LLM through a logical, step-by-step reasoning process, addressing the root cause of the previous failures.  The removal of the lengthy, prescriptive examples encourages the model to generalize its reasoning abilities rather than memorizing specific cases.
