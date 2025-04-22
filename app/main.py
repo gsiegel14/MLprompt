@@ -199,8 +199,28 @@ def load_dataset():
         elif dataset_type == 'nejm_train':
             # Load NEJM training dataset
             try:
-                with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
-                    examples = json.load(f)
+                # First try from examples.json, then fallback to current_train.json
+                try:
+                    with open(os.path.join('data/train', 'examples.json'), 'r') as f:
+                        examples = json.load(f)
+                except:
+                    with open(os.path.join('data/train', 'current_train.json'), 'r') as f:
+                        examples = json.load(f)
+                
+                # Make sure we actually have examples
+                if not examples or len(examples) == 0:
+                    # If we got an empty list, run the fix_nejm_data script
+                    import sys
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
+                    fix_nejm_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(fix_nejm_module)
+                    fix_nejm_module.fix_nejm_data()
+                    
+                    # Now try loading again
+                    with open(os.path.join('data/train', 'examples.json'), 'r') as f:
+                        examples = json.load(f)
+                
                 logger.info(f"Loaded {len(examples)} NEJM training examples")
             except Exception as e:
                 logger.error(f"Could not load NEJM training examples: {e}")
@@ -208,8 +228,28 @@ def load_dataset():
         elif dataset_type == 'nejm_validation':
             # Load NEJM validation dataset
             try:
-                with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
-                    examples = json.load(f)
+                # First try from examples.json, then fallback to current_validation.json
+                try:
+                    with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
+                        examples = json.load(f)
+                except:
+                    with open(os.path.join('data/validation', 'current_validation.json'), 'r') as f:
+                        examples = json.load(f)
+                
+                # Make sure we actually have examples
+                if not examples or len(examples) == 0:
+                    # If we got an empty list, run the fix_nejm_data script
+                    import sys
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("fix_nejm_data", "fix_nejm_data.py")
+                    fix_nejm_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(fix_nejm_module)
+                    fix_nejm_module.fix_nejm_data()
+                    
+                    # Now try loading again
+                    with open(os.path.join('data/validation', 'examples.json'), 'r') as f:
+                        examples = json.load(f)
+                
                 logger.info(f"Loaded {len(examples)} NEJM validation examples")
             except Exception as e:
                 logger.error(f"Could not load NEJM validation examples: {e}")
