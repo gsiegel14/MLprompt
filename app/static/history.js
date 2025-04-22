@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
     // UI Elements
     const experimentsBodyEl = document.getElementById('experiments-body');
@@ -9,22 +8,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentExperimentIdEl = document.getElementById('current-experiment-id');
     const iterationsAccordionEl = document.getElementById('iterations-accordion');
     const spinner = document.getElementById('spinner');
-    
+
     // Setup Chart.js
     let historyChart;
     setupHistoryChart();
-    
+
     // Initial state variables
     let currentExperimentId = null;
     let currentExperimentData = null;
-    
+
     // Load all experiments
     loadExperiments();
-    
+
     // Event listeners
     backToListBtn.addEventListener('click', showExperimentsList);
     backToDetailsBtn.addEventListener('click', showExperimentDetails);
-    
+
     // Functions
     function loadExperiments() {
         showSpinner();
@@ -57,21 +56,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideSpinner();
             });
     }
-    
+
     function populateExperimentsTable(experiments) {
         experimentsBodyEl.innerHTML = '';
-        
+
         experiments.forEach(exp => {
             const date = new Date(exp.timestamp * 1000);
             const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            
+
             const avgScore = exp.metrics?.avg_score || 0;
             const perfectMatchPercent = exp.metrics?.perfect_match_percent || 0;
-            
+
             // Calculate improvement (would need more data in a real implementation)
             const improvement = '+0.0%';
             const improvementClass = 'text-success';
-            
+
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${exp.experiment_id}</td>
@@ -87,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             experimentsBodyEl.appendChild(row);
         });
-        
+
         // Add event listeners
         document.querySelectorAll('.view-experiment').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     function loadExperimentDetails(experimentId) {
         showSpinner();
         fetch(`/experiments/${experimentId}`)
@@ -107,16 +106,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (data.iterations && data.iterations.length > 0) {
                     currentExperimentId = experimentId;
                     currentExperimentData = data;
-                    
+
                     // Update UI
                     currentExperimentIdEl.textContent = experimentId;
-                    
+
                     // Populate iterations
                     populateIterationsAccordion(data.iterations);
-                    
+
                     // Update chart
                     updateHistoryChart(data.iterations);
-                    
+
                     // Show details view
                     showExperimentDetails();
                 } else {
@@ -131,21 +130,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideSpinner();
             });
     }
-    
+
     function populateIterationsAccordion(iterations) {
         iterationsAccordionEl.innerHTML = '';
-        
+
         iterations.forEach((iteration, index) => {
             const avgScore = iteration.metrics?.avg_score || 0;
             const perfectMatches = iteration.metrics?.perfect_matches || 0;
             const totalExamples = iteration.metrics?.total_examples || 0;
-            
+
             // Calculate improvements
             const previousScore = index > 0 ? iterations[index - 1].metrics?.avg_score || 0 : 0;
             const scoreImprovement = avgScore - previousScore;
             const improvementClass = scoreImprovement > 0 ? 'text-success' : (scoreImprovement < 0 ? 'text-danger' : 'text-muted');
             const improvementSign = scoreImprovement > 0 ? '+' : '';
-            
+
             const item = document.createElement('div');
             item.className = 'accordion-item';
             item.innerHTML = `
@@ -175,17 +174,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="text-muted">Perfect Match %</div>
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <h6>System Prompt:</h6>
                             <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.system_prompt || '').substring(0, 200)}${iteration.system_prompt && iteration.system_prompt.length > 200 ? '...' : ''}</pre>
                         </div>
-                        
+
                         <div class="mb-3">
                             <h6>Output Prompt:</h6>
                             <pre class="p-2 bg-dark rounded">${escapeHtml(iteration.output_prompt || '').substring(0, 200)}${iteration.output_prompt && iteration.output_prompt.length > 200 ? '...' : ''}</pre>
                         </div>
-                        
+
                         ${index > 0 ? `
                         <div class="mb-3">
                             <h6>Optimizer Reasoning:</h6>
@@ -194,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                         ` : ''}
-                        
+
                         <div class="mt-3 text-center">
                             ${index > 0 ? `
                             <button class="btn btn-sm btn-outline-info compare-prompts" data-current="${index}" data-previous="${index - 1}">
@@ -208,26 +207,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            
+
             iterationsAccordionEl.appendChild(item);
         });
-        
+
         // Add event listeners to compare buttons
         document.querySelectorAll('.compare-prompts').forEach(btn => {
             btn.addEventListener('click', function() {
                 const currentIndex = parseInt(this.getAttribute('data-current'));
                 const previousIndex = parseInt(this.getAttribute('data-previous'));
-                
+
                 showPromptComparison(previousIndex, currentIndex);
             });
         });
-        
+
         // Add event listeners to view examples buttons
         document.querySelectorAll('.view-examples').forEach(btn => {
             btn.addEventListener('click', function() {
                 const iteration = parseInt(this.getAttribute('data-iteration'));
                 loadExamplesForIteration(iteration);
-                
+
                 // Scroll to examples section
                 document.getElementById('examples-container').scrollIntoView({
                     behavior: 'smooth'
@@ -235,52 +234,52 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     function showPromptComparison(originalIndex, optimizedIndex) {
         const iterations = currentExperimentData.iterations;
         if (!iterations || originalIndex < 0 || optimizedIndex >= iterations.length) {
             showAlert('Invalid comparison', 'danger');
             return;
         }
-        
+
         const original = iterations[originalIndex];
         const optimized = iterations[optimizedIndex];
-        
+
         // Update UI elements
         document.getElementById('original-iteration').textContent = `Iteration ${original.iteration}`;
         document.getElementById('optimized-iteration').textContent = `Iteration ${optimized.iteration}`;
-        
+
         document.getElementById('original-system-prompt').textContent = original.system_prompt || '';
         document.getElementById('optimized-system-prompt').textContent = optimized.system_prompt || '';
-        
+
         document.getElementById('original-output-prompt').textContent = original.output_prompt || '';
         document.getElementById('optimized-output-prompt').textContent = optimized.output_prompt || '';
-        
+
         document.getElementById('original-score').textContent = `${((original.metrics?.avg_score || 0) * 100).toFixed(1)}%`;
         document.getElementById('optimized-score').textContent = `${((optimized.metrics?.avg_score || 0) * 100).toFixed(1)}%`;
-        
+
         document.getElementById('optimizer-reasoning').textContent = optimized.reasoning || 'No reasoning available';
-        
+
         // Set up load examples button
         const loadExamplesBtn = document.getElementById('load-examples-btn');
         loadExamplesBtn.onclick = () => loadExampleResults(original.iteration, optimized.iteration);
-        
+
         // Reset examples container
         document.getElementById('compare-examples-container').innerHTML = `
             <div class="p-4 text-center text-muted">
                 <p>Click "Load Examples" to see detailed results for each test case</p>
             </div>
         `;
-        
+
         // Show comparison view
         experimentDetailsEl.style.display = 'none';
         compareViewEl.style.display = 'block';
     }
-    
+
     function loadExampleResults(originalIterationNumber, optimizedIterationNumber) {
         showSpinner();
         const examplesContainer = document.getElementById('compare-examples-container');
-        
+
         // Get examples for both iterations
         Promise.all([
             fetch(`/experiments/${currentExperimentId}/examples/${originalIterationNumber}`),
@@ -292,10 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 showAlert('Error loading examples', 'danger');
                 return;
             }
-            
+
             const originalExamples = originalData.examples || [];
             const optimizedExamples = optimizedData.examples || [];
-            
+
             if (originalExamples.length === 0 && optimizedExamples.length === 0) {
                 examplesContainer.innerHTML = `
                     <div class="p-4 text-center text-muted">
@@ -304,25 +303,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 return;
             }
-            
+
             // Use optimized examples as the base list if available, otherwise use original
             const baseExamples = optimizedExamples.length > 0 ? optimizedExamples : originalExamples;
-            
+
             // Clear container
             examplesContainer.innerHTML = '';
-            
+
             // Create a map for quick lookup of original examples by user input
             const originalExamplesMap = {};
             originalExamples.forEach(ex => {
                 originalExamplesMap[ex.user_input] = ex;
             });
-            
+
             // Add filters and statistics summary
             const perfectOriginal = originalExamples.filter(ex => ex.score >= 0.9).length;
             const perfectOptimized = optimizedExamples.filter(ex => ex.score >= 0.9).length;
             const avgScoreOriginal = originalExamples.length > 0 ? originalExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / originalExamples.length : 0;
             const avgScoreOptimized = optimizedExamples.length > 0 ? optimizedExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / optimizedExamples.length : 0;
-            
+
             const summaryEl = document.createElement('div');
             summaryEl.className = 'mb-4 p-3 bg-light border rounded';
             summaryEl.innerHTML = `
@@ -353,22 +352,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             examplesContainer.appendChild(summaryEl);
-            
+
             // Add filter functionality
             examplesContainer.querySelectorAll('.filter-examples-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     // Update active state
                     examplesContainer.querySelectorAll('.filter-examples-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    
+
                     // Filter examples
                     const filter = this.getAttribute('data-filter');
                     const exampleItems = examplesContainer.querySelectorAll('.example-item');
-                    
+
                     exampleItems.forEach(item => {
                         const improvement = parseFloat(item.getAttribute('data-improvement'));
                         const optimizedScore = parseFloat(item.getAttribute('data-optimized-score'));
-                        
+
                         if (filter === 'all') {
                             item.style.display = '';
                         } else if (filter === 'improved' && improvement > 0) {
@@ -383,25 +382,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 });
             });
-            
+
             // Display examples
             baseExamples.forEach((example, index) => {
                 const userInput = example.user_input;
                 const groundTruth = example.ground_truth_output;
                 const optimizedResponse = example.model_response;
                 const optimizedScore = example.score;
-                
+
                 // Try to find matching original example
                 const originalExample = originalExamplesMap[userInput];
                 const originalResponse = originalExample ? originalExample.model_response : 'Not available';
                 const originalScore = originalExample ? originalExample.score : 0;
-                
+
                 // Calculate score improvement
                 const scoreImprovement = optimizedScore - originalScore;
                 const scoreClass = scoreImprovement > 0 ? 'text-success' : 
                                   scoreImprovement < 0 ? 'text-danger' : 'text-muted';
                 const scoreSign = scoreImprovement > 0 ? '+' : '';
-                
+
                 // Create example card
                 const exampleEl = document.createElement('div');
                 exampleEl.className = 'accordion-item example-item';
@@ -432,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ${escapeHtml(userInput)}
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <h6 class="d-flex align-items-center">
                                     <i class="fa-solid fa-check-circle me-2"></i> Ground Truth Output:
@@ -441,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ${escapeHtml(groundTruth)}
                                 </div>
                             </div>
-                            
+
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <h6 class="d-flex align-items-center">
@@ -452,18 +451,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ${escapeHtml(originalResponse)}
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6">
                                     <h6 class="d-flex align-items-center">
                                         <i class="fa-solid fa-robot me-2"></i> Optimized Response: 
                                         <span class="badge bg-primary ms-2">${(optimizedScore * 100).toFixed(1)}%</span>
                                     </h6>
-                                    <div class="p-3 bg-light border ${optimizedScore >= 0.9 ? 'border-success' : ''} rounded" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="p-3 border rounded ${optimizedScore >= 0.9 ? 'border-success' : ''} rounded" style="max-height: 300px; overflow-y: auto;">
                                         ${escapeHtml(optimizedResponse)}
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mt-3">
                                 <h6 class="d-flex align-items-center">
                                     <i class="fa-solid fa-calculator me-2"></i> Score Calculation
@@ -479,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                
+
                 examplesContainer.appendChild(exampleEl);
             });
         })
@@ -496,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hideSpinner();
         });
     }
-    
+
     // Examples handling
     function loadExamplesForIteration(iteration) {
         const examplesContainer = document.getElementById('examples-container');
@@ -506,22 +505,22 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Error: Examples container not found', 'danger');
             return;
         }
-        
+
         const examplesLoading = document.getElementById('examples-loading');
         const noExamplesMessage = document.getElementById('no-examples-message');
-        
+
         if (!examplesLoading || !noExamplesMessage) {
             console.error('Examples loading elements not found');
             showAlert('Error: Examples loading elements not found', 'danger');
             return;
         }
-        
+
         // Reset container and show loading
         const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
         examplesList.forEach(el => el.remove());
         examplesLoading.style.display = 'block';
         noExamplesMessage.style.display = 'none';
-        
+
         if (!currentExperimentData || !currentExperimentData.iterations) {
             console.error('Current experiment data not available');
             examplesLoading.style.display = 'none';
@@ -529,17 +528,17 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Error: No experiment data available', 'danger');
             return;
         }
-        
+
         // Find the iteration data from the currently loaded experiment
         const iterationData = currentExperimentData.iterations.find(it => it.iteration === iteration);
-        
+
         if (!iterationData || !iterationData.examples) {
             // Need to fetch examples from the server
             fetch(`/experiments/${currentExperimentId}/iterations/${iteration}/examples`)
                 .then(response => response.json())
                 .then(data => {
                     examplesLoading.style.display = 'none';
-                    
+
                     if (data.error) {
                         showAlert(data.error, 'danger');
                         noExamplesMessage.style.display = 'block';
@@ -549,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (currentIteration) {
                             currentIteration.examples = data.examples;
                         }
-                        
+
                         // Display examples
                         renderExamples(data.examples);
                     } else {
@@ -565,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             // We already have the examples data
             examplesLoading.style.display = 'none';
-            
+
             if (iterationData.examples.length > 0) {
                 renderExamples(iterationData.examples);
             } else {
@@ -573,30 +572,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     function renderExamples(examples) {
         const examplesContainer = document.getElementById('examples-container');
         if (!examplesContainer) {
             console.error('Examples container not found');
             return;
         }
-        
+
         // Clear any existing examples
         const examplesList = Array.from(examplesContainer.querySelectorAll('.example-card'));
         examplesList.forEach(el => el.remove());
-        
+
         // Get current filter
         const activeFilter = document.querySelector('.filter-examples.active');
         if (!activeFilter) {
             console.error('Active filter not found');
             return;
         }
-        
+
         const activeFilterValue = activeFilter.getAttribute('data-filter');
-        
+
         // Sort examples by score (highest first)
         examples.sort((a, b) => (b.score || 0) - (a.score || 0));
-        
+
         // Apply filter
         let filteredExamples = examples;
         if (activeFilterValue === 'perfect') {
@@ -604,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (activeFilterValue === 'imperfect') {
             filteredExamples = examples.filter(ex => ex.score < 0.9);
         }
-        
+
         if (filteredExamples.length === 0) {
             // No examples match the filter
             const noMatchMessage = document.createElement('div');
@@ -616,11 +615,11 @@ document.addEventListener('DOMContentLoaded', function() {
             examplesContainer.appendChild(noMatchMessage);
             return;
         }
-        
+
         // Show metrics summary
         const perfectMatches = examples.filter(ex => ex.score >= 0.9).length;
         const avgScore = examples.length > 0 ? examples.reduce((sum, ex) => sum + (ex.score || 0), 0) / examples.length : 0;
-        
+
         const summaryCard = document.createElement('div');
         summaryCard.className = 'card mb-4';
         summaryCard.innerHTML = `
@@ -649,16 +648,16 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         examplesContainer.appendChild(summaryCard);
-        
+
         // Render examples
         filteredExamples.forEach((example, index) => {
             const score = example.score || 0;
             const isPerfectMatch = score >= 0.9;
-            
+
             const exampleCard = document.createElement('div');
             exampleCard.className = 'example-card border rounded mb-3';
             exampleCard.setAttribute('data-score', score);
-            
+
             // Determine score badge color based on score
             let badgeClass = 'bg-danger';
             if (score >= 0.9) {
@@ -668,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (score >= 0.5) {
                 badgeClass = 'bg-info';
             }
-            
+
             exampleCard.innerHTML = `
                 <div class="p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -678,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </h6>
                         <span class="badge ${badgeClass}">${(score * 100).toFixed(1)}%</span>
                     </div>
-                    
+
                     <div class="mb-3">
                         <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
                             <i class="fa-solid fa-keyboard me-2"></i> USER INPUT:
@@ -687,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${escapeHtml(example.user_input)}
                         </div>
                     </div>
-                    
+
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
@@ -697,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${escapeHtml(example.ground_truth_output)}
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
                                 <i class="fa-solid fa-robot me-2"></i> MODEL RESPONSE:
@@ -707,7 +706,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mt-3">
                         <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
                             <i class="fa-solid fa-calculator me-2"></i> HOW SCORE IS CALCULATED:
@@ -723,18 +722,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            
+
             examplesContainer.appendChild(exampleCard);
         });
     }
-    
+
     // Set up filter buttons for examples
     document.querySelectorAll('.filter-examples').forEach(btn => {
         btn.addEventListener('click', function() {
             // Update active state
             document.querySelectorAll('.filter-examples').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
+
             // Get currently loaded examples
             const activeIteration = document.querySelector('.accordion-collapse.show');
             if (activeIteration) {
@@ -753,14 +752,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     function setupHistoryChart() {
         const ctx = document.getElementById('history-chart');
         if (!ctx) {
             console.error('History chart canvas not found');
             return;
         }
-        
+
+        try {
         historyChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: {
@@ -769,7 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Average Score',
                         data: [],
-                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderColor: 'rgba(75, 192, 192,1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         tension: 0.4,
                         fill: true
@@ -814,49 +814,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        } catch (error) {
+            console.error('Error initializing chart:', error);
+            // Fall back to a simple text display if chart fails
+            const chartContainer = ctx.parentElement;
+            if (chartContainer) {
+                chartContainer.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        Chart rendering failed. Please try refreshing the page.
+                    </div>
+                    <div class="p-3 bg-light rounded">
+                        <h5>Performance Metrics Summary</h5>
+                        <div id="text-metrics-summary">No data available</div>
+                    </div>
+                `;
+            }
+        }
     }
-    
+
     function updateHistoryChart(iterations) {
         if (!historyChart) {
-            console.error('History chart not initialized');
+            // Update text summary if chart failed to initialize
+            const textSummary = document.getElementById('text-metrics-summary');
+            if (textSummary) {
+                let summaryHTML = '<ul>';
+                iterations.forEach(item => {
+                    summaryHTML += `<li>Iteration ${item.iteration}: Score ${((item.metrics?.avg_score || 0) * 100).toFixed(1)}%, Perfect Matches ${(item.metrics?.perfect_match_percent || 0).toFixed(1)}%</li>`;
+                });
+                summaryHTML += '</ul>';
+                textSummary.innerHTML = summaryHTML;
+            }
             return;
         }
-        
-        const labels = iterations.map(item => `Iteration ${item.iteration}`);
-        const avgScores = iterations.map(item => (item.metrics?.avg_score || 0) * 100);
-        const perfectMatches = iterations.map(item => item.metrics?.perfect_match_percent || 0);
-        
-        historyChart.data.labels = labels;
-        historyChart.data.datasets[0].data = avgScores;
-        historyChart.data.datasets[1].data = perfectMatches;
-        historyChart.update();
+
+        try {
+            const labels = iterations.map(item => `Iteration ${item.iteration}`);
+            const avgScores = iterations.map(item => (item.metrics?.avg_score || 0) * 100);
+            const perfectMatches = iterations.map(item => item.metrics?.perfect_match_percent || 0);
+
+            historyChart.data.labels = labels;
+            historyChart.data.datasets[0].data = avgScores;
+            historyChart.data.datasets[1].data = perfectMatches;
+            historyChart.update();
+        } catch (error) {
+            console.error('Error updating chart:', error);
+            showAlert('Error updating performance chart', 'warning');
+        }
     }
-    
+
     function showExperimentsList() {
         experimentDetailsEl.style.display = 'none';
         compareViewEl.style.display = 'none';
     }
-    
+
     function showExperimentDetails() {
         experimentDetailsEl.style.display = 'block';
         compareViewEl.style.display = 'none';
     }
-    
+
     function showSpinner() {
         spinner.style.display = 'flex';
     }
-    
+
     function hideSpinner() {
         spinner.style.display = 'none';
     }
-    
+
     function showAlert(message, type = 'info') {
         const alertContainer = document.getElementById('alert-container');
         if (!alertContainer) {
             console.error('Alert container not found');
             return;
         }
-        
+
         const alert = document.createElement('div');
         alert.className = `alert alert-${type} alert-dismissible fade show`;
         alert.innerHTML = `
@@ -864,7 +895,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
         alertContainer.appendChild(alert);
-        
+
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
             try {
@@ -876,7 +907,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 5000);
     }
-    
+
     function escapeHtml(text) {
         if (!text) return '';
         try {
