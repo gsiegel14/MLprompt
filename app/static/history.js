@@ -224,13 +224,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listeners to view examples buttons
         document.querySelectorAll('.view-examples').forEach(btn => {
             btn.addEventListener('click', function() {
-                const iteration = parseInt(this.getAttribute('data-iteration'));
-                loadExamplesForIteration(iteration);
-
                 // Scroll to examples section
                 document.getElementById('examples-container').scrollIntoView({
                     behavior: 'smooth'
                 });
+                
+                // Note: The actual function call is now handled by the onclick attribute
+                // to ensure global scope access
             });
         });
     }
