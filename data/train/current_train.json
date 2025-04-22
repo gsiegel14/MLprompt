@@ -1,10 +1,34 @@
 [
   {
-    "user_input": "How many planets are in our solar system?",
-    "ground_truth_output": "8"
+    "user_input": "A 30-year-old woman presents with severe",
+    "ground_truth_output": "colicky right flank pain radiating to the groin. She reports nausea and gross hematuria. Urinalysis shows microscopic hematuria. CT scan shows a 5mm stone in the right ureter.,Ureterolithiasis (kidney stone)"
   },
   {
-    "user_input": "What is the capital of France?",
-    "ground_truth_output": "Paris"
+    "user_input": "A 35-year-old woman presents with severe headache that began suddenly while exercising. She describes it as \"the worst headache of my life.\" Neurological exam shows nuchal rigidity and photophobia. CT scan of the head shows subarachnoid blood.",
+    "ground_truth_output": "Subarachnoid hemorrhage"
+  },
+  {
+    "user_input": "A 60-year-old woman presents with sudden onset of weakness and numbness on the left side of her face and left arm that started 2 hours ago. She has a history of atrial fibrillation and is on warfarin. Vital signs: BP 170/90",
+    "ground_truth_output": "HR 80, RR 16. CT scan of the head shows no bleeding.,Ischemic stroke (cerebrovascular accident)"
+  },
+  {
+    "user_input": "A 40-year-old man presents with abdominal pain that started periumbilically and moved to the right lower quadrant over 12 hours. He reports anorexia and nausea. On exam",
+    "ground_truth_output": "he has rebound tenderness at McBurney's point. WBC is elevated.,Acute appendicitis"
+  },
+  {
+    "user_input": "user_input",
+    "ground_truth_output": "ground_truth_output"
+  },
+  {
+    "user_input": "A 65-year-old man with a history of hypertension and diabetes presents with sudden onset of severe",
+    "ground_truth_output": "tearing chest pain radiating to the back. CT angiogram shows a dilated aortic root with an intimal flap.,Aortic dissection"
+  },
+  {
+    "user_input": "A 45-year-old man presents with crushing chest pain radiating to the left arm that started 1 hour ago. He has a history of hypertension and smoking. Vital signs: BP 160/95",
+    "ground_truth_output": "HR 110, RR 22. ECG shows ST elevation in leads II, III, and aVF.,Acute inferior myocardial infarction"
+  },
+  {
+    "user_input": "A 55-year-old man with a history of alcoholism presents with severe upper abdominal pain radiating to the back",
+    "ground_truth_output": "nausea, and vomiting for the past 12 hours. On exam, he has epigastric tenderness. Labs show elevated lipase and amylase.,Acute pancreatitis"
   }
 ]

@@ -1,6 +1,14 @@
 [
   {
-    "user_input": "What is the boiling point of water in Celsius?",
-    "ground_truth_output": "100"
+    "user_input": "A 50-year-old man presents with gradually worsening shortness of breath over the past 2 weeks. He has a history of congestive heart failure. Physical exam reveals bilateral lower extremity edema and crackles in both lung bases. BNP is elevated.",
+    "ground_truth_output": "Acute exacerbation of congestive heart failure"
+  },
+  {
+    "user_input": "A 70-year-old woman presents with fever",
+    "ground_truth_output": "productive cough with yellow sputum, and dyspnea for the past 3 days. She has a history of COPD. Chest X-ray shows a right lower lobe infiltrate.,Community-acquired pneumonia"
+  },
+  {
+    "user_input": "A 25-year-old woman presents with fever",
+    "ground_truth_output": "right flank pain, and dysuria for the past 2 days. Urinalysis shows pyuria and bacteriuria. CBC reveals leukocytosis.,Pyelonephritis"
   }
 ]

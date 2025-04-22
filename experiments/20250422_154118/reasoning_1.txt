@@ -1,0 +1,8 @@
+Failed to extract output prompt from response. Using original.
+Failed to extract system prompt from response. Using original.
+summarizing findings, listing differential diagnoses, explaining reasoning, and stating the final diagnosis. This structured approach forces the LLM to engage in a more logical and systematic approach to diagnosis.  The explicit instruction to state \"Insufficient data\" when appropriate addresses the issue seen in Example 1.  The revised output prompt mirrors the steps in the system prompt, reinforcing the expected structure.
+
+
+The changes avoid overfitting by focusing on improving the overall reasoning process rather than addressing specific keywords or phrases from the ground truth.  The addition of structured steps is a general improvement applicable to a wide range of diagnostic problems, not just the specific examples provided. The requirement to explain the reasoning enhances the transparency and allows for evaluation of the LLM's underlying logic, making the model more robust and less prone to errors stemming from incomplete information or ambiguous inputs.  It encourages the model to engage in a more rigorous consideration of the available data, improving its ability to handle both complete and incomplete cases."
+}
+```
