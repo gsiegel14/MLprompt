@@ -690,6 +690,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('examplesAccordion').innerHTML = '';
         document.getElementById('error-analysis-table').innerHTML = '';
         
+        // Update global examples for the comparison view
+        currentExamples = data.examples || [];
+        currentExampleIndex = 0;
+        
         // Show/hide no examples message
         const noExamplesMessage = document.getElementById('no-examples-message');
         
@@ -794,6 +798,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             });
+            
+            // Set up view toggle buttons
+            document.getElementById('view-accordion').addEventListener('click', () => toggleExampleView('accordion'));
+            document.getElementById('view-comparison').addEventListener('click', () => toggleExampleView('comparison'));
+            
+            // Set up navigation buttons for comparison view
+            document.getElementById('prev-example').addEventListener('click', () => navigateExample(-1));
+            document.getElementById('next-example').addEventListener('click', () => navigateExample(1));
             
             // Initialize metrics charts
             initializeMetricsCharts(data);
@@ -1365,6 +1377,112 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show success message
         showAlert('Optimized prompts applied successfully', 'success');
+    }
+    
+    // Toggle between accordion and comparison views
+    function toggleExampleView(viewType) {
+        const accordionView = document.getElementById('accordion-view');
+        const comparisonView = document.getElementById('comparison-view');
+        const accordionBtn = document.getElementById('view-accordion');
+        const comparisonBtn = document.getElementById('view-comparison');
+        
+        if (viewType === 'accordion') {
+            accordionView.style.display = 'block';
+            comparisonView.style.display = 'none';
+            
+            accordionBtn.classList.add('active');
+            comparisonBtn.classList.remove('active');
+        } else {
+            accordionView.style.display = 'none';
+            comparisonView.style.display = 'block';
+            
+            accordionBtn.classList.remove('active');
+            comparisonBtn.classList.add('active');
+            
+            // Update the comparison view in case it's the first time viewing
+            updateComparisonView();
+        }
+    }
+    
+    // Global variables to store example data for navigation
+    let currentExamples = [];
+    let currentExampleIndex = 0;
+    
+    // Update the comparison view with current example
+    function updateComparisonView() {
+        if (!currentExamples || currentExamples.length === 0) {
+            document.getElementById('comparison-view').innerHTML = '<div class="alert alert-info m-3">No examples available for comparison</div>';
+            return;
+        }
+        
+        const example = currentExamples[currentExampleIndex];
+        if (!example) return;
+        
+        // Update example counter
+        document.getElementById('current-example-num').textContent = currentExampleIndex + 1;
+        document.getElementById('total-examples').textContent = currentExamples.length;
+        
+        // Fill in example details
+        document.getElementById('comparison-user-input').textContent = example.user_input || '';
+        document.getElementById('comparison-ground-truth').textContent = example.ground_truth_output || '';
+        
+        // For initial vs optimized responses, we need to determine what data we have
+        let initialResponse = '';
+        let optimizedResponse = '';
+        let initialScore = 0;
+        let optimizedScore = 0;
+        
+        // If we have separate initial and optimized responses
+        if (example.initial_response && example.optimized_response) {
+            initialResponse = example.initial_response;
+            optimizedResponse = example.optimized_response;
+            initialScore = example.initial_score || 0;
+            optimizedScore = example.optimized_score || example.score || 0;
+        } 
+        // If we only have model_response (single response)
+        else if (example.model_response) {
+            initialResponse = example.model_response;
+            optimizedResponse = example.model_response;
+            initialScore = example.score || 0;
+            optimizedScore = example.score || 0;
+        }
+        
+        // Set the response elements
+        document.getElementById('comparison-initial-response').textContent = initialResponse;
+        document.getElementById('comparison-optimized-response').textContent = optimizedResponse;
+        
+        // Update score badges
+        document.getElementById('initial-score-badge').textContent = `Score: ${(initialScore * 100).toFixed(1)}%`;
+        document.getElementById('optimized-score-badge').textContent = `Score: ${(optimizedScore * 100).toFixed(1)}%`;
+        
+        // Update improvement text
+        const improvementEl = document.getElementById('improvement-text');
+        if (optimizedScore > initialScore) {
+            const improvement = ((optimizedScore - initialScore) * 100).toFixed(1);
+            improvementEl.textContent = `Response improved by ${improvement}% after prompt optimization`;
+            document.getElementById('comparison-improvement').className = 'alert alert-success';
+        } else if (optimizedScore < initialScore) {
+            const decrease = ((initialScore - optimizedScore) * 100).toFixed(1);
+            improvementEl.textContent = `Response decreased by ${decrease}% after prompt optimization`;
+            document.getElementById('comparison-improvement').className = 'alert alert-danger';
+        } else {
+            improvementEl.textContent = 'No change in score between initial and optimized responses';
+            document.getElementById('comparison-improvement').className = 'alert alert-info';
+        }
+        
+        // Enable/disable navigation buttons
+        document.getElementById('prev-example').disabled = currentExampleIndex === 0;
+        document.getElementById('next-example').disabled = currentExampleIndex === currentExamples.length - 1;
+    }
+    
+    // Navigate between examples in comparison view
+    function navigateExample(direction) {
+        const newIndex = currentExampleIndex + direction;
+        
+        if (newIndex >= 0 && newIndex < currentExamples.length) {
+            currentExampleIndex = newIndex;
+            updateComparisonView();
+        }
     }
     
     // Show spinner with safety timeout
