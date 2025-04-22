@@ -378,21 +378,105 @@ textarea, .results-section {
 
 /* Examples Styling */
 .examples-list {
-    max-height: 800px;
+    max-height: 600px;
     overflow-y: auto;
 }
 
 .example-card {
-    transition: all 0.2s ease;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
 }
 
 .example-card:hover {
     background-color: rgba(0, 0, 0, 0.02);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.filter-examples.active {
-    background-color: #4361ee;
-    color: white;
+.example-item {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+.example-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.comparison-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.score-pill {
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: rgba(0,0,0,0.05);
+}
+
+.score-improvement {
+    transition: all 0.3s ease;
+}
+
+.score-improvement.positive {
+    color: #198754;
+}
+
+.score-improvement.negative {
+    color: #dc3545;
+}
+
+.perfect-match {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-color: rgba(25, 135, 84, 0.3);
+}
+
+.needs-improvement {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.example-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    background-color: rgba(0,0,0,0.03);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+}
+
+/* Tooltip for score explanation */
+.score-info {
+    position: relative;
+    cursor: pointer;
+}
+
+.score-info:hover::after {
+    content: "Scores are calculated based on semantic similarity to the ground truth, exact matches of key phrases, and correct structure.";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 100%;
+    width: 250px;
+    padding: 8px;
+    background-color: #333;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    z-index: 100;
+}
+
+/* Animation for score changes */
+@keyframes highlight {
+    0% { background-color: rgba(255, 193, 7, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.highlight-animation {
+    animation: highlight 2s ease-out;
 }
 
 /* History page styles */

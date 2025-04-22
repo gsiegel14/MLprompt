@@ -316,6 +316,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 originalExamplesMap[ex.user_input] = ex;
             });
             
+            // Add filters and statistics summary
+            const perfectOriginal = originalExamples.filter(ex => ex.score >= 0.9).length;
+            const perfectOptimized = optimizedExamples.filter(ex => ex.score >= 0.9).length;
+            const avgScoreOriginal = originalExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / originalExamples.length;
+            const avgScoreOptimized = optimizedExamples.reduce((sum, ex) => sum + (ex.score || 0), 0) / optimizedExamples.length;
+            
+            const summaryEl = document.createElement('div');
+            summaryEl.className = 'mb-4 p-3 bg-light border rounded';
+            summaryEl.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Original Iteration ${originalIterationNumber}</h5>
+                        <div>Average Score: ${(avgScoreOriginal * 100).toFixed(1)}%</div>
+                        <div>Perfect Matches: ${perfectOriginal}/${originalExamples.length}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Optimized Iteration ${optimizedIterationNumber}</h5>
+                        <div>Average Score: ${(avgScoreOptimized * 100).toFixed(1)}%</div>
+                        <div>Perfect Matches: ${perfectOptimized}/${optimizedExamples.length}</div>
+                        <div class="mt-1">
+                            <span class="badge ${avgScoreOptimized > avgScoreOriginal ? 'bg-success' : 'bg-danger'}">
+                                ${avgScoreOptimized > avgScoreOriginal ? '+' : ''}${((avgScoreOptimized - avgScoreOriginal) * 100).toFixed(1)}% Overall
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary active filter-examples-btn" data-filter="all">All Examples</button>
+                        <button class="btn btn-outline-primary filter-examples-btn" data-filter="improved">Improved</button>
+                        <button class="btn btn-outline-primary filter-examples-btn" data-filter="perfect">Perfect Matches</button>
+                        <button class="btn btn-outline-primary filter-examples-btn" data-filter="worse">Worse</button>
+                    </div>
+                </div>
+            `;
+            examplesContainer.appendChild(summaryEl);
+            
+            // Add filter functionality
+            examplesContainer.querySelectorAll('.filter-examples-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active state
+                    examplesContainer.querySelectorAll('.filter-examples-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Filter examples
+                    const filter = this.getAttribute('data-filter');
+                    const exampleItems = examplesContainer.querySelectorAll('.example-item');
+                    
+                    exampleItems.forEach(item => {
+                        const improvement = parseFloat(item.getAttribute('data-improvement'));
+                        const optimizedScore = parseFloat(item.getAttribute('data-optimized-score'));
+                        
+                        if (filter === 'all') {
+                            item.style.display = '';
+                        } else if (filter === 'improved' && improvement > 0) {
+                            item.style.display = '';
+                        } else if (filter === 'perfect' && optimizedScore >= 0.9) {
+                            item.style.display = '';
+                        } else if (filter === 'worse' && improvement < 0) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
             // Display examples
             baseExamples.forEach((example, index) => {
                 const userInput = example.user_input;
@@ -336,29 +403,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Create example card
                 const exampleEl = document.createElement('div');
-                exampleEl.className = 'accordion-item';
+                exampleEl.className = 'accordion-item example-item';
+                exampleEl.setAttribute('data-improvement', scoreImprovement);
+                exampleEl.setAttribute('data-optimized-score', optimizedScore);
                 exampleEl.innerHTML = `
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" 
                                 data-bs-toggle="collapse" data-bs-target="#example-${index}">
                             <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                 <span><strong>Example ${index + 1}</strong></span>
-                                <span class="badge bg-primary ms-2">${(optimizedScore * 100).toFixed(1)}% Score</span>
-                                <span class="${scoreClass}">${scoreSign}${(scoreImprovement * 100).toFixed(1)}%</span>
+                                <div>
+                                    <span class="badge bg-secondary me-2">${(originalScore * 100).toFixed(1)}%</span>
+                                    <i class="fa-solid fa-arrow-right mx-1"></i>
+                                    <span class="badge bg-primary ms-2">${(optimizedScore * 100).toFixed(1)}%</span>
+                                    <span class="badge ${scoreClass} ms-2">${scoreSign}${(scoreImprovement * 100).toFixed(1)}%</span>
+                                </div>
                             </div>
                         </button>
                     </h2>
                     <div id="example-${index}" class="accordion-collapse collapse">
                         <div class="accordion-body">
                             <div class="mb-3">
-                                <h6>User Input:</h6>
+                                <h6 class="d-flex align-items-center">
+                                    <i class="fa-solid fa-keyboard me-2"></i> User Input:
+                                </h6>
                                 <div class="p-3 bg-light border rounded">
                                     ${escapeHtml(userInput)}
                                 </div>
                             </div>
                             
                             <div class="mb-3">
-                                <h6>Ground Truth Output:</h6>
+                                <h6 class="d-flex align-items-center">
+                                    <i class="fa-solid fa-check-circle me-2"></i> Ground Truth Output:
+                                </h6>
                                 <div class="p-3 bg-light border rounded">
                                     ${escapeHtml(groundTruth)}
                                 </div>
@@ -366,21 +443,36 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
-                                    <h6>Original Response: 
-                                        <span class="badge bg-secondary">${(originalScore * 100).toFixed(1)}%</span>
+                                    <h6 class="d-flex align-items-center">
+                                        <i class="fa-solid fa-robot me-2"></i> Original Response: 
+                                        <span class="badge bg-secondary ms-2">${(originalScore * 100).toFixed(1)}%</span>
                                     </h6>
-                                    <div class="p-3 bg-light border rounded">
+                                    <div class="p-3 bg-light border rounded" style="max-height: 300px; overflow-y: auto;">
                                         ${escapeHtml(originalResponse)}
                                     </div>
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <h6>Optimized Response: 
-                                        <span class="badge bg-primary">${(optimizedScore * 100).toFixed(1)}%</span>
+                                    <h6 class="d-flex align-items-center">
+                                        <i class="fa-solid fa-robot me-2"></i> Optimized Response: 
+                                        <span class="badge bg-primary ms-2">${(optimizedScore * 100).toFixed(1)}%</span>
                                     </h6>
-                                    <div class="p-3 bg-light border rounded">
+                                    <div class="p-3 bg-light border ${optimizedScore >= 0.9 ? 'border-success' : ''} rounded" style="max-height: 300px; overflow-y: auto;">
                                         ${escapeHtml(optimizedResponse)}
                                     </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <h6 class="d-flex align-items-center">
+                                    <i class="fa-solid fa-calculator me-2"></i> Score Calculation
+                                </h6>
+                                <div class="p-3 bg-light border rounded">
+                                    <p class="mb-1"><strong>Improvement: </strong> <span class="${scoreClass}">${scoreSign}${(scoreImprovement * 100).toFixed(1)}%</span></p>
+                                    <p class="mb-0">
+                                        Scores are calculated based on semantic similarity to the ground truth, exact matches of key phrases, and correct structure.
+                                        A score ≥ 90% is considered a perfect match.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -590,13 +682,46 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Show metrics summary
+        const perfectMatches = examples.filter(ex => ex.score >= 0.9).length;
+        const avgScore = examples.reduce((sum, ex) => sum + (ex.score || 0), 0) / examples.length;
+        
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'card mb-4';
+        summaryCard.innerHTML = `
+            <div class="card-body p-3">
+                <h5 class="card-title">Examples Summary</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-4 me-2">${(avgScore * 100).toFixed(1)}%</div>
+                            <div class="text-muted">Average Score</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-4 me-2">${perfectMatches}</div>
+                            <div class="text-muted">Perfect Matches</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-4 me-2">${examples.length}</div>
+                            <div class="text-muted">Total Examples</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        examplesContainer.appendChild(summaryCard);
+        
         // Render examples
         filteredExamples.forEach((example, index) => {
             const score = example.score || 0;
             const isPerfectMatch = score >= 0.9;
             
             const exampleCard = document.createElement('div');
-            exampleCard.className = 'example-card border-bottom';
+            exampleCard.className = 'example-card border rounded mb-3';
             exampleCard.setAttribute('data-score', score);
             
             // Determine score badge color based on score
@@ -612,35 +737,46 @@ document.addEventListener('DOMContentLoaded', function() {
             exampleCard.innerHTML = `
                 <div class="p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">Example ${index + 1}</h6>
+                        <h6 class="mb-0 d-flex align-items-center">
+                            <i class="fa-solid fa-clipboard-check me-2"></i>
+                            Example ${index + 1}
+                        </h6>
                         <span class="badge ${badgeClass}">${(score * 100).toFixed(1)}%</span>
                     </div>
                     
                     <div class="mb-3">
-                        <div class="fw-bold text-muted small mb-1">USER INPUT:</div>
-                        <div class="p-2 bg-light border rounded user-input">
+                        <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
+                            <i class="fa-solid fa-keyboard me-2"></i> USER INPUT:
+                        </div>
+                        <div class="p-2 bg-light border rounded user-input" style="max-height: 150px; overflow-y: auto;">
                             ${escapeHtml(example.user_input)}
                         </div>
                     </div>
                     
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="fw-bold text-muted small mb-1">EXPECTED OUTPUT:</div>
-                            <div class="p-2 bg-light border rounded expected-output">
+                            <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
+                                <i class="fa-solid fa-check-circle me-2"></i> EXPECTED OUTPUT:
+                            </div>
+                            <div class="p-2 bg-light border rounded expected-output" style="max-height: 200px; overflow-y: auto;">
                                 ${escapeHtml(example.ground_truth_output)}
                             </div>
                         </div>
                         
                         <div class="col-md-6">
-                            <div class="fw-bold text-muted small mb-1">MODEL RESPONSE:</div>
-                            <div class="p-2 border rounded model-response ${isPerfectMatch ? 'border-success bg-success bg-opacity-10' : 'border-danger bg-danger bg-opacity-10'}">
+                            <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
+                                <i class="fa-solid fa-robot me-2"></i> MODEL RESPONSE:
+                            </div>
+                            <div class="p-2 border rounded model-response ${isPerfectMatch ? 'border-success bg-success bg-opacity-10' : 'border-danger bg-danger bg-opacity-10'}" style="max-height: 200px; overflow-y: auto;">
                                 ${escapeHtml(example.model_response)}
                             </div>
                         </div>
                     </div>
                     
                     <div class="mt-3">
-                        <div class="fw-bold text-muted small mb-1">HOW SCORE IS CALCULATED:</div>
+                        <div class="fw-bold text-muted small mb-1 d-flex align-items-center">
+                            <i class="fa-solid fa-calculator me-2"></i> HOW SCORE IS CALCULATED:
+                        </div>
                         <div class="p-2 bg-light border rounded small">
                             <p class="mb-1">The score is calculated using:</p>
                             <ul class="mb-1">

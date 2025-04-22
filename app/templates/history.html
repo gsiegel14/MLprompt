@@ -168,7 +168,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div id="examples-container" class="examples-list">
+                    <div id="examples-container" class="examples-list p-3">
                         <!-- Will be populated dynamically -->
                         <div class="text-center py-4 text-muted" id="examples-loading">
                             <div class="spinner-border spinner-border-sm me-2" role="status">
@@ -179,6 +179,90 @@
                         <div class="text-center py-4 text-muted" id="no-examples-message" style="display: none;">
                             <i class="fa-solid fa-inbox me-2"></i>
                             No examples available for this iteration
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Example Details Modal -->
+            <div class="modal fade" id="exampleDetailsModal" tabindex="-1" aria-labelledby="exampleDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleDetailsModalLabel">Example Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="exampleDetailsModalBody">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <i class="fa-solid fa-keyboard me-2"></i> User Input
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="modal-user-input" class="p-3 bg-light border rounded" style="max-height: 200px; overflow-y: auto;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-12 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <i class="fa-solid fa-check-circle me-2"></i> Ground Truth Output
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="modal-ground-truth" class="p-3 bg-light border rounded" style="max-height: 200px; overflow-y: auto;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                            <span><i class="fa-solid fa-robot me-2"></i> Original Response</span>
+                                            <span class="badge bg-secondary" id="modal-original-score">0%</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="modal-original-response" class="p-3 bg-light border rounded" style="height: 300px; overflow-y: auto;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                            <span><i class="fa-solid fa-robot me-2"></i> Optimized Response</span>
+                                            <span class="badge bg-light text-primary" id="modal-optimized-score">0%</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="modal-optimized-response" class="p-3 bg-light border rounded" style="height: 300px; overflow-y: auto;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header bg-light">
+                                    <i class="fa-solid fa-calculator me-2"></i> Score Calculation
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                            <div id="modal-score-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <div id="modal-score-improvement" class="fs-5"></div>
+                                    </div>
+                                    <p class="mb-1">The score is calculated using:</p>
+                                    <ul class="mb-1">
+                                        <li>Semantic similarity (70%): How similar the text sequences are</li>
+                                        <li>Keyword matching (30%): How many important keywords match</li>
+                                    </ul>
+                                    <p class="mb-0">A score ≥ 90% is considered a perfect match.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>
