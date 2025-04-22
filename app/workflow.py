@@ -219,6 +219,15 @@ class PromptOptimizationWorkflow:
                     # Add this chunk's results to the main results array
                     results.extend(chunk_results)
                     
+                    # Log chunk progress to the process log
+                    with open(process_log_file, 'a') as log_file:
+                        log_file.write(f"CHUNK {chunk_start+1}-{chunk_end} PROCESSED\n")
+                        log_file.write(f"  Success: {len(chunk_results)} examples\n")
+                        log_file.write(f"  Memory before chunk: {memory_before_iter:.2f} MB\n")
+                        current_memory = process.memory_info().rss / 1024 / 1024
+                        log_file.write(f"  Memory after chunk: {current_memory:.2f} MB (delta: {current_memory - memory_before_iter:.2f} MB)\n")
+                        log_file.write(f"  Cumulative progress: {len(results)}/{len(batch)} examples processed\n\n")
+                    
                     # Clear chunk_results to free memory
                     chunk_results = []
                     
@@ -268,9 +277,19 @@ class PromptOptimizationWorkflow:
                 # Run additional garbage collection
                 gc.collect()
                 
+                # Log optimization phase details to the process log
+                with open(process_log_file, 'a') as log_file:
+                    log_file.write("\n=== PHASE 2: OPTIMIZATION ===\n")
+                    log_file.write(f"Memory before optimization: {memory_after_phase1:.2f} MB\n")
+                    log_file.write(f"Examples for optimization: {len(optimization_examples)}\n")
+                    log_file.write(f"Optimizer strategy: {optimizer_strategy}\n")
+                    log_file.write(f"Memory after clearing full results: {process.memory_info().rss / 1024 / 1024:.2f} MB\n\n")
+                
                 try:
                     # Call the Optimizer LLM to improve the prompts
                     logger.info("Calling optimize_prompts function...")
+                    optimization_start_time = time.time()
+                    
                     optimization_result = optimize_prompts(
                         current_system_prompt,
                         current_output_prompt,
@@ -278,14 +297,31 @@ class PromptOptimizationWorkflow:
                         optimizer_prompt,
                         optimizer_strategy
                     )
-                    logger.info("optimize_prompts function completed successfully")
+                    
+                    optimization_duration = time.time() - optimization_start_time
+                    logger.info(f"optimize_prompts function completed in {optimization_duration:.2f} seconds")
+                    
+                    # Log optimization success to file
+                    with open(process_log_file, 'a') as log_file:
+                        log_file.write(f"Optimization completed successfully in {optimization_duration:.2f} seconds\n")
+                        reasoning = optimization_result.get('reasoning', '')
+                        reasoning_preview = reasoning[:200] + '...' if len(reasoning) > 200 else reasoning
+                        log_file.write(f"Reasoning preview: {reasoning_preview}\n")
+                        
                 except Exception as e:
-                    logger.error(f"Error in optimization: {e}")
+                    error_msg = str(e)
+                    logger.error(f"Error in optimization: {error_msg}")
+                    
+                    # Log the error to the process log
+                    with open(process_log_file, 'a') as log_file:
+                        log_file.write(f"ERROR IN OPTIMIZATION: {error_msg}\n")
+                        log_file.write(traceback.format_exc() + "\n")
+                    
                     # Create a default result if optimization fails
                     optimization_result = {
                         "system_prompt": current_system_prompt,
                         "output_prompt": current_output_prompt,
-                        "reasoning": f"Optimization failed: {str(e)}"
+                        "reasoning": f"Optimization failed: {error_msg}"
                     }
                 
                 # Memory check after Phase 2
@@ -339,6 +375,25 @@ class PromptOptimizationWorkflow:
             if no_improvement_count >= early_stopping_patience:
                 logger.info(f"Early stopping after {iteration} iterations (no improvement for {no_improvement_count} iterations)")
                 break
+            
+            # Log iteration summary to the process log
+            with open(process_log_file, 'a') as log_file:
+                log_file.write("\n=== ITERATION SUMMARY ===\n")
+                log_file.write(f"Iteration {iteration} completed\n")
+                log_file.write(f"Score: {current_score:.4f}\n")
+                log_file.write(f"Best score so far: {best_score:.4f} (iteration {best_iteration})\n")
+                log_file.write(f"No improvement count: {no_improvement_count}/{early_stopping_patience}\n")
+                
+                if current_score > best_score:
+                    log_file.write("IMPROVEMENT ACHIEVED - Saved as best version\n")
+                else:
+                    log_file.write("NO IMPROVEMENT\n")
+                
+                # Log memory usage
+                final_memory = process.memory_info().rss / 1024 / 1024
+                log_file.write(f"Final memory usage: {final_memory:.2f} MB\n")
+                log_file.write(f"Memory change during iteration: {final_memory - memory_before_iter:.2f} MB\n")
+                log_file.write("="*50 + "\n\n")
                 
             # Short pause to avoid API rate limits
             time.sleep(1)
@@ -363,10 +418,32 @@ class PromptOptimizationWorkflow:
         Returns:
             dict: Validation results
         """
+        # Begin extensive logging
+        from datetime import datetime
+        import traceback
+        
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        validation_log_file = f"logs/validation_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        with open(validation_log_file, 'w') as log_file:
+            log_file.write(f"=== VALIDATION RUN - {log_timestamp} ===\n")
+            log_file.write(f"Comparing prompt versions: {prompt_versions}\n")
+            log_file.write("="*80 + "\n\n")
+        
+        # Memory tracking
+        import gc
+        import psutil
+        process = psutil.Process()
+        initial_memory = process.memory_info().rss / 1024 / 1024
+        logger.info(f"Memory usage before validation: {initial_memory:.2f} MB")
+        
         # Get validation examples
         validation_examples = self.data_module.get_batch(batch_size=0, validation=True)
         if not validation_examples:
             logger.warning("No validation examples available")
+            with open(validation_log_file, 'a') as log_file:
+                log_file.write("ERROR: No validation examples available\n")
             return {"error": "No validation examples available"}
         
         # Collect results for each prompt version
@@ -417,15 +494,69 @@ class PromptOptimizationWorkflow:
             
             # Calculate metrics for this version
             metrics = evaluate_batch(results)
+            version_score = metrics.get('avg_score', 0)
             validation_results[f"v{version}"] = {
                 "metrics": metrics,
                 "example_count": len(results)
             }
             
+            # Log validation results for this version
+            with open(validation_log_file, 'a') as log_file:
+                log_file.write(f"\n=== VERSION {version} VALIDATION RESULTS ===\n")
+                log_file.write(f"Examples processed: {len(results)}/{len(validation_examples)}\n")
+                log_file.write(f"Average score: {version_score:.4f}\n")
+                log_file.write(f"Perfect matches: {metrics.get('perfect_matches', 0)}/{len(results)}\n")
+                log_file.write(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB\n")
+                log_file.write("="*50 + "\n")
+            
+            # Run garbage collection between versions
+            gc.collect()
+            logger.info(f"Completed validation for version {version} with score {version_score:.4f}")
+            
             # Short pause to avoid API rate limits
             time.sleep(1)
         
+        # Create and log a final summary
+        with open(validation_log_file, 'a') as log_file:
+            log_file.write("\n=== VALIDATION SUMMARY ===\n")
+            log_file.write(f"Total versions compared: {len(validation_results)}\n")
+            log_file.write(f"Total examples processed: {len(validation_examples)}\n")
+            
+            # Find the best performing version
+            best_version = None
+            best_score = 0
+            for version, results in validation_results.items():
+                version_score = results.get('metrics', {}).get('avg_score', 0)
+                if version_score > best_score:
+                    best_score = version_score
+                    best_version = version
+            
+            if best_version:
+                log_file.write(f"Best performing version: {best_version} (score: {best_score:.4f})\n")
+                
+                # List all versions and their scores
+                log_file.write("\nAll version scores:\n")
+                for version, results in validation_results.items():
+                    version_score = results.get('metrics', {}).get('avg_score', 0)
+                    perfect_matches = results.get('metrics', {}).get('perfect_matches', 0)
+                    example_count = results.get('example_count', 0)
+                    log_file.write(f"  {version}: {version_score:.4f} ({perfect_matches}/{example_count} perfect matches)\n")
+            else:
+                log_file.write("No valid results to compare\n")
+                
+            # Final memory usage
+            final_memory = process.memory_info().rss / 1024 / 1024
+            log_file.write(f"\nMemory usage: {final_memory:.2f} MB (change: {final_memory - initial_memory:.2f} MB)\n")
+            log_file.write(f"Validation completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            log_file.write("="*80 + "\n")
+            
+        logger.info(f"Validation completed and logged to {validation_log_file}")
+        
+        # Run a final garbage collection
+        gc.collect()
+        
         return {
             "validation_results": validation_results,
-            "example_count": len(validation_examples)
+            "example_count": len(validation_examples),
+            "log_file": validation_log_file  # Return the log file path for reference
         }
