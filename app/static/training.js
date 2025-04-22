@@ -108,6 +108,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
         
+        // Set up event listeners for comparison tab navigation
+        document.getElementById('comparison-prev-example').addEventListener('click', () => {
+            if (currentExampleIndex > 0) {
+                currentExampleIndex--;
+                updateComparisonTabView();
+            }
+        });
+        
+        document.getElementById('comparison-next-example').addEventListener('click', () => {
+            if (currentExampleIndex < currentExamples.length - 1) {
+                currentExampleIndex++;
+                updateComparisonTabView();
+            }
+        });
+        
+        // Set up tab switch listeners
+        document.getElementById('comparisons-tab').addEventListener('shown.bs.tab', function (e) {
+            updateComparisonTabView();
+        });
+        
         updateDataStats();
     }
     
@@ -694,6 +714,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update global examples for the comparison view
         currentExamples = data.examples || [];
         currentExampleIndex = 0;
+        
+        // Initialize comparison tab view
+        const noComparisonExamples = document.getElementById('no-comparison-examples');
+        const comparisonContent = document.getElementById('comparison-content');
+        
+        if (currentExamples && currentExamples.length > 0) {
+            noComparisonExamples.style.display = 'none';
+            comparisonContent.style.display = 'block';
+            // Will be populated when tab is clicked through the updateComparisonTabView function
+        } else {
+            noComparisonExamples.style.display = 'block';
+            comparisonContent.style.display = 'none';
+        }
         
         // Show/hide no examples message
         const noExamplesMessage = document.getElementById('no-examples-message');

@@ -46,13 +46,28 @@ def fix_nejm_data(csv_path='attached_assets/NEJM 160 Validation Database - NEJM 
     
     logger.info(f"Processed {len(examples)} valid examples")
     
-    # Shuffle the examples for random split
+    # Set a fixed seed for deterministic splitting (ensures same split each time)
+    random.seed(42)
+    
+    # Shuffle the examples
     random.shuffle(examples)
     
-    # Split into train and validation sets
-    split_index = int(len(examples) * train_ratio)
-    train_examples = examples[:split_index]
-    validation_examples = examples[split_index:]
+    # Use fixed counts to ensure we always get 127 training and 32 validation examples
+    # This maintains consistency across runs
+    train_count = 127
+    validation_count = 32
+    
+    # Make sure we don't exceed the total examples available
+    if len(examples) < (train_count + validation_count):
+        # If we don't have enough examples, revert to ratio-based split
+        split_index = int(len(examples) * train_ratio)
+        train_examples = examples[:split_index]
+        validation_examples = examples[split_index:]
+        logger.warning(f"Not enough examples to create fixed split. Using ratio-based split instead.")
+    else:
+        # Use fixed counts
+        train_examples = examples[:train_count]
+        validation_examples = examples[train_count:train_count+validation_count]
     
     logger.info(f"Split into {len(train_examples)} training and {len(validation_examples)} validation examples")
     
