@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
     optimizerPresetEl.addEventListener('change', updateOptimizerPreset);
     loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
     loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
+    document.getElementById('reset-nejm-cache-btn').addEventListener('click', resetNejmCache);
     document.getElementById('apply-optimized-prompts-btn').addEventListener('click', applyOptimizedPrompts);
     document.getElementById('view-latest-comparisons-btn').addEventListener('click', showLatestComparisons);
     

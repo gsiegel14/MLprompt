@@ -1,10 +1,10 @@
 [
   {
-    "user_input": "Dr. Jacquelyn M. Nestor (Medicine): A 19-year-old woman was transferred to this hospital because of respiratory failure. The patient had been in her usual state of health until 3 weeks before the curr...",
-    "ground_truth_output": "Takayasu\u2019s arteritis."
+    "user_input": "Dr. Zachary A. Sporn (Medicine): A 38-year-old woman was evaluated at this hospital because of dyspnea\\",
+    "ground_truth_output": "chest discomfort\\\\\\, and nodules on chest imaging. ..."
   },
   {
-    "user_input": "Dr. Javier A. Suarez (Neurology): A 32-year-old man was admitted to this hospital after 2 weeks of confusion and headache and 2 days of fever. The patient had been in his usual state of health until 1...",
-    "ground_truth_output": "Encephalitis due to Beh\u00e7et\u2019s disease."
+    "user_input": "user_input",
+    "ground_truth_output": "ground_truth_output"
   }
 ]
