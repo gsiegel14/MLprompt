@@ -57,9 +57,21 @@ def load_config() -> Dict[str, Any]:
             }
         }
 
-def load_optimizer_prompt() -> str:
-    """Load the optimizer prompt from file or use default."""
-    prompt_path = os.path.join('prompts', 'optimizer', 'default_optimizer.txt')
+def load_optimizer_prompt(optimizer_type: str = 'general') -> str:
+    """
+    Load the optimizer prompt from file or use default.
+    
+    Args:
+        optimizer_type (str): Type of optimizer to load ('general', 'medical')
+    
+    Returns:
+        str: The optimizer prompt
+    """
+    if optimizer_type == 'medical':
+        prompt_path = os.path.join('prompts', 'optimizer', 'medical_reasoning_improver.txt')
+    else:
+        prompt_path = os.path.join('prompts', 'optimizer', 'reasoning_improver.txt')
+    
     try:
         if os.path.exists(prompt_path):
             with open(prompt_path, 'r') as f:
@@ -67,9 +79,18 @@ def load_optimizer_prompt() -> str:
         else:
             # Create directory and file if it doesn't exist
             os.makedirs(os.path.dirname(prompt_path), exist_ok=True)
-            with open(prompt_path, 'w') as f:
-                f.write(DEFAULT_OPTIMIZER_PROMPT)
-            return DEFAULT_OPTIMIZER_PROMPT
+            
+            # Use default prompt based on type
+            if optimizer_type == 'medical':
+                # Create a default medical optimizer prompt
+                with open(prompt_path, 'w') as f:
+                    f.write(DEFAULT_OPTIMIZER_PROMPT)
+                return DEFAULT_OPTIMIZER_PROMPT
+            else:
+                # Create a default general optimizer prompt
+                with open(prompt_path, 'w') as f:
+                    f.write(DEFAULT_OPTIMIZER_PROMPT)
+                return DEFAULT_OPTIMIZER_PROMPT
     except Exception as e:
         logger.error(f"Error loading optimizer prompt: {e}")
         return DEFAULT_OPTIMIZER_PROMPT
@@ -362,11 +383,22 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
     
     # Set default values if not provided
     if optimizer_system_prompt is None:
-        optimizer_system_prompt = load_optimizer_prompt()
+        # Check if this is a medical diagnostic prompt by looking for keywords
+        if current_system_prompt and ('medicine' in current_system_prompt.lower() or 
+                                     'medical' in current_system_prompt.lower() or 
+                                     'diagnosis' in current_system_prompt.lower() or
+                                     'clinical' in current_system_prompt.lower()):
+            optimizer_system_prompt = load_optimizer_prompt('medical')
+        else:
+            optimizer_system_prompt = load_optimizer_prompt('general')
     
     if strategy is None:
         strategies = optimizer_config.get('strategies', ['full_rewrite'])
         strategy = strategies[0]
+        
+    # If strategy is medical_diagnostic but no specialized prompt was provided, load it
+    if strategy == 'medical_diagnostic' and 'medical' not in optimizer_system_prompt.lower():
+        optimizer_system_prompt = load_optimizer_prompt('medical')
     
     # Calculate metrics
     metrics = calculate_aggregate_metrics(examples)
@@ -377,7 +409,7 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
         current_output_prompt,
         examples,
         metrics,
-        strategy
+        strategy if strategy is not None else 'full_rewrite'
     )
     
     try:
@@ -505,6 +537,11 @@ def get_optimization_strategies() -> List[Dict[str, str]]:
             "id": "example_addition",
             "name": "Add Few-Shot Examples",
             "description": "Add few-shot examples to help the model learn patterns"
+        },
+        {
+            "id": "medical_diagnostic",
+            "name": "Medical Diagnostic Enhancement",
+            "description": "Optimize prompts for medical diagnostic reasoning using specialized workflow"
         }
     ]
     
