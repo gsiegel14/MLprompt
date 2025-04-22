@@ -68,35 +68,28 @@ def load_optimizer_prompt(optimizer_type: str = 'reasoning_first') -> str:
         str: The optimizer prompt
     """
     if optimizer_type == 'reasoning_first':
-        # Use the new Reasoning-First Refinement prompt pack
-        system_prompt_path = os.path.join('prompts', 'optimizer_prompt_reasoning_first.txt')
-        output_prompt_path = os.path.join('prompts', 'optimizer_output_reasoning_first.txt')
+        # Try multiple possible locations for the reasoning_first prompt
+        possible_paths = [
+            os.path.join('prompts', 'optimizer_prompt_reasoning_first.txt'),
+            os.path.join('prompts', 'optimizer', 'reasoning_first.txt'),
+            os.path.join('prompts', 'optimizer', 'reasoning_improver.txt')
+        ]
         
-        try:
-            system_prompt = ""
-            output_prompt = ""
-            
-            if os.path.exists(system_prompt_path):
-                with open(system_prompt_path, 'r') as f:
-                    system_prompt = f.read()
-            else:
-                logger.warning(f"Reasoning-First system prompt file not found: {system_prompt_path}")
-                system_prompt = DEFAULT_OPTIMIZER_PROMPT
-                
-            if os.path.exists(output_prompt_path):
-                with open(output_prompt_path, 'r') as f:
-                    output_prompt = f.read()
-            else:
-                logger.warning(f"Reasoning-First output prompt file not found: {output_prompt_path}")
-                output_prompt = ""
-            
-            # Combine the system prompt and output prompt
-            combined_prompt = system_prompt + "\n\n" + output_prompt
-            return combined_prompt
-            
-        except Exception as e:
-            logger.error(f"Error loading Reasoning-First prompt pack: {e}")
-            return DEFAULT_OPTIMIZER_PROMPT
+        # Try each path in order
+        for path in possible_paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r') as f:
+                        logger.info(f"Using optimizer prompt from: {path}")
+                        return f.read()
+                except Exception as e:
+                    logger.warning(f"Error reading {path}: {e}")
+                    continue
+        
+        # If we get here, none of the paths worked, use the default
+        logger.warning("No reasoning-first optimizer prompt found in any location. Using default.")
+        return DEFAULT_OPTIMIZER_PROMPT
+        
     elif optimizer_type == 'medical':
         prompt_path = os.path.join('prompts', 'optimizer', 'medical_reasoning_improver.txt')
     else:
@@ -581,8 +574,15 @@ def extract_section(text: str, section_name: str) -> str:
     - SECTION_NAME: ...
     - ## SECTION_NAME ##
     - SECTION_NAME
+    
+    This is an improved version with better handling of different formats.
     """
-    # First, try with explicit tags
+    import re
+    
+    # Log what we're looking for to help with debugging
+    logger.debug(f"Extracting section '{section_name}' from response")
+    
+    # Add more patterns to better match LLM outputs
     patterns = [
         # [SECTION_NAME]content[/SECTION_NAME]
         (f"\\[{section_name}\\](.*?)\\[\\/{section_name}\\]", 1),
@@ -593,16 +593,28 @@ def extract_section(text: str, section_name: str) -> str:
         # ## SECTION_NAME ##\ncontent
         (f"#{2,3}\\s*{section_name}\\s*#{0,3}\\s*(.*?)(?:#{2,3}|$)", 1),
         # SECTION_NAME\ncontent
-        (f"^{section_name}\\s*$(.*?)(?:^[A-Z_\\s]+$|$)", 1)
+        (f"^{section_name}\\s*$(.*?)(?:^[A-Z_\\s]+$|$)", 1),
+        # New pattern: markdown style ```\nSECTION_NAME\ncontent\n```
+        (f"```\\s*\\n{section_name}\\s*\\n(.*?)\\n```", 1),
+        # New pattern: <SECTION_NAME>content</SECTION_NAME>
+        (f"<{section_name}>(.*?)<\\/{section_name}>", 1),
+        # New pattern: **SECTION_NAME:**\ncontent
+        (f"\\*\\*{section_name}\\*\\*:?\\s*(.*?)(?:\\n\\s*\\*\\*|$)", 1),
+        # New pattern: SECTION_NAME - content
+        (f"{section_name}\\s+-\\s+(.*?)(?:\\n\\n|$)", 1)
     ]
     
-    import re
-    
-    # Try each pattern
+    # Try each pattern with error handling
     for pattern, group in patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
-        if matches and matches[0].strip():
-            return matches[0].strip()
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
+            if matches and matches[0].strip():
+                extracted_text = matches[0].strip()
+                logger.debug(f"Found {section_name} with pattern {pattern}: {extracted_text[:50]}...")
+                return extracted_text
+        except Exception as e:
+            logger.warning(f"Error with regex pattern '{pattern}': {e}")
+            continue
     
     # If still not found, try a more generic approach
     lines = text.split('\n')
