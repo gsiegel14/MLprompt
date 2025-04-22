@@ -4,6 +4,7 @@
     --secondary-color: #4f46e5;
     --accent-color: #818cf8;
     --text-color: #e2e8f0;
+    --grey-text-color: #555555;
     --bg-color: #111827;
     --card-bg-color: #1e293b;
     --border-color: #334155;
@@ -64,7 +65,7 @@ pre, code {
 .form-control, .form-select {
     background-color: #ffffff;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
     border-radius: var(--border-radius);
 }
 
@@ -117,7 +118,7 @@ input[type="file"] {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     transition: all var(--transition-speed) ease;
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 .custom-file-upload:hover {
@@ -165,7 +166,7 @@ input[type="file"] {
 .logs {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.875rem;
-    color: #333333;
+    color: var(--grey-text-color);
     white-space: pre-wrap;
 }
 
@@ -175,7 +176,7 @@ input[type="file"] {
     border-radius: var(--border-radius);
     transition: all var(--transition-speed) ease;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 .metric-card:hover {
@@ -186,7 +187,7 @@ input[type="file"] {
 .data-stats {
     background-color: #ffffff;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 /* Optimization Results */
@@ -195,7 +196,7 @@ input[type="file"] {
     border-radius: var(--border-radius);
     padding: 1rem;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 .before, .after {
@@ -203,7 +204,7 @@ input[type="file"] {
     border-radius: var(--border-radius);
     min-width: 80px;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 .change {
@@ -218,7 +219,7 @@ input[type="file"] {
     max-height: 200px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
-    color: #333333;
+    color: var(--grey-text-color);
 }
 
 /* Badge Styles */
