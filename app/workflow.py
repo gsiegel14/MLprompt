@@ -219,16 +219,16 @@ class PromptOptimizationWorkflow:
                 optimization_examples = results[:5] if len(results) > 5 else results
                 logger.info(f"Using {len(optimization_examples)} examples for optimization")
                 
-                # Free up original results array to save memory
+                # Make a copy of the first 5 examples for the experiment tracker
+                results_for_tracker = results[:5] if len(results) > 5 else results.copy()
+                logger.info(f"Saved {len(results_for_tracker)} examples for experiment tracker")
+                
+                # Free up original results array to save memory if it's large
                 if len(results) > 5:
-                    # Keep a reference to the first 5 examples for saving in experiment tracker later
-                    results_for_tracker = results[:5]
                     # Clear the full results array
                     results = None
                     gc.collect()
                     logger.info("Cleared full results array to save memory")
-                else:
-                    results_for_tracker = results
                 
                 # Run additional garbage collection
                 gc.collect()

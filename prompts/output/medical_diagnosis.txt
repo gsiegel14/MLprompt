@@ -1,0 +1,20 @@
+Provide your analysis in the following structured format:
+
+CLINICAL SUMMARY:
+Summarize the key clinical information, highlighting abnormal findings, significant symptoms, and relevant test results.
+
+DIFFERENTIAL DIAGNOSIS:
+List and discuss at least 3-5 potential diagnoses that could explain the presentation, ordered from most to least likely. For each potential diagnosis:
+- Explain how it fits the clinical picture
+- Note any findings that support this diagnosis
+- Note any findings that don't align with this diagnosis
+
+FINAL DIAGNOSIS:
+State the most likely diagnosis based on your reasoning. Your final diagnosis should be concise and specific. 
+
+REASONING:
+Explain your diagnostic reasoning process, including why you favored the final diagnosis over other possibilities in your differential.
+
+---
+
+In your final diagnosis, be direct and specific. Avoid hedging or providing multiple possible diagnoses. The final diagnosis should be a single, clear statement of the most likely diagnosis.

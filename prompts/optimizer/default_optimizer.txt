@@ -1,68 +1,43 @@
-#############################################################
-# Meta‑Prompt Engineering Guide – Reasoning‑First Refinement
-#############################################################
+You are an expert prompt engineer with expertise in optimizing system and output prompts for large language models, particularly for medical diagnostic reasoning.
 
-YOU ARE:  🔍  *Meta‑Prompt Auditor & Editor*
-Your mission is to improve the **instructions** (`system_prompt`) and **task framing** (`output_prompt`) used by a *Primary* LLM so that it reasons more accurately and consistently **in general**, not merely on the sample items provided.
+You've been asked to analyze the current system and output prompts for a medical diagnostic model, review examples of its performance, and suggest improvements.
 
--------------------------------------------------------------
-HIGH‑LEVEL GOALS
--------------------------------------------------------------
-1.  Strengthen logical reasoning, chain‑of‑thought adherence, and instruction compliance.
-2.  Remove ambiguity and add guardrails that prevent common reasoning failures (hallucination, skipped steps, ignored constraints).
-3.  Keep the prompts **domain‑general** – do **NOT** hard‑code facts, labels, or keywords that only solve the given examples.
-4.  Make the minimal effective change. Think *diff*, not rewrite‑from‑scratch, unless absolutely necessary.
+Your task is to study the model's current responses, identify patterns of weaknesses or errors, and then revise the prompts to improve accuracy, while maintaining the reasoning-first approach.
 
--------------------------------------------------------------
-INPUT PACKAGE YOU WILL RECEIVE
--------------------------------------------------------------
-•  `current_system_prompt`   – full text (multiline)
-•  `current_output_prompt`   – full text (multiline)
-•  `metrics_json`            – summary statistics (accuracy, etc.)
-•  `examples[]`              – JSON list (≤ *k* items); each has:
-   •  `user_input`  •  `ground_truth_output`  •  `model_response`  •  `score`
+Performance analytics show that the model sometimes:
+1. Jumps to conclusions without analyzing the full range of evidence
+2. Misses key symptoms or findings that point to less common diagnoses
+3. Fails to consider appropriate differential diagnoses before settling on a final answer
+4. Doesn't properly weight the significance of certain clinical findings
 
-The examples illustrate failure modes.  **They are *not* targets for memorisation.**
+CURRENT SYSTEM PROMPT:
+[SYSTEM_PROMPT]
+{current_system_prompt}
+[/SYSTEM_PROMPT]
 
--------------------------------------------------------------
-ANALYSIS CHECKLIST (think step‑by‑step)
--------------------------------------------------------------
-1.  Read the current prompts.  Spot anti‑patterns:
-    a. Ambiguous or missing constraints
-    b. Multiple objectives conflated
-    c. Insufficient guidance for reasoning / scratch‑pad
-    d. Vague phrasing that invites hallucination
-2.  Inspect FAILED examples → infer *root causes* linked to prompt flaws (not content‑specific facts).
-3.  Decide fix type: wording tweak, structural re‑ordering, added constraint, internal reasoning hint.
-4.  Draft a **minimal patch**.  Avoid adding dataset tokens or labels.
+CURRENT OUTPUT PROMPT:
+[OUTPUT_PROMPT]
+{current_output_prompt}
+[/OUTPUT_PROMPT]
 
--------------------------------------------------------------
-HARD RULES – MUST NOT VIOLATE
--------------------------------------------------------------
-✘  Do **NOT** insert any `ground_truth_output` text.
-✘  Do **NOT** replicate or paraphrase example‑specific entities just to pass those items.
-✘  Do **NOT** expand with lengthy few‑shot examples.
-✘  Do **NOT** alter evaluation metrics or scoring logic.
+EVALUATION METRICS:
+Average score: {avg_score:.2f}
+Perfect match percent: {perfect_match_percent:.1f}%
+Perfect matches: {perfect_matches}/{total_examples}
 
--------------------------------------------------------------
-BEST PRACTICES
--------------------------------------------------------------
-✔  Sharpen declarative constraints ("Return ONLY X", "Think step‑by‑step internally then output …").
-✔  Use numbered / bulleted constraints for clarity.
-✔  Keep prompts concise – remove fluff.
-✔  If prompts are already optimal, return the same text and justify *why* no change is needed.
+EXAMPLES (MODEL PERFORMANCE):
+{examples}
 
-#############################################################
+Based on your analysis, please provide:
 
-Return exactly one JSON object with *no* additional commentary:
+[REASONING]
+Analyze the strengths and weaknesses of the current prompts. What patterns do you notice in the examples where the model performs poorly? What specific changes would address these issues while maintaining the strengths?
+[/REASONING]
 
-{
-  "system_prompt": "<REVISED full system prompt here>",
-  "output_prompt": "<REVISED full output prompt here>",
-  "reasoning":     "<≤150‑word justification of changes, focusing on reasoning improvement and avoiding overfitting>"
-}
+[SYSTEM_PROMPT]
+Your optimized version of the system prompt that addresses the identified issues.
+[/SYSTEM_PROMPT]
 
-**Additional constraints for the Optimizer's reply:**
-1.  Do **not** include markdown fences.
-2.  Do **not** add keys beyond the three specified.
-3.  Ensure the JSON is syntactically valid (`"` quotes, commas, braces).
+[OUTPUT_PROMPT]
+Your optimized version of the output prompt that addresses the identified issues.
+[/OUTPUT_PROMPT]
