@@ -252,11 +252,11 @@ def test_llm_client():
             import yaml
             with open('config.yaml', 'r') as f:
                 config = yaml.safe_load(f)
-            model_name = config.get('gemini', {}).get('model_name', 'gemini-1.5-flash')
+            model_name = config.get('gemini', {}).get('model_name', 'gemini-2.5-flash')
             logger.info(f"Using model from config: {model_name}")
         except Exception as e:
             logger.warning(f"Could not load config.yaml, using default model: {e}")
-            model_name = 'gemini-1.5-flash'
+            model_name = 'gemini-2.5-flash'
         
         # Test with a simple example
         logger.info("Testing LLM response generation...")

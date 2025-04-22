@@ -19,12 +19,12 @@ def run_minimal_test():
     # Create minimal configuration
     config = {
         'gemini': {
-            'model_name': 'gemini-1.5-flash',
+            'model_name': 'gemini-2.5-flash',
             'temperature': 0.0,
             'max_output_tokens': 1024
         },
         'optimizer': {
-            'model_name': 'gemini-1.5-flash',
+            'model_name': 'gemini-2.5-flash',
             'temperature': 0.7,
             'max_output_tokens': 2048
         }
