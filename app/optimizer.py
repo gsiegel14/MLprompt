@@ -484,7 +484,7 @@ def optimize_prompts(current_system_prompt: str, current_output_prompt: str,
     try:
         # Get the optimizer LLM configuration
         llm_config = {
-            'model_name': optimizer_config.get('model_name', 'gemini-1.0-pro'),  # Using free tier model
+            'model_name': optimizer_config.get('model_name', 'gemini-2.5-flash'),  # Updated to Gemini 2.5 Flash
             'temperature': optimizer_config.get('temperature', 0.7),
             'max_output_tokens': optimizer_config.get('max_output_tokens', 2048)
         }

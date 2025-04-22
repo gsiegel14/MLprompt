@@ -27,7 +27,7 @@ except Exception as e:
     # Default configuration
     config = {
         'gemini': {
-            'model_name': 'gemini-1.5-pro',
+            'model_name': 'gemini-2.5-flash',
             'temperature': 0.0,
             'top_p': 0.95,
             'top_k': 40,
