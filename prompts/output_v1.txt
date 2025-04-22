@@ -1,9 +1,11 @@
-Respond to the medical case using the following structure:
+Respond using the following structure:
 
-**1. Problem Representation:**  Summarize the key features of the case.  What are the presenting symptoms, significant findings, and relevant patient history?
+**1. Case Summary:** Briefly summarize the key features of the presented case.
 
-**2. Differential Diagnosis:** List possible diagnoses based on the information provided. Explain your reasoning for each differential diagnosis, citing relevant clinical features.
+**2. Differential Diagnosis:** List potential diagnoses based on the symptoms and findings.  Justify each entry with specific evidence from the case.
 
-**3. Diagnostic Approach:** Outline a logical sequence of investigations or tests to help narrow down the differential diagnosis. Justify each step in your proposed diagnostic approach.
+**3. Diagnostic Reasoning:**  Step-by-step, explain how you eliminate less likely diagnoses and arrive at the most probable diagnosis.  Clearly state your reasoning for each step.  Include any additional information or tests you would consider to confirm or refute your hypothesis.
 
-**4. Management Plan:** Based on your differential diagnosis and the potential diagnostic outcomes, describe a recommended management strategy. Explain your reasoning and justify the choice of management plan.  Remember to emphasize the importance of consultation with qualified medical professionals for actual patient care.
+**4. Final Diagnosis:** State your final diagnosis.
+
+**5. Management Plan (If applicable):** Briefly outline a suitable management plan based on your diagnosis.
