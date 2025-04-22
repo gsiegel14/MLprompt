@@ -1,10 +1,14 @@
 [
   {
     "user_input": "A 70-year-old male with a 40 pack-year smoking history presents with chronic productive cough",
-    "ground_truth_output": "progressive dyspnea, and recurrent respiratory infections. Spirometry shows FEV1/FVC < 0.7.,Chronic obstructive pulmonary disease"
+    "ground_truth_output": "progressive dyspnea, and recurrent respiratory infections. Spirometry shows FEV1/FVC < 0.7 and FEV1 45% of predicted.,Chronic obstructive pulmonary disease (COPD)"
   },
   {
     "user_input": "A 30-year-old female presents with episodic palpitations",
-    "ground_truth_output": "tremors, weight loss despite increased appetite, heat intolerance, and anxiety. Examination reveals tachycardia, fine tremor, and exophthalmos.,Graves' disease"
+    "ground_truth_output": "tremors, weight loss despite increased appetite, heat intolerance, and anxiety. Examination reveals tachycardia, fine tremor, and exophthalmos. TSH is suppressed and free T4 is elevated.,Graves' disease"
+  },
+  {
+    "user_input": "An 8-year-old boy presents with fever",
+    "ground_truth_output": "sore throat, tender cervical lymphadenopathy, and tonsillar exudates. Rapid strep test is positive. No cough or rhinorrhea is present.,Streptococcal pharyngitis (Strep throat)"
   }
 ]
