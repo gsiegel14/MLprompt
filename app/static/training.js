@@ -48,11 +48,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let trainingInProgress = false;
     let currentExperimentId = null;
     let currentIteration = 0;
+    let trainingData = [];  // Store loaded example data
     let optimizerPrompt = '';
-    let trainingData = [];
     let validationSplit = 0.8;
     let trainingHistory = [];
     let currentComparisonData = null;
+    let spinnerTimeout = null; // For handling stuck spinners
     
     // Initialize UI
     initializeUI();
@@ -218,19 +219,67 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Parse examples from textarea
     function parseExamples() {
+        // If we already have trainingData loaded from API, use that
+        if (trainingData && trainingData.length > 0) {
+            return trainingData;
+        }
+        
+        // Otherwise try to parse from text area
         const text = examplesTextEl.value.trim();
         if (!text) return [];
         
+        // Skip header row if present
         const lines = text.split('\n');
+        const startIndex = lines[0].toLowerCase().includes('user_input') ? 1 : 0;
         const examples = [];
         
-        for (const line of lines) {
-            const [userInput, groundTruth] = line.split(',').map(s => s.trim());
-            if (userInput && groundTruth) {
-                examples.push({
-                    user_input: userInput,
-                    ground_truth_output: groundTruth
-                });
+        // Process each line, handling escaped commas
+        for (let i = startIndex; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            try {
+                // Handle escaped commas by first splitting on unescaped commas
+                let parts = [];
+                let currentPart = '';
+                let escapeActive = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    
+                    if (char === '\\' && j + 1 < line.length && line[j + 1] === ',') {
+                        // This is an escaped comma, add just the comma
+                        currentPart += ',';
+                        j++; // Skip the next character (the comma)
+                        continue;
+                    }
+                    
+                    if (char === ',' && !escapeActive) {
+                        // Unescaped comma, end of part
+                        parts.push(currentPart);
+                        currentPart = '';
+                        continue;
+                    }
+                    
+                    // Regular character
+                    currentPart += char;
+                }
+                
+                // Add the last part
+                parts.push(currentPart);
+                
+                const userInput = parts[0].trim();
+                const groundTruth = parts[1] ? parts[1].trim() : '';
+                
+                if (userInput && groundTruth) {
+                    examples.push({
+                        user_input: userInput,
+                        ground_truth_output: groundTruth
+                    });
+                }
+            } catch (e) {
+                console.error('Error parsing line:', line, e);
+                // Skip this line and continue
             }
         }
         
@@ -915,14 +964,32 @@ document.addEventListener('DOMContentLoaded', function() {
         showAlert('Optimized prompts applied successfully', 'success');
     }
     
-    // Show spinner
+    // Show spinner with safety timeout
     function showSpinner() {
         spinner.style.display = 'flex';
+        
+        // Set a safety timeout to hide spinner if it gets stuck
+        if (spinnerTimeout) {
+            clearTimeout(spinnerTimeout);
+        }
+        
+        // Automatically hide spinner after 30 seconds if it gets stuck
+        spinnerTimeout = setTimeout(() => {
+            hideSpinner();
+            showAlert('Operation timed out. If you were loading data, please try again or check the logs for errors.', 'warning');
+            console.warn('Spinner timeout triggered - operation took too long');
+        }, 30000);
     }
     
-    // Hide spinner
+    // Hide spinner and clear timeout
     function hideSpinner() {
         spinner.style.display = 'none';
+        
+        // Clear the safety timeout
+        if (spinnerTimeout) {
+            clearTimeout(spinnerTimeout);
+            spinnerTimeout = null;
+        }
     }
     
     // Show alert
