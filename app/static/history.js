@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fa-solid fa-code-compare me-1"></i> Compare with Previous
                             </button>
                             ` : ''}
-                            <button class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}">
+                            <button class="btn btn-sm btn-outline-primary view-examples" data-iteration="${iteration.iteration}" onclick="loadExamplesForIteration(${iteration.iteration})">
                                 <i class="fa-solid fa-magnifying-glass me-1"></i> View Examples
                             </button>
                         </div>
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('examples-container').scrollIntoView({
                     behavior: 'smooth'
                 });
-                
+
                 // Note: The actual function call is now handled by the onclick attribute
                 // to ensure global scope access
             });
@@ -497,6 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Examples handling
+    // Make sure loadExamplesForIteration is available globally
     window.loadExamplesForIteration = function(iteration) {
         console.log(`Loading examples for iteration: ${iteration}`);
         const examplesContainer = document.getElementById('examples-container');
