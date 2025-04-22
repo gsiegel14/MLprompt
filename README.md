@@ -28,3 +28,9 @@ A web-based UI for iteratively testing and refining LLM prompts using a machine 
 - Run evaluation and view metrics
 - Use the optimizer to refine prompts based on results
 - Track experiment history and compare iterations
+
+## Medical Case Study Feature
+This application comes pre-loaded with NEJM (New England Journal of Medicine) case studies:
+- 159 medical cases split 50/50 between training and validation sets
+- Enhanced similarity evaluation that checks if the ground truth diagnosis appears in the LLM response
+- Ideal for training diagnostic reasoning prompts
