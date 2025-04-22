@@ -126,6 +126,69 @@ def check_examples_loading(driver):
         example_cards = driver.find_elements(By.CLASS_NAME, "example-card")
         if example_cards:
             logger.info(f"✅ Examples loaded successfully: {len(example_cards)} examples found")
+            
+            # Display example contents for debugging
+            logger.info("=== EXAMPLE CONTENTS ===")
+            
+            for i, card in enumerate(example_cards[:3]):  # Limit to first 3 for brevity
+                try:
+                    # Extract content from the card
+                    user_input = card.find_element(By.CSS_SELECTOR, ".user-input").text
+                    ground_truth = card.find_element(By.CSS_SELECTOR, ".ground-truth").text
+                    model_response = card.find_element(By.CSS_SELECTOR, ".model-response").text
+                    score = card.find_element(By.CSS_SELECTOR, ".score").text
+                    
+                    logger.info(f"\nEXAMPLE #{i+1}:")
+                    logger.info(f"User Input: {user_input[:100]}..." if len(user_input) > 100 else f"User Input: {user_input}")
+                    logger.info(f"Ground Truth: {ground_truth[:100]}..." if len(ground_truth) > 100 else f"Ground Truth: {ground_truth}")
+                    logger.info(f"Model Response: {model_response[:100]}..." if len(model_response) > 100 else f"Model Response: {model_response}")
+                    logger.info(f"Score: {score}")
+                    logger.info("-" * 50)
+                except Exception as e:
+                    logger.error(f"Error extracting content from example card {i+1}: {e}")
+            
+            # Display direct examination of examples.json file
+            experiment_id = iteration = None
+            try:
+                # Get experiment ID and iteration from the page
+                breadcrumb = driver.find_element(By.CSS_SELECTOR, ".breadcrumb")
+                breadcrumb_text = breadcrumb.text
+                
+                # Extract experiment ID and iteration
+                if "Experiment:" in breadcrumb_text and "Iteration:" in breadcrumb_text:
+                    exp_start = breadcrumb_text.find("Experiment:") + len("Experiment:")
+                    exp_end = breadcrumb_text.find("Iteration:")
+                    experiment_id = breadcrumb_text[exp_start:exp_end].strip()
+                    
+                    iter_start = breadcrumb_text.find("Iteration:") + len("Iteration:")
+                    iteration = breadcrumb_text[iter_start:].strip()
+                    
+                    logger.info(f"Found experiment ID: {experiment_id}, iteration: {iteration}")
+                    
+                    # Try to load the examples file directly
+                    examples_path = f"experiments/{experiment_id}/examples/examples_{iteration}.json"
+                    if os.path.exists(examples_path):
+                        with open(examples_path, 'r') as f:
+                            examples_data = json.load(f)
+                            
+                        logger.info(f"\n=== DIRECT FILE CONTENT ({examples_path}) ===")
+                        for i, example in enumerate(examples_data[:2]):  # Show first 2 examples
+                            logger.info(f"\nFILE EXAMPLE #{i+1}:")
+                            user_input = example.get('user_input', '')
+                            ground_truth = example.get('ground_truth_output', '')
+                            model_response = example.get('model_response', '')
+                            score = example.get('score', 0)
+                            
+                            logger.info(f"User Input: {user_input[:100]}..." if len(user_input) > 100 else f"User Input: {user_input}")
+                            logger.info(f"Ground Truth: {ground_truth[:100]}..." if len(ground_truth) > 100 else f"Ground Truth: {ground_truth}")
+                            logger.info(f"Model Response: {model_response[:100]}..." if len(model_response) > 100 else f"Model Response: {model_response}")
+                            logger.info(f"Score: {score}")
+                            logger.info("-" * 50)
+                    else:
+                        logger.warning(f"Examples file not found: {examples_path}")
+            except Exception as e:
+                logger.error(f"Error loading examples file: {e}")
+            
             return True
         else:
             logger.warning("⚠️ No example cards found after loading")
@@ -176,12 +239,64 @@ def check_examples_files_exist(experiment_id):
         example_files = list(examples_dir.glob("examples_*.json"))
         if example_files:
             logger.info(f"✅ Found {len(example_files)} example files in examples directory")
+            
+            # Display content of the most recent example file for debugging
+            if example_files:
+                latest_example_file = max(example_files, key=lambda p: p.stat().st_mtime)
+                logger.info(f"Most recent example file: {latest_example_file}")
+                
+                try:
+                    with open(latest_example_file, 'r') as f:
+                        examples_data = json.load(f)
+                    
+                    logger.info(f"=== EXAMPLES CONTENT ({latest_example_file.name}) ===")
+                    for i, example in enumerate(examples_data[:2]):  # Limit to first 2 for brevity
+                        logger.info(f"\nEXAMPLE #{i+1}:")
+                        user_input = example.get('user_input', '')
+                        ground_truth = example.get('ground_truth_output', '')
+                        model_response = example.get('model_response', '')
+                        score = example.get('score', 0)
+                        
+                        logger.info(f"User Input: {user_input[:100]}..." if len(user_input) > 100 else f"User Input: {user_input}")
+                        logger.info(f"Ground Truth: {ground_truth[:100]}..." if len(ground_truth) > 100 else f"Ground Truth: {ground_truth}")
+                        logger.info(f"Model Response: {model_response[:100]}..." if len(model_response) > 100 else f"Model Response: {model_response}")
+                        logger.info(f"Score: {score}")
+                        logger.info("-" * 50)
+                except Exception as e:
+                    logger.error(f"Error reading example file: {e}")
+            
             return True
     
     # Check for example files directly in experiment directory
     example_files = list(base_path.glob("examples_*.json"))
     if example_files:
         logger.info(f"✅ Found {len(example_files)} example files in experiment directory")
+        
+        # Display content of the most recent example file for debugging
+        if example_files:
+            latest_example_file = max(example_files, key=lambda p: p.stat().st_mtime)
+            logger.info(f"Most recent example file: {latest_example_file}")
+            
+            try:
+                with open(latest_example_file, 'r') as f:
+                    examples_data = json.load(f)
+                
+                logger.info(f"=== EXAMPLES CONTENT ({latest_example_file.name}) ===")
+                for i, example in enumerate(examples_data[:2]):  # Limit to first 2 for brevity
+                    logger.info(f"\nEXAMPLE #{i+1}:")
+                    user_input = example.get('user_input', '')
+                    ground_truth = example.get('ground_truth_output', '')
+                    model_response = example.get('model_response', '')
+                    score = example.get('score', 0)
+                    
+                    logger.info(f"User Input: {user_input[:100]}..." if len(user_input) > 100 else f"User Input: {user_input}")
+                    logger.info(f"Ground Truth: {ground_truth[:100]}..." if len(ground_truth) > 100 else f"Ground Truth: {ground_truth}")
+                    logger.info(f"Model Response: {model_response[:100]}..." if len(model_response) > 100 else f"Model Response: {model_response}")
+                    logger.info(f"Score: {score}")
+                    logger.info("-" * 50)
+            except Exception as e:
+                logger.error(f"Error reading example file: {e}")
+        
         return True
     
     logger.error(f"❌ No example files found for experiment {experiment_id}")
