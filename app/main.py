@@ -767,7 +767,7 @@ def train():
                     with open(log_file_path, 'a') as f:
                         f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
 
-                # Step 10: Prepare the response
+                                # Step 10: Prepare the response
                 logger.info("STEP 10: Preparing response")
                 response = {
                     'experiment_id': experiment_id,
@@ -862,35 +862,34 @@ def get_experiments():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/experiments/<experiment_id>', methods=['GET'])
-def get_experiment(experiment_id):
-    """Get details about a specific experiment."""
-    try:
-        experiment_tracker = ExperimentTracker()
-        iterations = experiment_tracker.get_iterations(experiment_id)
+def get_experiment_details(experiment_id):
+    """Get detailed information about a specific experiment."""
+    tracker = ExperimentTracker()
+    iterations = tracker.get_iterations(experiment_id)
 
-        if not iterations:
-            return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
+    if not iterations:
+        return jsonify({'error': f'Experiment {experiment_id} not found or has no iterations'})
 
-        return jsonify({'iterations': iterations})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return jsonify({'iterations': iterations})
 
-@app.route('/experiments/<experiment_id>/iterations/<int:iteration>/examples')
-def get_iteration_examples(experiment_id, iteration):
+@app.route('/experiments/<experiment_id>/examples/<int:iteration>')
+def get_experiment_examples(experiment_id, iteration):
     """Get examples for a specific iteration of an experiment."""
     try:
-        experiment_tracker = ExperimentTracker()
-        exp_dir = os.path.join(experiment_tracker.base_dir, experiment_id)
-
+        # Access the experiment directory
+        exp_dir = os.path.join('experiments', experiment_id)
         if not os.path.exists(exp_dir):
-            return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
+            return jsonify({'error': f'Experiment {experiment_id} not found'})
 
-        # Look for examples file
+        # Check for examples directory
         examples_dir = os.path.join(exp_dir, 'examples')
-        examples_file = os.path.join(examples_dir, f"examples_{iteration}.json")
+        if not os.path.exists(examples_dir):
+            return jsonify({'error': 'No examples directory found for this experiment'})
 
+        # Find example file for the iteration
+        examples_file = os.path.join(examples_dir, f'examples_{iteration}.json')
         if not os.path.exists(examples_file):
-            return jsonify({'error': f'No examples found for iteration {iteration}'}), 404
+            return jsonify({'error': f'No examples found for iteration {iteration}'})
 
         # Load examples
         with open(examples_file, 'r') as f:
@@ -898,8 +897,8 @@ def get_iteration_examples(experiment_id, iteration):
 
         return jsonify({'examples': examples})
     except Exception as e:
-        logger.error(f"Error loading examples: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error retrieving examples: {e}")
+        return jsonify({'error': f'Error retrieving examples: {str(e)}'})
 
 @app.route('/optimizer_prompt', methods=['GET'])
 def get_optimizer_prompt():
@@ -1202,6 +1201,33 @@ def validate_prompts():
     except Exception as e:
         logger.error(f"Error in validation: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/experiments/<experiment_id>/iterations/<int:iteration>/examples')
+def get_iteration_examples(experiment_id, iteration):
+    """Get examples for a specific iteration of an experiment."""
+    try:
+        experiment_tracker = ExperimentTracker()
+        exp_dir = os.path.join(experiment_tracker.base_dir, experiment_id)
+
+        if not os.path.exists(exp_dir):
+            return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
+
+        # Look for examples file
+        examples_dir = os.path.join(exp_dir, 'examples')
+        examples_file = os.path.join(examples_dir, f"examples_{iteration}.json")
+
+        if not os.path.exists(examples_file):
+            return jsonify({'error': f'No examples found for iteration {iteration}'}), 404
+
+        # Load examples
+        with open(examples_file, 'r') as f:
+            examples = json.load(f)
+
+        return jsonify({'examples': examples})
+    except Exception as e:
+        logger.error(f"Error loading examples: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
