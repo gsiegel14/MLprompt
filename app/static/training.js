@@ -82,9 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set up train percent display
         updateTrainPercentDisplay();
         
-        // Default system and output prompts
-        systemPromptEl.value = 'You are a helpful assistant that provides accurate and concise information.';
-        outputPromptEl.value = 'Please provide a response that directly answers the user\'s question with accurate information.';
+        // Load advanced medical prompts by default
+        loadMedicalPrompts();
         
         // Sample examples data
         examplesTextEl.value = 'What is the capital of France?,Paris\nHow many planets are in our solar system?,8\nWhat is the boiling point of water in Celsius?,100';
@@ -376,6 +375,44 @@ document.addEventListener('DOMContentLoaded', function() {
         .finally(() => {
             hideSpinner();
         });
+    }
+    
+    // Load advanced medical prompts
+    function loadMedicalPrompts() {
+        showSpinner();
+        
+        // Fetch system prompt
+        fetch('/prompts/system_prompt_advanced_medical.txt')
+            .then(response => response.text())
+            .then(data => {
+                if (data) {
+                    systemPromptEl.value = data;
+                } else {
+                    showAlert('Failed to load medical system prompt', 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading medical system prompt:', error);
+                showAlert('Error loading medical system prompt', 'danger');
+            });
+            
+        // Fetch output prompt
+        fetch('/prompts/output_prompt_advanced_medical.txt')
+            .then(response => response.text())
+            .then(data => {
+                if (data) {
+                    outputPromptEl.value = data;
+                } else {
+                    showAlert('Failed to load medical output prompt', 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading medical output prompt:', error);
+                showAlert('Error loading medical output prompt', 'danger');
+            })
+            .finally(() => {
+                hideSpinner();
+            });
     }
     
     // Show sample prompts

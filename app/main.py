@@ -58,6 +58,11 @@ def index():
 def training():
     """Render the ML training interface."""
     return render_template('training.html')
+    
+@app.route('/prompts/<path:filename>')
+def serve_prompt_file(filename):
+    """Serve prompt files from the prompts folder."""
+    return send_from_directory('prompts', filename)
 
 @app.route('/history')
 def history():
