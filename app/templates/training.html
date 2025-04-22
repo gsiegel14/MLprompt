@@ -429,6 +429,12 @@
                                 </div>
                             </div>
                             
+                            <div class="text-center mb-3">
+                                <button class="btn btn-sm btn-outline-primary" id="compare-prompts-btn">
+                                    <i class="fa-solid fa-code-compare me-1"></i> Compare Prompt Changes
+                                </button>
+                            </div>
+                            
                             <div class="text-center">
                                 <button class="btn btn-sm btn-outline-secondary" id="view-details-btn">
                                     <i class="fa-solid fa-magnifying-glass-plus me-1"></i> View Full Details
@@ -532,6 +538,96 @@
         </div>
     </div>
     
+    <!-- Prompt Comparison Modal -->
+    <div class="modal fade" id="prompt-comparison-modal" tabindex="-1" aria-labelledby="prompt-comparison-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="prompt-comparison-modal-label">Prompt Comparison</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="promptComparisonTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="system-prompt-tab" data-bs-toggle="tab" data-bs-target="#system-prompt-tab-pane" 
+                                type="button" role="tab" aria-controls="system-prompt-tab-pane" aria-selected="true">System Prompt</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="output-prompt-tab-comp" data-bs-toggle="tab" data-bs-target="#output-prompt-tab-pane-comp" 
+                                type="button" role="tab" aria-controls="output-prompt-tab-pane-comp" aria-selected="false">Output Prompt</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-3" id="promptComparisonTabContent">
+                        <div class="tab-pane fade show active" id="system-prompt-tab-pane" role="tabpanel" aria-labelledby="system-prompt-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info bg-opacity-25">
+                                            <strong>Original System Prompt</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="original-system-prompt" class="prompt-display p-3 border bg-light" style="white-space: pre-wrap;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-success bg-opacity-25">
+                                            <strong>Optimized System Prompt</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="optimized-system-prompt" class="prompt-display p-3 border bg-light" style="white-space: pre-wrap;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="output-prompt-tab-pane-comp" role="tabpanel" aria-labelledby="output-prompt-tab-comp">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info bg-opacity-25">
+                                            <strong>Original Output Prompt</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="original-output-prompt" class="prompt-display p-3 border bg-light" style="white-space: pre-wrap;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-success bg-opacity-25">
+                                            <strong>Optimized Output Prompt</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre id="optimized-output-prompt" class="prompt-display p-3 border bg-light" style="white-space: pre-wrap;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header bg-primary bg-opacity-10">
+                            <strong>Changes Summary</strong>
+                        </div>
+                        <div class="card-body">
+                            <p>The LLM made the following changes to improve prompt performance:</p>
+                            <ul id="changes-summary" class="changes-list">
+                                <li class="text-muted">No changes detected</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="apply-optimized-prompts-btn">Apply Optimized Prompts</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Spinner -->
     <div id="spinner" class="spinner-container text-center">
         <div class="spinner-border text-primary" role="status">

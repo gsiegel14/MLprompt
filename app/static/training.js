@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let trainingData = [];
     let validationSplit = 0.8;
     let trainingHistory = [];
+    let currentComparisonData = null;
     
     // Initialize UI
     initializeUI();
@@ -73,11 +74,15 @@ document.addEventListener('DOMContentLoaded', function() {
     optimizerPresetEl.addEventListener('change', updateOptimizerPreset);
     loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
     loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
+    document.getElementById('apply-optimized-prompts-btn').addEventListener('click', applyOptimizedPrompts);
     
-    // Add event listener for view details button once results are available
+    // Add event listener for view details and compare prompts buttons
     document.addEventListener('click', function(e) {
         if (e.target && e.target.id === 'view-details-btn') {
             viewFullDetails();
+        }
+        if (e.target && e.target.id === 'compare-prompts-btn') {
+            showPromptComparison();
         }
     });
     
@@ -777,6 +782,112 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (after.metrics.avg_score < before.metrics.avg_score) {
             afterScoreEl.classList.add('text-danger');
         }
+        
+        // Store the optimized prompts for comparison
+        currentComparisonData = {
+            original: {
+                system_prompt: before.system_prompt,
+                output_prompt: before.output_prompt
+            },
+            optimized: {
+                system_prompt: after.system_prompt,
+                output_prompt: after.output_prompt,
+                reasoning: after.reasoning || ''
+            }
+        };
+    }
+    
+    // Show prompt comparison modal
+    function showPromptComparison() {
+        if (!currentComparisonData) {
+            showAlert('No optimization data available for comparison', 'warning');
+            return;
+        }
+        
+        // Populate comparison modal
+        document.getElementById('original-system-prompt').textContent = currentComparisonData.original.system_prompt;
+        document.getElementById('optimized-system-prompt').textContent = currentComparisonData.optimized.system_prompt;
+        document.getElementById('original-output-prompt').textContent = currentComparisonData.original.output_prompt;
+        document.getElementById('optimized-output-prompt').textContent = currentComparisonData.optimized.output_prompt;
+        
+        // Generate changes summary
+        const changesList = document.getElementById('changes-summary');
+        const reasoning = currentComparisonData.optimized.reasoning;
+        
+        if (reasoning) {
+            // Look for key improvements in the reasoning text
+            const changesHTML = generateChangesSummary(reasoning);
+            changesList.innerHTML = changesHTML;
+        } else {
+            changesList.innerHTML = '<li class="text-muted">No detailed changes available</li>';
+        }
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('prompt-comparison-modal'));
+        modal.show();
+    }
+    
+    // Generate summary of changes from optimizer reasoning
+    function generateChangesSummary(reasoning) {
+        // Split reasoning into paragraphs and look for key points
+        const paragraphs = reasoning.split('\n').filter(p => p.trim().length > 0);
+        let changesFound = [];
+        
+        // Keywords to look for that might indicate a change
+        const changeKeywords = [
+            'add', 'added', 'adding', 
+            'remov', 'removed', 'removing',
+            'chang', 'changed', 'changing',
+            'modify', 'modified', 'modifying',
+            'enhanc', 'enhanced', 'enhancing',
+            'improv', 'improved', 'improving',
+            'replac', 'replaced', 'replacing',
+            'refin', 'refined', 'refining'
+        ];
+        
+        // Look for sentences containing change keywords
+        paragraphs.forEach(paragraph => {
+            const sentences = paragraph.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            
+            sentences.forEach(sentence => {
+                const sentenceLower = sentence.toLowerCase().trim();
+                
+                // Check if the sentence contains any change keywords
+                if (changeKeywords.some(keyword => sentenceLower.includes(keyword))) {
+                    changesFound.push(sentence.trim());
+                }
+            });
+        });
+        
+        // If we found specific changes, display them
+        if (changesFound.length > 0) {
+            // Limit to 5 most significant changes
+            changesFound = changesFound.slice(0, 5);
+            return changesFound.map(change => `<li>${change}.</li>`).join('');
+        }
+        
+        // Fallback: just use the first few sentences from reasoning
+        const firstFewSentences = reasoning.split(/[.!?]+/).filter(s => s.trim().length > 0).slice(0, 3);
+        return firstFewSentences.map(sentence => `<li>${sentence.trim()}.</li>`).join('');
+    }
+    
+    // Apply optimized prompts to the editor
+    function applyOptimizedPrompts() {
+        if (!currentComparisonData || !currentComparisonData.optimized) {
+            showAlert('No optimized prompts available to apply', 'warning');
+            return;
+        }
+        
+        // Apply the optimized prompts to the editor fields
+        systemPromptEl.value = currentComparisonData.optimized.system_prompt;
+        outputPromptEl.value = currentComparisonData.optimized.output_prompt;
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('prompt-comparison-modal'));
+        modal.hide();
+        
+        // Show success message
+        showAlert('Optimized prompts applied successfully', 'success');
     }
     
     // Show spinner
