@@ -115,10 +115,14 @@
                     <div class="card-body">
                         <form id="training-form">
                             <div class="mb-3">
-                                <label for="experiment-id" class="form-label">Experiment</label>
+                                <label for="experiment-id" class="form-label">
+                                    Experiment
+                                    <i class="fa-solid fa-circle-info text-primary ms-1" data-bs-toggle="tooltip" 
+                                       title="Each experiment tracks a series of prompt optimization iterations. You can save and compare multiple experiments."></i>
+                                </label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" id="experiment-id" readonly placeholder="New experiment will be created">
-                                    <button class="btn btn-outline-secondary" type="button" id="load-experiment-btn">
+                                    <button class="btn btn-outline-secondary" type="button" id="load-experiment-btn" data-bs-toggle="tooltip" title="Load a previous experiment">
                                         <i class="fa-solid fa-folder-open"></i>
                                     </button>
                                 </div>
