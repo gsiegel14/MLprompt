@@ -1,0 +1,364 @@
+ML Backbone and Workflow Implementation
+This document provides comprehensive instructions for implementing a machine learning-driven prompt optimization platform that iteratively refines LLM prompts through a 5-step workflow.
+System Overview
+Our prompt optimization platform follows this workflow:
+Primary LLM Inference - Generate baseline responses using current prompts
+Hugging Face Evaluation - Compute baseline metrics
+Optimizer LLM - Generate refined prompts based on performance data
+Refined LLM Inference - Run inference with optimized prompts
+Second Evaluation - Compare metrics and decide whether to continue
+The system uses Prefect 2.0 for orchestration, Vertex AI (Gemini) for LLM inference, and Hugging Face Evaluate for metrics calculation.
+Project Setup
+# Create project directory structure
+mkdir -p prompt_optimizer_platform/src/{api/{endpoints},app/{clients,models,services,utils},flows/tasks}
+mkdir -p prompt_optimizer_platform/{config,data/{raw,processed},prompts,tests,notebooks}
+
+# Create necessary __init__.py files
+touch src/__init__.py
+touch src/api/__init__.py src/api/endpoints/__init__.py
+touch src/app/__init__.py src/app/clients/__init__.py src/app/models/__init__.py 
+touch src/app/services/__init__.py src/app/utils/__init__.py
+touch src/flows/__init__.py src/flows/tasks/__init__.py
+Core Components
+1. Configuration Management
+Create a settings module that loads environment variables:# src/app/config.py
+from pydantic_settings import BaseSettings
+from typing import Optional
+from pathlib import Path
+
+class Settings(BaseSettings):
+    # Vertex AI Settings
+    VERTEX_PROJECT_ID: str
+    VERTEX_LOCATION: str
+    PRIMARY_MODEL_NAME: str
+    OPTIMIZER_MODEL_NAME: str
+    
+    # Storage Settings
+    GCS_BUCKET_NAME: str
+    
+    # Prefect Settings
+    PREFECT_API_URL: Optional[str] = None
+    PREFECT_API_KEY: Optional[str] = None
+    
+    # Additional configurations...
+    
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
+
+settings = Settings()
+2. PromptState Model
+Create the core data model for managing prompt versions:
+# src/app/models/prompt_state.py
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
+import json
+import uuid
+import gcsfs
+from datetime import datetime
+
+class PromptState(BaseModel):
+    system_prompt: str
+    output_prompt: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    parent_id: Optional[str] = None
+    version: int = 1
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    def dict(self, **kwargs):
+        base_dict = super().dict(**kwargs)
+        base_dict["created_at"] = self.created_at.isoformat()
+        return base_dict
+    
+    @classmethod
+    def load(cls, path: str) -> "PromptState":
+        """Load from file path (local or GCS)"""
+        # Implementation for loading
+        
+    def save(self, path: str) -> str:
+        """Save to file path (local or GCS)"""
+        # Implementation for saving
+        # src/app/models/prompt_state.py
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
+import json
+import uuid
+import gcsfs
+from datetime import datetime
+
+class PromptState(BaseModel):
+    system_prompt: str
+    output_prompt: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    parent_id: Optional[str] = None
+    version: int = 1
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    def dict(self, **kwargs):
+        base_dict = super().dict(**kwargs)
+        base_dict["created_at"] = self.created_at.isoformat()
+        return base_dict
+    
+    @classmethod
+    def load(cls, path: str) -> "PromptState":
+        """Load from file path (local or GCS)"""
+        # Implementation for loading
+        
+    def save(self, path: str) -> str:
+        """Save to file path (local or GCS)"""
+        # Implementation for saving3. External Service Clients
+Vertex AI Client# src/app/clients/vertex_client.py
+from google.cloud import aiplatform
+from typing import List, Dict, Any, Optional
+import pandas as pd
+import logging
+from src.app.models.prompt_state import PromptState
+
+class VertexAIClient:
+    def __init__(self, project_id: str, location: str):
+        self.project_id = project_id
+        self.location = location
+        self.logger = logging.getLogger(__name__)
+        aiplatform.init(project=project_id, location=location)
+    
+    def generate_response(self, model_name: str, user_content: str, 
+                         system_content: Optional[str] = None,
+                         temperature: float = 0.0, max_tokens: int = 1024,
+                         response_mime_type: Optional[str] = None) -> str:
+        """Generate a single response from the LLM"""
+        # Implementation
+    
+    def batch_predict(self, df: pd.DataFrame, prompt_state: PromptState, 
+                     model_name: Optional[str] = None) -> List[str]:
+        """Run inference on dataset with given prompt state"""
+        # Implementation
+        ML Backbone and Workflow Implementation
+This document provides comprehensive instructions for implementing a machine learning-driven prompt optimization platform that iteratively refines LLM prompts through a 5-step workflow.
+System Overview
+Our prompt optimization platform follows this workflow:
+Primary LLM Inference - Generate baseline responses using current prompts
+Hugging Face Evaluation - Compute baseline metrics
+Optimizer LLM - Generate refined prompts based on performance data
+Refined LLM Inference - Run inference with optimized prompts
+Second Evaluation - Compare metrics and decide whether to continue
+The system uses Prefect 2.0 for orchestration, Vertex AI (Gemini) for LLM inference, and Hugging Face Evaluate for metrics calculation.
+Project Setup
+Apply to Stage1instur...
+Run
+# Create project directory structure
+mkdir -p prompt_optimizer_platform/src/{api/{endpoints},app/{clients,models,services,utils},flows/tasks}
+mkdir -p prompt_optimizer_platform/{config,data/{raw,processed},prompts,tests,notebooks}
+
+# Create necessary __init__.py files
+touch src/__init__.py
+touch src/api/__init__.py src/api/endpoints/__init__.py
+touch src/app/__init__.py src/app/clients/__init__.py src/app/models/__init__.py 
+touch src/app/services/__init__.py src/app/utils/__init__.py
+touch src/flows/__init__.py src/flows/tasks/__init__.py
+Core Components
+1. Configuration Management
+Create a settings module that loads environment variables:
+Apply to Stage1instur...
+# src/app/config.py
+from pydantic_settings import BaseSettings
+from typing import Optional
+from pathlib import Path
+
+class Settings(BaseSettings):
+    # Vertex AI Settings
+    VERTEX_PROJECT_ID: str
+    VERTEX_LOCATION: str
+    PRIMARY_MODEL_NAME: str
+    OPTIMIZER_MODEL_NAME: str
+    
+    # Storage Settings
+    GCS_BUCKET_NAME: str
+    
+    # Prefect Settings
+    PREFECT_API_URL: Optional[str] = None
+    PREFECT_API_KEY: Optional[str] = None
+    
+    # Additional configurations...
+    
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
+
+settings = Settings()
+2. PromptState Model
+Create the core data model for managing prompt versions:
+Apply to Stage1instur...
+# src/app/models/prompt_state.py
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
+import json
+import uuid
+import gcsfs
+from datetime import datetime
+
+class PromptState(BaseModel):
+    system_prompt: str
+    output_prompt: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    parent_id: Optional[str] = None
+    version: int = 1
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    def dict(self, **kwargs):
+        base_dict = super().dict(**kwargs)
+        base_dict["created_at"] = self.created_at.isoformat()
+        return base_dict
+    
+    @classmethod
+    def load(cls, path: str) -> "PromptState":
+        """Load from file path (local or GCS)"""
+        # Implementation for loading
+        
+    def save(self, path: str) -> str:
+        """Save to file path (local or GCS)"""
+        # Implementation for saving
+3. External Service Clients
+Vertex AI Client
+Apply to Stage1instur...
+# src/app/clients/vertex_client.py
+from google.cloud import aiplatform
+from typing import List, Dict, Any, Optional
+import pandas as pd
+import logging
+from src.app.models.prompt_state import PromptState
+
+class VertexAIClient:
+    def __init__(self, project_id: str, location: str):
+        self.project_id = project_id
+        self.location = location
+        self.logger = logging.getLogger(__name__)
+        aiplatform.init(project=project_id, location=location)
+    
+    def generate_response(self, model_name: str, user_content: str, 
+                         system_content: Optional[str] = None,
+                         temperature: float = 0.0, max_tokens: int = 1024,
+                         response_mime_type: Optional[str] = None) -> str:
+        """Generate a single response from the LLM"""
+        # Implementation
+    
+    def batch_predict(self, df: pd.DataFrame, prompt_state: PromptState, 
+                     model_name: Optional[str] = None) -> List[str]:
+        """Run inference on dataset with given prompt state"""
+        # Implementation
+Hugging Face Evaluator
+Apply to Stage1instur...
+# src/app/clients/hf_evaluator.py
+import evaluate
+import logging
+from typing import List, Dict, Any, Optional
+
+class EvaluatorService:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self._metrics_cache = {}
+    
+    def evaluate(self, predictions: List[str], references: List[str], 
+                metrics: Optional[List[str]] = None) -> Dict[str, float]:
+        """Evaluate predictions against references using specified metrics"""
+        # Implementation
+4. Prefect Workflow Implementation
+Main Tasks# src/flows/tasks/data_tasks.py
+@task(name="load-state", retries=2)
+def load_state(system_prompt_path, output_prompt_path, dataset_path, state_path=None):
+    """Load or initialize PromptState & training data"""
+    # Implementation
+
+# src/flows/tasks/inference_tasks.py
+@task(name="vertex-primary-inference", retries=3)
+def vertex_primary_inference(state_dict, dataset_dict, vertex_project_id, 
+                           vertex_location, model_name):
+    """Run primary inference with LLM"""
+    # Implementation
+
+# src/flows/tasks/evaluation_tasks.py
+@task(name="hf-evaluate-baseline")
+def hf_eval_baseline(dataset_dict, metric_name="exact_match"):
+    """Evaluate baseline predictions"""
+    # Implementation
+
+# src/flows/tasks/optimization_tasks.py
+@task(name="vertex-optimizer-refine", retries=2)
+def vertex_optimizer_refine(state_dict, dataset_dict, baseline_metrics,
+                          vertex_project_id, vertex_location, model_name, sample_k=5):
+    """Call optimizer LLM to get new prompts"""
+    # Implementation# src/app/main.py
+from fastapi import FastAPI
+from src.api.routers import api_router
+
+app = FastAPI(title="Prompt Optimization Platform API")
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "ok"}
+
+app.include_router(api_router, prefix="/api/v1")@task(name="train-meta-model", retries=2)
+def train_meta_model(metrics_history_path: str):
+    """Train a meta-model to predict prompt quality"""
+    # Implementation using scikit-learn
+
+@task(name="rl-agent-step", retries=1)
+def rl_agent_step(meta_model_uri, current_prompts, checkpoint_path=None):
+    """Run RL agent to explore prompt space"""
+    # Implementation using stable-baselines3fastapi~=0.100.0
+uvicorn[standard]~=0.23.2
+pydantic~=2.0.0
+pydantic-settings~=2.0.0
+python-dotenv~=1.0.0
+prefect~=2.13.0
+google-cloud-aiplatform~=1.36.0
+evaluate~=0.4.0
+pandas~=2.0.0
+scikit-learn~=1.3.0
+stable-baselines3[extra]~=2.0.0
+wandb~=0.16.0
+gcsfs~=2023.6.0
+joblib~=1.3.0# src/flows/prompt_optimization_flow.py
+@flow(name="prompt-optimization-flow")
+def prompt_optimization_flow(
+    vertex_project_id: str,
+    vertex_location: str,
+    primary_model_name: str,
+    optimizer_model_name: str,
+    dataset_path: str,
+    system_prompt_path: str,
+    output_prompt_path: str,
+    target_metric: str = "exact_match_score",
+    target_threshold: float = 0.90,
+    patience: int = 3,
+    max_iterations: int = 10,
+):
+    """Main optimization flow that iteratively improves prompts"""
+    state_path = None
+    no_improve_count = 0
+    
+    for iteration in range(max_iterations):
+        # 1. Load state and dataset
+        state_data = load_state(system_prompt_path, output_prompt_path, dataset_path, state_path)
+        
+        # 2. Run primary inference
+        dataset_with_preds = vertex_primary_inference(...)
+        
+        # 3. Evaluate baseline performance
+        baseline_metrics = hf_eval_baseline(...)
+        
+        # 4. Generate refined prompts
+        refined_prompt_state = vertex_optimizer_refine(...)
+        
+        # 5. Run inference with refined prompts
+        refined_dataset = vertex_refined_inference(...)
+        
+        # 6. Evaluate refined performance
+        refined_metrics = hf_eval_refined(...)
+        
+        # 7. Compare and decide whether to continue
+        result = compare_and_log(...)
+        
+        # Handle early stopping logic

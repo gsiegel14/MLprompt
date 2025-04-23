@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["geckodriver", "gh", "glibcLocales", "libxcrypt", "libyaml", "openssl", "postgresql"]
+packages = ["cairo", "ffmpeg-full", "freetype", "geckodriver", "gh", "ghostscript", "gitFull", "glibcLocales", "gobject-introspection", "gtk3", "libxcrypt", "libyaml", "openssl", "pkg-config", "postgresql", "qhull", "tcl", "tk"]
 
 [deployment]
 deploymentTarget = "autoscale"
