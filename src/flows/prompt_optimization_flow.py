@@ -2,6 +2,7 @@
 Prompt Optimization Flow using Prefect 2.0
 """
 import logging
+import time
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -349,13 +350,37 @@ def prompt_optimization_flow(
     current_prompt_state = load_prompt_state(system_prompt, output_prompt)
     best_prompt_state = current_prompt_state.dict()
     best_metrics = None
+    best_examples = None
 
     # Track history
     history = []
 
+    #Simple cost tracker (replace with a real implementation)
+    class SimpleCostTracker:
+        def __init__(self):
+            self.costs = []
+
+        def record_cost(self, cost):
+            self.costs.append(cost)
+
+        def get_cost_report(self):
+            return {"total_cost": sum(self.costs)}
+
+        def save_report(self, filename):
+            import json
+            with open(filename, 'w') as f:
+                json.dump(self.get_cost_report(), f)
+            return filename
+
+    cost_tracker = SimpleCostTracker()
+
+    optimization_start_time = time.time()
+
     # Iterate for optimization
     for iteration in range(max_iterations):
         logger.info(f"Starting iteration {iteration+1}/{max_iterations}")
+        #Record cost for this iteration (replace with actual cost calculation)
+        cost_tracker.record_cost(iteration + 1) #Example cost
 
         # Step 1: Primary LLM Inference
         examples_with_predictions = primary_llm_inference(
@@ -375,6 +400,7 @@ def prompt_optimization_flow(
         # Store metrics on first iteration
         if iteration == 0:
             best_metrics = baseline_metrics.copy()
+            best_examples = examples_with_predictions.copy()
 
         # Step 3: Optimizer LLM
         optimized_prompt_state = optimizer_llm(
@@ -424,6 +450,7 @@ def prompt_optimization_flow(
         if optimized_score > best_metrics.get(primary_metric, 0):
             best_prompt_state = optimized_prompt_state
             best_metrics = optimized_metrics.copy()
+            best_examples = examples_with_optimized.copy()
             logger.info(f"New best prompt found with {primary_metric}: {optimized_score:.4f}")
 
         # Early stopping if we reach target threshold
@@ -434,10 +461,19 @@ def prompt_optimization_flow(
         # Update current state for next iteration
         current_prompt_state = PromptState(**optimized_prompt_state)
 
-    # Return final results
+    # Calculate total optimization time
+    optimization_duration = time.time() - optimization_start_time
+
+    # Save final cost report
+    cost_report_path = cost_tracker.save_report("final_optimization_costs.json")
+
+    # Return the best prompt state, metrics, and cost information
     return {
         "best_prompt_state": best_prompt_state,
         "best_metrics": best_metrics,
         "history": history,
-        "iterations_completed": len(history)
+        "iterations_completed": len(history),
+        "optimization_duration_seconds": optimization_duration,
+        "cost_report": cost_tracker.get_cost_report(),
+        "cost_report_path": cost_report_path
     }
