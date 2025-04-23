@@ -68,13 +68,14 @@ class PromptOptimizationWorkflow:
                              optimizer_strategy: str = 'reasoning_first',
                              hf_metrics: List[str] = None) -> Dict[str, Any]:
         """
-        Run the enhanced 4-API call workflow.
+        Run the enhanced 5-step workflow with 4 API calls.
         
         This workflow uses:
         1. Google Vertex API #1: Primary LLM inference
-        2. Google Vertex API #2: Internal evaluation
-        3. Google Vertex API #3: Optimizer LLM for prompt refinement
-        4. Hugging Face API: External validation metrics
+        2. Hugging Face API: First external validation
+        3. Google Vertex API #2: Optimizer LLM for prompt refinement
+        4. Google Vertex API #3: Optimizer LLM reruns on original dataset
+        5. Hugging Face API: Second external validation on refined outputs
         
         Args:
             system_prompt: The system prompt
@@ -98,8 +99,8 @@ class PromptOptimizationWorkflow:
         logger.info(f"Started experiment {experiment_id}")
         
         try:
-            # Phase 1: Google Vertex API - Primary LLM Inference
-            logger.info("PHASE 1: Google Vertex API - Primary LLM Inference")
+            # Phase 1: Google Vertex API #1 - Primary LLM Inference
+            logger.info("PHASE 1: Google Vertex API #1 - Primary LLM Inference")
             
             # Get examples for testing
             batch = self.data_module.get_batch(batch_size=batch_size, validation=False)
@@ -129,10 +130,19 @@ class PromptOptimizationWorkflow:
                 references.append(ground_truth)
                 inputs.append(user_input)
             
-            # Phase 2: Google Vertex API - Internal Evaluation
-            logger.info("PHASE 2: Google Vertex API - Internal Evaluation")
+            # Phase 2: Hugging Face API - First External Validation
+            logger.info("PHASE 2: Hugging Face API - First External Validation")
             
-            # Evaluate predictions using internal metrics
+            # Evaluate with Hugging Face metrics - first validation
+            original_hf_metrics = evaluate_metrics(
+                predictions,
+                references,
+                hf_metrics
+            )
+            
+            logger.info(f"First Hugging Face metrics: {original_hf_metrics}")
+            
+            # Also calculate internal metrics for completeness
             internal_metrics = evaluate_batch([
                 {
                     'model_response': pred,
@@ -142,8 +152,8 @@ class PromptOptimizationWorkflow:
             
             logger.info(f"Internal evaluation metrics: {internal_metrics}")
             
-            # Phase 3: Google Vertex API - Optimizer LLM
-            logger.info("PHASE 3: Google Vertex API - Optimizer LLM for prompt refinement")
+            # Phase 3: Google Vertex API #2 - Optimizer LLM for Refinement
+            logger.info("PHASE 3: Google Vertex API #2 - Optimizer LLM for Prompt Refinement")
             
             # Load the appropriate optimizer prompt
             optimizer_prompt = load_optimizer_prompt('general')
@@ -177,21 +187,36 @@ class PromptOptimizationWorkflow:
             logger.info(f"Optimization complete - new system prompt length: {len(optimized_system_prompt)} chars")
             logger.info(f"Optimization complete - new output prompt length: {len(optimized_output_prompt)} chars")
             
-            # Phase 4: Hugging Face API - External Validation
-            logger.info("PHASE 4: Hugging Face API - External validation metrics")
+            # Phase 4: Google Vertex API #3 - Rerun with Optimized Prompts
+            logger.info("PHASE 4: Google Vertex API #3 - Rerun with Optimized Prompts")
             
-            # Get validation examples
+            # Process the same examples with the optimized prompts
+            optimized_predictions = []
+            
+            for i, example in enumerate(batch):
+                user_input = example.get('user_input', '')
+                
+                # Call the Primary LLM with optimized prompts
+                optimized_response = get_llm_response(
+                    optimized_system_prompt,
+                    user_input,
+                    optimized_output_prompt,
+                    self.config.get('gemini', {})
+                )
+                
+                optimized_predictions.append(optimized_response)
+                
+                logger.info(f"Example {i+1}: Original length {len(predictions[i])}, Optimized length {len(optimized_response)}")
+            
+            # Get validation examples for final assessment
             validation_batch = self.data_module.get_batch(batch_size=batch_size, validation=True)
             if not validation_batch:
                 return {"error": "No validation examples available"}
                 
-            # Generate predictions with original prompts
-            original_predictions = []
-            original_references = []
-            
-            # Generate predictions with optimized prompts
-            optimized_predictions = []
-            optimized_references = []
+            # Prepare for validation with both prompt sets
+            validation_original_predictions = []
+            validation_optimized_predictions = []
+            validation_references = []
             
             for example in validation_batch:
                 user_input = example.get('user_input', '')
@@ -213,28 +238,59 @@ class PromptOptimizationWorkflow:
                     self.config.get('gemini', {})
                 )
                 
-                original_predictions.append(original_response)
-                optimized_predictions.append(optimized_response)
-                
-                # Use the same reference for both
-                original_references.append(ground_truth)
-                optimized_references.append(ground_truth)
+                validation_original_predictions.append(original_response)
+                validation_optimized_predictions.append(optimized_response)
+                validation_references.append(ground_truth)
             
-            # Evaluate with Hugging Face metrics
-            original_hf_metrics = evaluate_metrics(
-                original_predictions,
-                original_references,
+            # Phase 5: Hugging Face API - Second External Validation
+            logger.info("PHASE 5: Hugging Face API - Second External Validation")
+            
+            # Evaluate validation set with Hugging Face metrics
+            validation_original_hf_metrics = evaluate_metrics(
+                validation_original_predictions,
+                validation_references,
                 hf_metrics
             )
             
-            optimized_hf_metrics = evaluate_metrics(
-                optimized_predictions,
-                optimized_references,
+            validation_optimized_hf_metrics = evaluate_metrics(
+                validation_optimized_predictions,
+                validation_references,
                 hf_metrics
             )
             
-            logger.info(f"Hugging Face metrics for original prompts: {original_hf_metrics}")
-            logger.info(f"Hugging Face metrics for optimized prompts: {optimized_hf_metrics}")
+            logger.info(f"Hugging Face metrics for original prompts (validation): {validation_original_hf_metrics}")
+            logger.info(f"Hugging Face metrics for optimized prompts (validation): {validation_optimized_hf_metrics}")
+            
+            # For completeness, also evaluate the training examples with original and optimized prompts
+            # These are the original predictions from Phase 1 and optimized predictions from Phase 4
+            original_predictions_training = predictions
+            optimized_predictions_training = optimized_predictions
+            
+            training_original_hf_metrics = evaluate_metrics(
+                original_predictions_training,
+                references,  # These are the references from the original batch
+                hf_metrics
+            )
+            
+            training_optimized_hf_metrics = evaluate_metrics(
+                optimized_predictions_training,
+                references,  # Using the same references
+                hf_metrics
+            )
+            
+            logger.info(f"Hugging Face metrics for original prompts (training): {training_original_hf_metrics}")
+            logger.info(f"Hugging Face metrics for optimized prompts (training): {training_optimized_hf_metrics}")
+            
+            # Combine metrics for the complete picture
+            original_hf_metrics = {
+                'training': training_original_hf_metrics,
+                'validation': validation_original_hf_metrics
+            }
+            
+            optimized_hf_metrics = {
+                'training': training_optimized_hf_metrics,
+                'validation': validation_optimized_hf_metrics
+            }
             
             # Save prompts and results
             self.experiment_tracker.save_prompt(experiment_id, 'system', 'original', system_prompt)
@@ -247,12 +303,13 @@ class PromptOptimizationWorkflow:
             
             # Save validation results
             validation_examples = []
-            for i in range(len(optimized_predictions)):
+            # Make sure we use validation data here
+            for i in range(len(validation_optimized_predictions)):
                 validation_examples.append({
                     'user_input': validation_batch[i].get('user_input', ''),
-                    'ground_truth_output': optimized_references[i],
-                    'original_response': original_predictions[i],
-                    'optimized_response': optimized_predictions[i]
+                    'ground_truth_output': validation_references[i],
+                    'original_response': validation_original_predictions[i],
+                    'optimized_response': validation_optimized_predictions[i]
                 })
                 
             self.experiment_tracker.save_validation_results(

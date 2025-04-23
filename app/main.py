@@ -469,7 +469,7 @@ def optimize():
 @app.route('/four_api_workflow', methods=['POST'])
 def four_api_workflow():
     """
-    Run the enhanced 4-API call workflow:
+    Run the enhanced 5-step workflow with 4 API calls:
     1. Google Vertex API #1: Primary LLM inference
     2. Hugging Face API: First external validation
     3. Google Vertex API #2: Optimizer LLM for prompt refinement
