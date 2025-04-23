@@ -1,11 +1,12 @@
 /**
- * Four-API Workflow JavaScript
+ * Five-API Workflow JavaScript
  * 
- * This script handles the frontend interaction for the 4-API call workflow:
+ * This script handles the frontend interaction for the 5-API call workflow:
  * 1. Google Vertex API #1: Primary LLM inference
- * 2. Google Vertex API #2: Internal evaluation
- * 3. Google Vertex API #3: Optimizer LLM for prompt refinement
- * 4. Hugging Face API: External validation metrics
+ * 2. Hugging Face API: First external validation
+ * 3. Google Vertex API #2: Optimizer LLM for prompt refinement
+ * 4. Google Vertex API #3: Optimizer LLM reruns on original dataset
+ * 5. Hugging Face API: Second external validation on refined outputs
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -75,7 +76,7 @@ function initializeForm() {
 function setupEventListeners() {
     const runWorkflowButton = document.getElementById('run-workflow-button');
     if (runWorkflowButton) {
-        runWorkflowButton.addEventListener('click', runFourApiWorkflow);
+        runWorkflowButton.addEventListener('click', runFiveApiWorkflow);
     }
     
     // Copy buttons for prompts
@@ -135,9 +136,9 @@ function loadOptimizationStrategies() {
 }
 
 /**
- * Run the 4-API workflow
+ * Run the 5-API workflow
  */
-function runFourApiWorkflow() {
+function runFiveApiWorkflow() {
     // Show loading UI
     const runButton = document.getElementById('run-workflow-button');
     const originalButtonText = runButton.innerHTML;
@@ -531,7 +532,6 @@ function resetMetrics() {
     if (confirm('Are you sure you want to reset all metrics history?')) {
         localStorage.removeItem('metricsHistory');
         updateMetricsUI();
-        document.getElementById('metrics-charts-container').style.display = 'none';
         showAlert('info', 'Metrics history has been reset');
     }
 }
@@ -541,29 +541,23 @@ function resetMetrics() {
  */
 function showAlert(type, message) {
     const alertContainer = document.getElementById('alert-container');
-    const alertClass = type === 'error' ? 'alert-danger' : 
-                      type === 'success' ? 'alert-success' : 
-                      type === 'info' ? 'alert-info' : 'alert-warning';
+    if (!alertContainer) return;
     
-    const alertElement = document.createElement('div');
-    alertElement.className = `alert ${alertClass} alert-dismissible fade show`;
-    alertElement.setAttribute('role', 'alert');
-    alertElement.innerHTML = `
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.role = 'alert';
+    
+    alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     
-    alertContainer.appendChild(alertElement);
+    alertContainer.appendChild(alertDiv);
     
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        try {
-            const bsAlert = new bootstrap.Alert(alertElement);
-            bsAlert.close();
-        } catch (e) {
-            // Fallback if bootstrap JS isn't available
-            alertElement.remove();
-        }
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
     }, 5000);
 }
 
@@ -584,7 +578,8 @@ function copyToClipboard(text) {
  */
 function showCopyFeedback(button) {
     const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+    
     setTimeout(() => {
         button.innerHTML = originalText;
     }, 2000);

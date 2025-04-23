@@ -300,31 +300,53 @@
                     </div>
                 </div>
 
-                <!-- Metrics Charts -->
+                <!-- Charts -->
                 <div id="metrics-charts-container" class="card mb-4" style="display: none;">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="h5 mb-0">Metrics History</h3>
+                        <h3 class="h5 mb-0">Performance History</h3>
                         <button id="reset-metrics-button" class="btn btn-sm btn-outline-danger">
                             <i class="fas fa-trash-alt me-1"></i> Reset
                         </button>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
-                            <h4 class="h6">Internal Performance</h4>
-                            <div style="height: 250px;">
-                                <canvas id="internal-metrics-chart"></canvas>
+                        <ul class="nav nav-tabs" id="charts-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="internal-charts-tab" data-bs-toggle="tab" data-bs-target="#internal-charts-tab-pane" type="button" role="tab">
+                                    Internal Metrics
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="exact-match-charts-tab" data-bs-toggle="tab" data-bs-target="#exact-match-charts-tab-pane" type="button" role="tab">
+                                    Exact Match
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="bleu-charts-tab" data-bs-toggle="tab" data-bs-target="#bleu-charts-tab-pane" type="button" role="tab">
+                                    BLEU
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="charts-tabs-content">
+                            <!-- Internal Metrics Chart Tab -->
+                            <div class="tab-pane fade show active" id="internal-charts-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="internal-metrics-chart"></canvas>
+                                </div>
                             </div>
-                        </div>
-                        <div class="mb-4">
-                            <h4 class="h6">Exact Match Comparison</h4>
-                            <div style="height: 250px;">
-                                <canvas id="hf-exact-match-chart"></canvas>
+
+                            <!-- Exact Match Chart Tab -->
+                            <div class="tab-pane fade" id="exact-match-charts-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="hf-exact-match-chart"></canvas>
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <h4 class="h6">BLEU Score Comparison</h4>
-                            <div style="height: 250px;">
-                                <canvas id="hf-bleu-chart"></canvas>
+
+                            <!-- BLEU Chart Tab -->
+                            <div class="tab-pane fade" id="bleu-charts-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="hf-bleu-chart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -333,6 +355,7 @@
         </div>
     </div>
 
+    <!-- Bootstrap & Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='five_api_workflow.js') }}"></script>
 </body>
