@@ -320,6 +320,7 @@ def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, co
                 raise RuntimeError(f"Failed to get LLM response after {max_retries} attempts: {last_error}")
 
     # This should never be reached due to the raise in the loop, but just in case
+    raise RuntimeError(f"Unexpected end of function reached in get_llm_response")
 
 """
 LLM Client with memory-efficient response caching.

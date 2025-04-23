@@ -71,6 +71,19 @@ mode = "sequential"
 task = "shell.exec"
 args = "python -m src.flows.prompt_optimization_flow"
 
+[[workflows.workflow]]
+name = "Fix and Test Application"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_quick.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
+
 [[ports]]
 localPort = 5000
 externalPort = 80

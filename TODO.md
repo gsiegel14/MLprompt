@@ -3,6 +3,8 @@
 
 ## Priority 1: Critical Issues
 - [x] Fix syntax error in llm_client.py that prevents application startup
+- [x] Fix syntax error with unexpected `else` statement in llm_client.py (line 175)
+- [ ] Resolve gunicorn application startup issues
 - [ ] Complete integration between Prefect flows and the main application
 - [ ] Set up proper Prefect agent configuration and deployment
 - [ ] Fix workflow scheduling and execution with proper error handling
