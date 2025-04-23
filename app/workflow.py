@@ -29,19 +29,19 @@ logger = logging.getLogger(__name__)
 
 class PromptOptimizationWorkflow:
     """
-    Implements the Four-Stage API Call workflow for prompt optimization.
+    Implements the Five-Stage API Call workflow for prompt optimization.
     
     Enhanced Workflow:
     1. Google Vertex API #1: Primary LLM Inference
        - Process training data with current prompts
-    2. Google Vertex API #2: Internal Evaluation
-       - Evaluate responses against ground truth
-    3. Google Vertex API #3: Optimizer LLM Refinement
+    2. Hugging Face API #1: First External Validation
+       - Evaluate responses against ground truth with external metrics
+    3. Google Vertex API #2: Optimizer LLM Refinement
        - Analyze results and generate improved prompts
-    4. Hugging Face API: External Validation Metrics
-       - Validate results using industry-standard metrics
-    5. Final Validation (Separate phase)
-       - Compare different prompt versions on unseen data
+    4. Google Vertex API #3: Refined LLM Inference
+       - Process the same examples with optimized prompts
+    5. Hugging Face API #2: Second External Validation
+       - Validate refined results using industry-standard metrics
     """
     
     def __init__(self, data_module: DataModule, experiment_tracker: ExperimentTracker, config: Optional[Dict[str, Any]] = None):
@@ -494,8 +494,26 @@ class PromptOptimizationWorkflow:
                 success_count = 0
                 error_count = 0
                 
-                # Use a smaller, more conservative batch size to prevent memory issues
-                max_batch_size = 25  # Reduced from 100 to 25 examples for more reliable processing
+                # Memory-efficient batch processing with dynamic sizing
+                import psutil
+                
+                # Get available memory
+                mem = psutil.virtual_memory()
+                available_mem_gb = mem.available / (1024 * 1024 * 1024)
+                
+                # Determine optimal batch size based on available memory
+                # Reserve at least 25% of available memory
+                if available_mem_gb > 4:
+                    max_batch_size = 40
+                elif available_mem_gb > 2:
+                    max_batch_size = 25
+                elif available_mem_gb > 1:
+                    max_batch_size = 15
+                else:
+                    max_batch_size = 10
+                    
+                logger.info(f"Available memory: {available_mem_gb:.2f} GB, setting max batch size to {max_batch_size}")
+                
                 if batch_size == 0 or batch_size > max_batch_size:
                     logger.info(f"Limiting batch size to {max_batch_size} examples (original: {batch_size})")
                     effective_batch_size = max_batch_size
@@ -503,8 +521,12 @@ class PromptOptimizationWorkflow:
                 else:
                     effective_batch_size = batch_size
                 
-                # Process in very small chunks to prevent memory issues
-                max_chunk_size = min(5, len(batch))  # Reduced to 5 examples per chunk for more reliable processing
+                # Process in small chunks with adaptive sizing
+                # Smaller chunks for low memory conditions
+                if available_mem_gb < 1:
+                    max_chunk_size = 3
+                else:
+                    max_chunk_size = min(5, len(batch))
                 logger.info(f"Processing in chunks of {max_chunk_size} examples")
                 
                 # Create a log file for detailed process tracking

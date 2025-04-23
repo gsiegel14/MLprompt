@@ -99,17 +99,44 @@ def todo():
 def run_evaluation():
     """Process inputs, run the model, and return evaluation results."""
     try:
+        # Validate request format
+        if not request.is_json:
+            return jsonify({'error': 'Request must be JSON format'}), 400
+            
         data = request.json
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid request format'}), 400
+            
+        # Extract and validate required fields
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
         examples_format = data.get('examples_format', 'text')
         examples_content = data.get('examples_content', '')
 
-        if not system_prompt or not output_prompt:
-            return jsonify({'error': 'System prompt and output prompt are required'}), 400
+        # Validate prompt fields
+        if not isinstance(system_prompt, str) or not isinstance(output_prompt, str):
+            return jsonify({'error': 'System prompt and output prompt must be strings'}), 400
+            
+        if not system_prompt.strip() or not output_prompt.strip():
+            return jsonify({'error': 'System prompt and output prompt are required and cannot be empty'}), 400
+            
+        # Validate examples format
+        if examples_format not in ['text', 'csv']:
+            return jsonify({'error': 'Invalid examples format. Must be "text" or "csv"'}), 400
 
-        if not examples_content:
-            return jsonify({'error': 'Example data is required'}), 400
+        # Validate examples content
+        if not examples_content or not isinstance(examples_content, str):
+            return jsonify({'error': 'Example data is required and must be a string'}), 400
+            
+        # Size limits to prevent abuse
+        if len(system_prompt) > 10000:
+            return jsonify({'error': 'System prompt exceeds maximum length of 10,000 characters'}), 400
+            
+        if len(output_prompt) > 5000:
+            return jsonify({'error': 'Output prompt exceeds maximum length of 5,000 characters'}), 400
+            
+        if len(examples_content) > 100000:
+            return jsonify({'error': 'Examples content exceeds maximum length of 100,000 characters'}), 400
 
         # Parse examples based on format
         if examples_format == 'text':
