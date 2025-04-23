@@ -175,7 +175,7 @@ function runFourApiWorkflow() {
     };
     
     // Send request to server
-    fetch('/four_api_workflow', {
+    fetch('/five_api_workflow', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

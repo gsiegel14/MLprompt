@@ -466,10 +466,10 @@ def optimize():
         logger.error(f"Error in optimization: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/four_api_workflow', methods=['POST'])
-def four_api_workflow():
+@app.route('/five_api_workflow', methods=['POST'])
+def five_api_workflow():
     """
-    Run the enhanced 5-step workflow with 4 API calls:
+    Run the enhanced 5-step workflow with 5 API calls:
     1. Google Vertex API #1: Primary LLM inference
     2. Hugging Face API: First external validation
     3. Google Vertex API #2: Optimizer LLM for prompt refinement
@@ -481,11 +481,11 @@ def four_api_workflow():
         import traceback
         from datetime import datetime
         log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file_path = f"logs/four_api_workflow_{log_timestamp}.log"
+        log_file_path = f"logs/five_api_workflow_{log_timestamp}.log"
         os.makedirs("logs", exist_ok=True)
         
         # Log start with request info
-        logger.info(f"========== 4-API WORKFLOW STARTED AT {log_timestamp} ==========")
+        logger.info(f"========== 5-API WORKFLOW STARTED AT {log_timestamp} ==========")
         
         # Parse request data
         data = request.json
@@ -527,8 +527,8 @@ def four_api_workflow():
                 'status': 'error'
             }), 400
         
-        # Run the 4-API workflow
-        results = prompt_workflow.run_four_api_workflow(
+        # Run the 5-API workflow
+        results = prompt_workflow.run_five_api_workflow(
             system_prompt=system_prompt,
             output_prompt=output_prompt,
             batch_size=batch_size,
@@ -538,7 +538,7 @@ def four_api_workflow():
         
         # Check for errors
         if 'error' in results:
-            logger.error(f"Error in 4-API workflow: {results['error']}")
+            logger.error(f"Error in 5-API workflow: {results['error']}")
             return jsonify({
                 'error': results['error'],
                 'status': 'error'
@@ -558,7 +558,7 @@ def four_api_workflow():
         })
         
     except Exception as e:
-        logger.error(f"Error in 4-API workflow: {e}")
+        logger.error(f"Error in 5-API workflow: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e), 'status': 'error'}), 500
