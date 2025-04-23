@@ -194,4 +194,156 @@ def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, co
                 raise RuntimeError(f"Failed to get LLM response after {max_retries} attempts: {last_error}")
     
     # This should never be reached due to the raise in the loop, but just in case
+
+"""
+LLM Client with memory-efficient response caching.
+
+This module provides a client for interacting with Language Models,
+with built-in caching to reduce API calls and costs.
+"""
+
+import os
+import json
+import hashlib
+import logging
+import time
+from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+
+# Configure cache directory
+CACHE_DIR = os.path.join('cache', 'llm_responses')
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+def get_cache_key(system_prompt: str, user_input: str, output_prompt: str) -> str:
+    """Generate a deterministic cache key for the prompt combination."""
+    # Create a combined string of all inputs
+    combined = f"{system_prompt}|||{user_input}|||{output_prompt}"
+    # Create a hash of the combined string
+    return hashlib.md5(combined.encode('utf-8')).hexdigest()
+
+def get_from_cache(cache_key: str) -> Optional[str]:
+    """Retrieve a response from cache if it exists."""
+    cache_file = os.path.join(CACHE_DIR, f"{cache_key}.json")
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+                logger.debug(f"Cache hit for key {cache_key}")
+                return cached_data.get('response')
+        except Exception as e:
+            logger.warning(f"Failed to read from cache: {e}")
+    return None
+
+def save_to_cache(cache_key: str, response: str) -> None:
+    """Save a response to the cache."""
+    cache_file = os.path.join(CACHE_DIR, f"{cache_key}.json")
+    try:
+        with open(cache_file, 'w') as f:
+            json.dump({
+                'response': response,
+                'timestamp': time.time()
+            }, f)
+        logger.debug(f"Saved response to cache with key {cache_key}")
+    except Exception as e:
+        logger.warning(f"Failed to write to cache: {e}")
+
+def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, config: Dict[str, Any]) -> str:
+    """
+    Get a response from the LLM, with caching to reduce API calls.
+    
+    Args:
+        system_prompt: System prompt for the LLM
+        user_input: User input to process
+        output_prompt: Output formatting instructions
+        config: Configuration for the LLM call
+        
+    Returns:
+        Generated response from the LLM
+    """
+    # Check if caching is enabled in config
+    enable_caching = config.get('enable_caching', True)
+    
+    if enable_caching:
+        # Try to get from cache first
+        cache_key = get_cache_key(system_prompt, user_input, output_prompt)
+        cached_response = get_from_cache(cache_key)
+        
+        if cached_response:
+            logger.info("Using cached LLM response")
+            return cached_response
+    
+    # Not in cache or caching disabled, make API call
+    try:
+        # Placeholder for actual API call implementation
+        # This should be replaced with your actual API call logic
+        import google.generativeai as genai
+        import os
+        
+        # Get API key from environment or config
+        api_key = os.environ.get('GOOGLE_API_KEY', config.get('api_key', ''))
+        
+        if not api_key:
+            raise ValueError("No API key provided for Gemini")
+        
+        # Configure the API client
+        genai.configure(api_key=api_key)
+        
+        # Prepare model parameters
+        model_name = config.get('model_name', 'gemini-1.5-pro')
+        temperature = config.get('temperature', 0.0)
+        max_output_tokens = config.get('max_output_tokens', 1024)
+        top_p = config.get('top_p', 0.95)
+        top_k = config.get('top_k', 40)
+        
+        # Set up the model
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            generation_config={
+                'temperature': temperature,
+                'max_output_tokens': max_output_tokens,
+                'top_p': top_p,
+                'top_k': top_k
+            }
+        )
+        
+        # Prepare the prompt
+        prompt = f"{system_prompt}\n\n{user_input}\n\n{output_prompt}"
+        
+        # Make the API call with retry logic
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                start_time = time.time()
+                response = model.generate_content(prompt)
+                elapsed_time = time.time() - start_time
+                
+                logger.debug(f"LLM API call completed in {elapsed_time:.2f} seconds")
+                
+                if response.text:
+                    # Cache the successful response if caching is enabled
+                    if enable_caching:
+                        save_to_cache(cache_key, response.text)
+                    return response.text
+                else:
+                    logger.warning("Empty response from LLM API")
+                    return "Error: Empty response from model"
+                    
+            except Exception as e:
+                logger.warning(f"LLM API call attempt {attempt+1}/{max_retries} failed: {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    raise
+        
+        return "Error: Failed to get response after multiple attempts"
+        
+    except Exception as e:
+        logger.error(f"Error getting LLM response: {e}")
+        raise
+
     raise RuntimeError(f"Unexpected error in retry loop: {last_error}")

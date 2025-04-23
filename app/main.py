@@ -59,17 +59,17 @@ def index():
 def training():
     """Render the ML training interface."""
     return render_template('training.html')
-    
+
 @app.route('/evaluation')
 def evaluation():
     """Render the prompt evaluation interface."""
     return render_template('evaluation.html')
-    
+
 @app.route('/final_prompts')
 def final_prompts():
     """Render the final prompts interface."""
     return render_template('final_prompts.html')
-    
+
 @app.route('/five_api_workflow_page')
 def five_api_workflow_page():
     """Render the 5-API workflow interface."""
@@ -143,13 +143,6 @@ def run_evaluation():
                 score = calculate_score(model_response, ground_truth)
 
                 results.append({
-
-
-@app.route('/cost_dashboard')
-def cost_dashboard():
-    """Render the cost tracking dashboard."""
-    return render_template('cost_dashboard.html')
-
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
                     'model_response': model_response,
@@ -490,10 +483,10 @@ def five_api_workflow():
         log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file_path = f"logs/five_api_workflow_{log_timestamp}.log"
         os.makedirs("logs", exist_ok=True)
-        
+
         # Log start with request info
         logger.info(f"========== 5-API WORKFLOW STARTED AT {log_timestamp} ==========")
-        
+
         # Parse request data
         data = request.json
         if not data:
@@ -502,14 +495,14 @@ def five_api_workflow():
             with open(log_file_path, 'w') as f:
                 f.write(f"ERROR: {error_msg}\n")
             return jsonify({'error': error_msg}), 400
-            
+
         # Extract request parameters
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
         batch_size = int(data.get('batch_size', 10))
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         hf_metrics = data.get('hf_metrics', ["exact_match", "bleu"])
-        
+
         # Validate parameters
         if not system_prompt or not output_prompt:
             error_msg = "System prompt and output prompt are required"
@@ -517,13 +510,13 @@ def five_api_workflow():
             with open(log_file_path, 'w') as f:
                 f.write(f"ERROR: {error_msg}\n")
             return jsonify({'error': error_msg}), 400
-            
+
         # Log details
         logger.info(f"Request details: batch_size={batch_size}, strategy={optimizer_strategy}")
         logger.info(f"System prompt length: {len(system_prompt)} chars")
         logger.info(f"Output prompt length: {len(output_prompt)} chars")
         logger.info(f"Hugging Face metrics: {hf_metrics}")
-        
+
         # Check if Hugging Face token is available
         try:
             validate_api_connection()
@@ -533,7 +526,7 @@ def five_api_workflow():
                 'error': f"Hugging Face API connection issue: {str(e)}. Please check your HUGGING_FACE_TOKEN.",
                 'status': 'error'
             }), 400
-        
+
         # Run the 5-API workflow
         results = prompt_workflow.run_five_api_workflow(
             system_prompt=system_prompt,
@@ -542,7 +535,7 @@ def five_api_workflow():
             optimizer_strategy=optimizer_strategy,
             hf_metrics=hf_metrics
         )
-        
+
         # Check for errors
         if 'error' in results:
             logger.error(f"Error in 5-API workflow: {results['error']}")
@@ -550,7 +543,7 @@ def five_api_workflow():
                 'error': results['error'],
                 'status': 'error'
             }), 500
-            
+
         # Return success response
         return jsonify({
             'status': 'success',
@@ -563,7 +556,7 @@ def five_api_workflow():
             'examples_count': results['examples_count'],
             'validation_count': results['validation_count']
         })
-        
+
     except Exception as e:
         logger.error(f"Error in 5-API workflow: {e}")
         import traceback
@@ -779,7 +772,7 @@ def train():
 
                 # Load optimizer prompt if not provided
                 if not optimizer_prompt:
-                    logger.info(f"Loading optimizer prompt with strategy: {optimizer_strategy}")
+                    logger.info(f"Loadingoptimizer prompt with strategy: {optimizer_strategy}")
                     optimizer_prompt = load_optimizer_prompt(optimizer_strategy)
                     logger.info(f"Loaded optimizer prompt: {len(optimizer_prompt)} chars")
 
@@ -1080,7 +1073,7 @@ def get_available_strategies():
     except Exception as e:
         logger.error(f"Error getting optimization strategies: {e}")
         return jsonify({'error': str(e)}), 500
-        
+
 @app.route('/get_optimization_strategies', methods=['GET'])
 def get_optimization_strategies():
     """Get available optimization strategies for the 4-API workflow."""
@@ -1191,12 +1184,12 @@ def two_stage_train():
             max_iterations = int(data.get('max_iterations', 1))
         except (TypeError, ValueError):
             max_iterations = 1
-            
+
         try:
             batch_size = int(data.get('batch_size', 5))
         except (TypeError, ValueError):
             batch_size = 5
-            
+
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         optimizer_type = data.get('optimizer_type', 'reasoning_first')
 
@@ -1396,7 +1389,7 @@ def run_four_step_evaluation_internal(
     """Internal function to run evaluation using the 4-API call workflow."""
     if metrics is None:
         metrics = ['exact_match', 'semantic_similarity', 'llm_evaluation']
-    
+
     try:
         # Load examples based on dataset type
         examples = []
@@ -1412,28 +1405,28 @@ def run_four_step_evaluation_internal(
             except Exception as e:
                 logger.error(f"Could not load NEJM validation examples: {e}")
                 return {'error': f"Could not load NEJM validation examples: {str(e)}"}
-        
+
         if not examples:
             return {'error': f'No examples found for dataset type: {dataset_type}'}
-            
+
         # If batch_size is 0 or greater than available examples, use all examples
         if batch_size <= 0 or batch_size > len(examples):
             batch_size = len(examples)
-            
+
         # Select random subset of examples if batch_size is less than total
         if batch_size < len(examples):
             import random
             examples = random.sample(examples, batch_size)
-        
+
         # Run evaluation for each example
         results = []
         for example in examples:
             user_input = example.get('user_input', '')
             ground_truth = example.get('ground_truth_output', '')
-            
+
             if not user_input:
                 continue
-                
+
             try:
                 # Step 1: Call Primary LLM
                 model_response = get_llm_response(
@@ -1442,30 +1435,30 @@ def run_four_step_evaluation_internal(
                     output_prompt,
                     config.get('gemini', {})
                 )
-                
+
                 # Step 2: Call Evaluator LLM
                 evaluation_context = f"""
                 User Input: {user_input}
-                
+
                 Ground Truth Output: {ground_truth}
-                
+
                 Model Response: {model_response}
                 """
-                
+
                 evaluation_result = get_llm_response(
                     evaluation_system_prompt,
                     evaluation_context,
                     evaluation_output_prompt,
                     config.get('gemini', {})
                 )
-                
+
                 # Parse evaluation result
                 score = 0
                 try:
                     # Try to extract score from the evaluation result (assuming JSON format)
                     import re
                     import json
-                    
+
                     # Clean up the response
                     cleaned_result = re.search(r'\{.*\}', evaluation_result, re.DOTALL)
                     if cleaned_result:
@@ -1479,13 +1472,13 @@ def run_four_step_evaluation_internal(
                             score = float(score_match.group(1))
                 except Exception as e:
                     logger.warning(f"Could not parse evaluation score: {e}")
-                
+
                 # Also calculate standard metrics
                 standard_score = calculate_score(model_response, ground_truth)
-                
+
                 # Use LLM evaluation score if available, otherwise use standard metrics
                 final_score = score if score > 0 else standard_score
-                
+
                 results.append({
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
@@ -1502,19 +1495,19 @@ def run_four_step_evaluation_internal(
                     'evaluation_result': "Error in evaluation",
                     'score': 0
                 })
-        
+
         # Calculate aggregate metrics
         total_score = sum(r.get('score', 0) for r in results)
         perfect_matches = sum(1 for r in results if r.get('score', 0) >= 0.9)
         total = len(results)
-        
+
         metrics_data = {
             "avg_score": total_score / total if total > 0 else 0,
             "perfect_matches": perfect_matches,
             "total_examples": total,
             "perfect_match_percent": (perfect_matches / total * 100) if total > 0 else 0
         }
-        
+
         return {
             'results': results,
             'metrics': metrics_data
@@ -1536,7 +1529,7 @@ Your task is to analyze a system prompt and output prompt pair and assess their 
 
 Provide scores for each category on a scale of 1-10, along with brief explanations.
 Then calculate an overall score between 0.0 and 1.0."""
-        
+
         # Grader output prompt
         grader_output_prompt = """Analyze the provided prompts and provide your assessment in the following JSON format:
 
@@ -1550,7 +1543,7 @@ Then calculate an overall score between 0.0 and 1.0."""
   "overall_score": <score_between_0_and_1>,
   "summary": "<overall_assessment>"
 }"""
-        
+
         # Prepare context for the grader
         grader_context = f"""
 System Prompt:
@@ -1560,7 +1553,7 @@ Output Prompt:
 {output_prompt}
 
 Please evaluate these prompts according to the criteria provided."""
-        
+
         # Call the Grader LLM
         grader_response = get_llm_response(
             grader_system_prompt,
@@ -1568,14 +1561,14 @@ Please evaluate these prompts according to the criteria provided."""
             grader_output_prompt,
             config.get('gemini', {})
         )
-        
+
         # Parse the grader response
         feedback = None
         try:
             # Try to extract JSON from the response
             import re
             import json
-            
+
             # Clean up the response
             cleaned_result = re.search(r'\{.*\}', grader_response, re.DOTALL)
             if cleaned_result:
@@ -1585,7 +1578,7 @@ Please evaluate these prompts according to the criteria provided."""
         except Exception as e:
             logger.warning(f"Could not parse grader feedback: {e}")
             feedback = grader_response
-            
+
         return {
             'feedback': feedback,
             'raw_response': grader_response
@@ -1606,13 +1599,13 @@ def run_four_step_evaluation():
         dataset_type = data.get('dataset_type', 'validation')
         batch_size = data.get('batch_size', 10)
         metrics = data.get('metrics', ['exact_match', 'semantic_similarity', 'llm_evaluation'])
-        
+
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400
-            
+
         if not evaluation_system_prompt or not evaluation_output_prompt:
             return jsonify({'error': 'Evaluation system prompt and output prompt are required'}), 400
-        
+
         # Call the internal evaluation function
         eval_results = run_four_step_evaluation_internal(
             system_prompt,
@@ -1623,10 +1616,10 @@ def run_four_step_evaluation():
             batch_size,
             metrics
         )
-        
+
         if 'error' in eval_results:
             return jsonify({'error': eval_results['error']}), 500
-            
+
         return jsonify(eval_results)
     except Exception as e:
         logger.error(f"Error in four-step evaluation: {e}")
@@ -1640,17 +1633,17 @@ def test_prompt():
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
         user_input = data.get('user_input', '')
-        
+
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400
-            
+
         if not user_input:
             return jsonify({'error': 'User input is required'}), 400
-            
+
         # Track response time
         import time
         start_time = time.time()
-        
+
         # Call the LLM
         response = get_llm_response(
             system_prompt, 
@@ -1658,17 +1651,17 @@ def test_prompt():
             output_prompt,
             config.get('gemini', {})
         )
-        
+
         end_time = time.time()
         response_time = f"{(end_time - start_time):.2f}s"
-        
+
         # Assess quality (simplified)
         quality = "Good"
         if len(response) > 500:
             quality = "High Quality"
         elif len(response) < 50:
             quality = "Low Quality"
-            
+
         return jsonify({
             'response': response,
             'response_time': response_time,
@@ -1685,16 +1678,16 @@ def grade_prompts():
         data = request.json
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
-        
+
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400
-        
+
         # Call the internal grading function
         grading_result = grade_prompts_internal(system_prompt, output_prompt)
-        
+
         if 'error' in grading_result:
             return jsonify({'error': grading_result['error']}), 500
-            
+
         return jsonify(grading_result)
     except Exception as e:
         logger.error(f"Error grading prompts: {e}")
@@ -1712,13 +1705,13 @@ def optimize_from_evaluation():
         dataset_type = data.get('dataset_type', 'validation')
         batch_size = data.get('batch_size', 10)
         metrics = data.get('metrics', ['exact_match', 'semantic_similarity', 'llm_evaluation'])
-        
+
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400
-            
+
         if not evaluation_system_prompt or not evaluation_output_prompt:
             return jsonify({'error': 'Evaluation system prompt and output prompt are required'}), 400
-            
+
         # First run evaluation to get results
         eval_results = run_four_step_evaluation_internal(
             system_prompt,
@@ -1729,28 +1722,28 @@ def optimize_from_evaluation():
             batch_size,
             metrics
         )
-        
+
         if not eval_results or 'error' in eval_results:
             return jsonify({'error': eval_results.get('error', 'Evaluation failed')}), 500
-            
+
         # Create a new experiment or use existing one
         experiment_id = data.get('experiment_id')
         if not experiment_id:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             experiment_id = f"exp_{timestamp}"
-            
+
         # Store the evaluation results
         experiment_tracker.create_experiment(experiment_id)
-        
+
         # Now run the optimizer
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         optimizer_prompt = load_optimizer_prompt(optimizer_strategy)
-        
+
         # Sample a few examples for the optimizer
         import random
         sample_size = min(3, len(eval_results['results']))
         sample_examples = random.sample(eval_results['results'], sample_size)
-        
+
         # Prepare optimizer context
         context = {
             'system_prompt': system_prompt,
@@ -1759,19 +1752,19 @@ def optimize_from_evaluation():
             'sample_examples': sample_examples,
             'optimizer_strategy': optimizer_strategy
         }
-        
+
         # Call the optimizer
         optimized_prompts = optimize_prompts(context, optimizer_prompt, config.get('optimizer', {}))
-        
+
         if not optimized_prompts or 'error' in optimized_prompts:
             return jsonify({'error': optimized_prompts.get('error', 'Optimization failed')}), 500
-            
+
         # Run grader on optimized prompts
         grading_result = grade_prompts_internal(
             optimized_prompts['system_prompt'],
             optimized_prompts['output_prompt']
         )
-        
+
         # Store the optimized prompts and results
         iteration = 1
         experiment_tracker.save_iteration(
@@ -1783,7 +1776,7 @@ def optimize_from_evaluation():
             sample_examples,
             grading_result.get('feedback', {})
         )
-        
+
         return jsonify({
             'system_prompt': optimized_prompts['system_prompt'],
             'output_prompt': optimized_prompts['output_prompt'],
@@ -1795,7 +1788,7 @@ def optimize_from_evaluation():
     except Exception as e:
         logger.error(f"Error in optimize_from_evaluation: {e}")
         return jsonify({'error': str(e)}), 500
-        
+
 @app.route('/save_evaluation', methods=['POST'])
 def save_evaluation():
     """Save evaluation results."""
@@ -1806,17 +1799,17 @@ def save_evaluation():
         evaluation_system_prompt = data.get('evaluation_system_prompt', '')
         evaluation_output_prompt = data.get('evaluation_output_prompt', '')
         metrics = data.get('metrics', {})
-        
+
         if not system_prompt or not output_prompt:
             return jsonify({'error': 'System prompt and output prompt are required'}), 400
-            
+
         # Create a filename based on timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"evaluation_{timestamp}.json"
-        
+
         # Create evaluation directory if it doesn't exist
         os.makedirs('evaluations', exist_ok=True)
-        
+
         # Save the evaluation data
         evaluation_data = {
             'system_prompt': system_prompt,
@@ -1826,10 +1819,10 @@ def save_evaluation():
             'metrics': metrics,
             'timestamp': timestamp
         }
-        
+
         with open(os.path.join('evaluations', filename), 'w') as f:
             json.dump(evaluation_data, f, indent=2)
-            
+
         return jsonify({
             'success': True,
             'filename': filename
@@ -1846,7 +1839,7 @@ def get_experiments_list():
         # Get all experiment folders
         experiment_folders = [f for f in os.listdir('experiments') if os.path.isdir(os.path.join('experiments', f))]
         experiments = []
-        
+
         for folder in experiment_folders:
             # Get experiment details
             experiment_path = os.path.join('experiments', folder, 'experiment.json')
@@ -1868,7 +1861,7 @@ def get_experiments_list():
                         experiments.append(experiment)
                 except Exception as e:
                     logger.error(f"Error loading experiment {folder}: {e}")
-        
+
         return jsonify({'experiments': experiments})
     except Exception as e:
         logger.error(f"Error getting experiments: {e}")
@@ -1880,21 +1873,21 @@ def get_experiment_data(experiment_id):
     try:
         # Get experiment details
         experiment_path = os.path.join('experiments', experiment_id, 'experiment.json')
-        
+
         if not os.path.exists(experiment_path):
             return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
-            
+
         with open(experiment_path, 'r') as f:
             experiment = json.load(f)
             experiment['id'] = experiment_id
-            
+
         # Get iterations
         iterations_path = os.path.join('experiments', experiment_id, 'iterations')
         iterations = []
-        
+
         if os.path.exists(iterations_path):
             iteration_files = sorted([f for f in os.listdir(iterations_path) if f.endswith('.json')])
-            
+
             for file in iteration_files:
                 try:
                     with open(os.path.join(iterations_path, file), 'r') as f:
@@ -1902,42 +1895,42 @@ def get_experiment_data(experiment_id):
                         iterations.append(iteration)
                 except Exception as e:
                     logger.error(f"Error loading iteration {file}: {e}")
-        
+
         experiment['iterations'] = iterations
         return jsonify(experiment)
     except Exception as e:
         logger.error(f"Error getting experiment details: {e}")
         return jsonify({'error': str(e)}), 500
-        
+
 @app.route('/api/prompts')
 def get_prompts():
     """Get prompts for a specific experiment and iteration."""
     try:
         experiment_id = request.args.get('experiment_id')
         iteration = request.args.get('iteration')
-        
+
         if not experiment_id:
             return jsonify({'error': 'Experiment ID is required'}), 400
-            
+
         # Get experiment details
         experiment_path = os.path.join('experiments', experiment_id, 'experiment.json')
-        
+
         if not os.path.exists(experiment_path):
             return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
-            
+
         with open(experiment_path, 'r') as f:
             experiment = json.load(f)
-        
+
         # Get original prompts
         original_prompts = {
             'system_prompt': experiment.get('original_system_prompt', ''),
             'output_prompt': experiment.get('original_output_prompt', '')
         }
-        
+
         # Get optimizer prompt
         optimizer_strategy = experiment.get('optimizer_strategy', 'reasoning_first')
         optimizer_prompt_text = load_optimizer_prompt(optimizer_strategy)
-        
+
         result = {
             'original': original_prompts,
             'optimizer': {
@@ -1945,46 +1938,46 @@ def get_prompts():
                 'strategy': optimizer_strategy
             }
         }
-        
+
         # If iteration is specified and not "original", get the optimized prompts
         if iteration and iteration != "original" and iteration.isdigit():
             iteration_idx = int(iteration)
             iteration_path = os.path.join('experiments', experiment_id, 'iterations', f'iteration_{iteration_idx}.json')
-            
+
             if os.path.exists(iteration_path):
                 with open(iteration_path, 'r') as f:
                     iteration_data = json.load(f)
-                
+
                 # Get the optimized prompts
                 optimized_prompts = {
                     'system_prompt': iteration_data.get('optimized_system_prompt', ''),
                     'output_prompt': iteration_data.get('optimized_output_prompt', '')
                 }
-                
+
                 # Get metrics if available
                 metrics = {}
                 if 'avg_score' in iteration_data and 'initial_avg_score' in experiment:
                     initial_score = experiment['initial_avg_score']
                     current_score = iteration_data['avg_score']
                     improvement = ((current_score - initial_score) / initial_score) * 100 if initial_score > 0 else 0
-                    
+
                     # Use actual grading metrics if available, otherwise use placeholders
                     metrics = {
                         'improvement_percentage': round(improvement, 1),
                         'clarity_score': iteration_data.get('grading', {}).get('clarity', 8.5),
                         'conciseness_score': iteration_data.get('grading', {}).get('conciseness', 7.9),
                         'effectiveness_score': iteration_data.get('grading', {}).get('effectiveness', 9.2),
-                        
+
                         # Add training and validation accuracy metrics
                         'training_accuracy': iteration_data.get('training_accuracy', 0.82),
                         'validation_accuracy': iteration_data.get('validation_accuracy', 0.78),
                         'original_accuracy': initial_score,
                         'final_accuracy': current_score
                     }
-                
+
                 result['final'] = optimized_prompts
                 result['metrics'] = metrics
-        
+
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error getting prompts: {e}")
@@ -1998,7 +1991,7 @@ def experiment_tracking():
     Show experiment tracking visualization
     """
     return render_template('experiment_tracking.html')
-    
+
 @app.route('/advanced_optimization')
 def advanced_optimization():
     """
@@ -2013,24 +2006,24 @@ def experiment_metrics_data():
     """
     # Get all experiments
     experiments_dir = "experiments"
-    
+
     if not os.path.exists(experiments_dir):
         return jsonify({"experiments": []})
-    
+
     experiments = []
     for experiment_id in os.listdir(experiments_dir):
         experiment_dir = os.path.join(experiments_dir, experiment_id)
-        
+
         # Skip if not a directory
         if not os.path.isdir(experiment_dir):
             continue
-        
+
         # Get metadata
         created_at = datetime.fromtimestamp(os.path.getctime(experiment_dir)).isoformat()
-        
+
         # Find metrics files
         metrics_data = []
-        
+
         # Check for metrics files
         for f in os.listdir(experiment_dir):
             if f.startswith('metrics_') and f.endswith('.json'):
@@ -2041,7 +2034,7 @@ def experiment_metrics_data():
                         "iteration": iteration,
                         "metrics": metrics
                     })
-        
+
         # Skip if no metrics
         if not metrics_data:
             # Check newer directory structure
@@ -2055,16 +2048,21 @@ def experiment_metrics_data():
                     })
             else:
                 continue
-        
+
         experiments.append({
             "id": experiment_id,
             "created_at": created_at,
             "metrics": metrics_data
         })
-    
+
     # Sort by created_at
     experiments.sort(key=lambda x: x["created_at"])
-    
+
     return jsonify({
         "experiments": experiments
     })
+
+@app.route('/cost_dashboard')
+def cost_dashboard():
+    """Render the cost tracking dashboard."""
+    return render_template('cost_dashboard.html')
