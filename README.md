@@ -1,3 +1,95 @@
+
+# Prompt Optimization Platform
+
+A machine learning platform for iteratively refining LLM prompts through a 5-step ML-driven workflow.
+
+## Architecture Overview
+
+```
+                   ┌───────────────────────────┐
+                   │    FastAPI Application    │
+                   │    (Main Entry Point)     │
+                   └───────────┬───────────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+    ┌───────────▼────────────┐  ┌─────────────▼─────────────┐
+    │     Flask Dashboard    │  │      Prefect Flows        │
+    │  (Monitoring & Admin)  │  │  (Workflow Orchestration) │
+    └───────────┬────────────┘  └─────────────┬─────────────┘
+                │                              │
+                └──────────────┬──────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │   Shared Services   │
+                    │ (Auth, DB, Caching) │
+                    └─────────────────────┘
+```
+
+## Features
+
+- **5-Step ML-Driven Workflow**: A structured approach to prompt optimization
+- **Prefect Flow Integration**: Orchestrated workflow management
+- **FlaskUI Dashboard**: Monitoring and visualization for experiments and costs
+- **FastAPI Backend**: High-performance REST API
+- **Authentication**: API key validation for secure access
+- **Cost Tracking**: Monitor token usage and associated costs
+- **Caching**: Reduce API costs with response caching
+- **Unified Logging**: Structured JSON logs across all components
+
+## Getting Started
+
+1. Install dependencies:
+```
+pip install -r requirements.txt
+```
+
+2. Start the application:
+```
+uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload
+```
+
+3. Access the application:
+   - Dashboard: http://localhost:5000/dashboard
+   - API Documentation: http://localhost:5000/api/docs
+
+## Dashboard
+
+The Flask dashboard provides visualization and monitoring for:
+
+- Experiment tracking
+- Cost monitoring
+- Workflow status
+- System health
+
+## API Documentation
+
+The API documentation is available at `/api/docs` and includes endpoints for:
+
+- Prompt management
+- Optimization workflows
+- Experiment tracking
+- Dataset management
+- Cost reporting
+
+## Configuration
+
+Configure the application through environment variables or a `.env` file:
+
+- `ENVIRONMENT`: The environment (development, production)
+- `DEBUG`: Enable debug mode (1 or 0)
+- `API_KEY`: API key for authentication
+- `VERTEX_PROJECT_ID`: Google Cloud Vertex AI project ID
+- `PRIMARY_MODEL`: Primary LLM model name
+- `OPTIMIZER_MODEL`: Optimizer LLM model name
+- `PREFECT_ENABLED`: Enable Prefect integration (1 or 0)
+- `PREFECT_API_URL`: Prefect API URL
+- `PREFECT_API_KEY`: Prefect API key
+
+## License
+
+[MIT License](LICENSE)
+
 # MLprompt - Prompt Engineering ML Platform
 
 ## Overview

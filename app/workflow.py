@@ -300,6 +300,47 @@ class PromptOptimizationWorkflow:
 
     def _handle_workflow_error(self, error, phase, iteration, experiment_id, context=None):
         """
+        Handle workflow errors during execution
+        
+        Args:
+            error (Exception): The error that occurred
+            phase (str): The phase where the error occurred
+            iteration (int): The current iteration
+            experiment_id (str): The experiment ID
+            context (dict, optional): Additional context
+        """
+        logger.error(f"Error in {phase} phase (iteration {iteration}): {error}")
+        
+        # Log detailed error information
+        logger.error(f"Error details: {traceback.format_exc()}")
+        
+        # Update experiment with error status
+        self.experiment_tracker.update_experiment_status(
+            experiment_id=experiment_id,
+            status="failed",
+            metadata={
+                "error": str(error),
+                "phase": phase,
+                "iteration": iteration,
+                "timestamp": datetime.now().isoformat()
+            }
+        )
+        
+        # Save error information to experiment directory
+        error_file = os.path.join(
+            self.experiment_tracker.get_experiment_dir(experiment_id),
+            f"error_{phase}_{iteration}.log"
+        )
+        
+        with open(error_file, 'w') as f:
+            f.write(f"Error in {phase} phase (iteration {iteration}): {error}\n")
+            f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+            f.write(f"Traceback:\n{traceback.format_exc()}")
+            
+            if context:
+                f.write("\nContext:\n")
+                f.write(json.dumps(context, indent=2))
+        """
         Handle errors during workflow execution with robust recovery.
         
         Args:

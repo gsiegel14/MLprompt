@@ -191,3 +191,216 @@ def log_model_call(logger):
 
 # Initialize logging when module is imported
 configure_logging()
+"""
+Advanced logging configuration with structured logs and performance tracking.
+"""
+
+import os
+import logging
+import json
+import time
+import traceback
+import uuid
+from datetime import datetime
+from typing import Dict, Any, Optional
+import threading
+from functools import wraps
+
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
+
+# Initialize request context using thread-local storage
+request_context = threading.local()
+
+class StructuredLogFormatter(logging.Formatter):
+    """
+    Custom formatter for structured JSON logs
+    """
+    def format(self, record):
+        log_data = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "line": record.lineno,
+        }
+        
+        # Add exception info if available
+        if record.exc_info:
+            log_data["exception"] = {
+                "type": record.exc_info[0].__name__,
+                "message": str(record.exc_info[1]),
+                "traceback": traceback.format_exception(*record.exc_info)
+            }
+        
+        # Add request context if available
+        if hasattr(request_context, "request_id"):
+            log_data["request_id"] = request_context.request_id
+            
+        if hasattr(request_context, "user_id"):
+            log_data["user_id"] = request_context.user_id
+            
+        if hasattr(request_context, "extra") and isinstance(request_context.extra, dict):
+            log_data.update(request_context.extra)
+        
+        return json.dumps(log_data)
+
+def setup_unified_logging():
+    """
+    Configure unified logging across all components
+    """
+    # Create a JSON formatter
+    json_formatter = StructuredLogFormatter()
+    
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(json_formatter)
+    
+    # Create file handler for all logs
+    file_handler = logging.FileHandler('logs/application.log')
+    file_handler.setFormatter(json_formatter)
+    
+    # Create file handler for errors only
+    error_handler = logging.FileHandler('logs/errors.log')
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(json_formatter)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Add our handlers
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(error_handler)
+    
+    # Set specific log levels for different components
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("gunicorn").setLevel(logging.WARNING)
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    
+    # Log initialization
+    logging.getLogger(__name__).info("Unified logging configured")
+
+def set_request_context(request_id: Optional[str] = None, 
+                        user_id: Optional[str] = None, 
+                        **kwargs):
+    """
+    Set context for the current request
+    
+    Args:
+        request_id: Unique ID for the request
+        user_id: User ID associated with the request
+        **kwargs: Additional context values
+    """
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+    
+    request_context.request_id = request_id
+    
+    if user_id:
+        request_context.user_id = user_id
+    
+    # Store extra context
+    if not hasattr(request_context, "extra"):
+        request_context.extra = {}
+    
+    request_context.extra.update(kwargs)
+
+def clear_request_context():
+    """
+    Clear the current request context
+    """
+    if hasattr(request_context, "request_id"):
+        delattr(request_context, "request_id")
+    
+    if hasattr(request_context, "user_id"):
+        delattr(request_context, "user_id")
+    
+    if hasattr(request_context, "extra"):
+        delattr(request_context, "extra")
+
+def log_execution_time(function_name=None):
+    """
+    Decorator to log execution time of functions
+    
+    Args:
+        function_name: Optional name to use in logs
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            name = function_name or func.__name__
+            logger = logging.getLogger(func.__module__)
+            
+            start_time = time.time()
+            
+            try:
+                result = func(*args, **kwargs)
+                execution_time = time.time() - start_time
+                logger.info(f"Function {name} executed in {execution_time:.4f}s")
+                
+                # Add execution time to request context if it exists
+                if hasattr(request_context, "extra"):
+                    if "execution_times" not in request_context.extra:
+                        request_context.extra["execution_times"] = {}
+                    
+                    request_context.extra["execution_times"][name] = execution_time
+                
+                return result
+            except Exception as e:
+                execution_time = time.time() - start_time
+                logger.error(f"Function {name} failed after {execution_time:.4f}s: {str(e)}")
+                raise
+                
+        return wrapper
+    return decorator
+
+def log_api_call(logger=None):
+    """
+    Decorator to log API calls with request and response details
+    
+    Args:
+        logger: Optional logger to use
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Get or create logger
+            log = logger or logging.getLogger(func.__module__)
+            
+            # Generate request ID
+            request_id = str(uuid.uuid4())
+            
+            # Set request context
+            set_request_context(request_id=request_id, endpoint=func.__name__)
+            
+            try:
+                # Log request
+                log.info(f"API call started: {func.__name__}")
+                
+                # Execute the endpoint
+                start_time = time.time()
+                response = await func(*args, **kwargs)
+                execution_time = time.time() - start_time
+                
+                # Log successful response
+                log.info(f"API call completed: {func.__name__} in {execution_time:.4f}s")
+                
+                return response
+            except Exception as e:
+                # Log error response
+                log.error(f"API call failed: {func.__name__} - {str(e)}")
+                # Re-raise the exception
+                raise
+            finally:
+                # Clear request context
+                clear_request_context()
+                
+        return wrapper
+    return decorator
