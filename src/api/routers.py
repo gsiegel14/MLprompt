@@ -60,3 +60,63 @@ async def api_root():
             "health": "/api/v1/health"
         }
     )
+"""
+Main API router that combines all endpoint modules
+"""
+from fastapi import APIRouter, Depends, HTTPException
+from src.app.auth import get_api_key
+
+from src.api.endpoints import (
+    prompts,
+    optimization,
+    experiments,
+    datasets,
+    inference,
+    cost_tracking
+)
+
+# Create main API router
+api_router = APIRouter()
+
+# Include each module's router with appropriate prefix
+api_router.include_router(
+    prompts.router,
+    prefix="/prompts",
+    tags=["Prompts"],
+    dependencies=[Depends(get_api_key)]
+)
+
+api_router.include_router(
+    optimization.router, 
+    prefix="/optimize", 
+    tags=["Optimization"],
+    dependencies=[Depends(get_api_key)]
+)
+
+api_router.include_router(
+    experiments.router,
+    prefix="/experiments",
+    tags=["Experiments"],
+    dependencies=[Depends(get_api_key)]
+)
+
+api_router.include_router(
+    datasets.router,
+    prefix="/datasets",
+    tags=["Datasets"],
+    dependencies=[Depends(get_api_key)]
+)
+
+api_router.include_router(
+    inference.router,
+    prefix="/inference",
+    tags=["Inference"],
+    dependencies=[Depends(get_api_key)]
+)
+
+api_router.include_router(
+    cost_tracking.router,
+    prefix="/costs",
+    tags=["Costs"],
+    dependencies=[Depends(get_api_key)]
+)

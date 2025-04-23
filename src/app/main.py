@@ -61,3 +61,30 @@ async def shutdown_event():
     logger.info("Shutting down Prompt Optimization Platform API")
     
     # Clean up any resources
+"""
+Application entry point for the Prompt Optimization Platform
+"""
+import os
+import logging
+from pathlib import Path
+from src.app.factory import create_app
+from src.app.config import settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if not settings.DEBUG else logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Create the application
+app = create_app()
+
+# Make the app directly runnable
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(
+        "src.app.main:app",
+        host="0.0.0.0",
+        port=5000,
+        reload=settings.DEBUG
+    )

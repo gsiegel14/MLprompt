@@ -97,6 +97,19 @@ args = "python test_quick.py"
 task = "shell.exec"
 args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 
+[[workflows.workflow]]
+name = "Start FastAPI and Prefect"
+author = 41794870
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m src.app.main"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.start_prefect_agent"
+
 [[ports]]
 localPort = 5000
 externalPort = 80

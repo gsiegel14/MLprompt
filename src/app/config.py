@@ -58,3 +58,46 @@ class Settings(BaseSettings):
         env_file_encoding = 'utf-8'
 
 settings = Settings()
+"""
+Configuration settings for the application
+"""
+import os
+from pydantic_settings import BaseSettings
+from typing import Optional
+
+class Settings(BaseSettings):
+    """Application settings"""
+    
+    # Environment and debugging
+    ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
+    DEBUG: bool = os.environ.get("DEBUG", "1") == "1"
+    
+    # API configuration
+    API_KEY: str = os.environ.get("API_KEY", "dev_key_change_me")
+    ENFORCE_API_KEY: bool = os.environ.get("ENFORCE_API_KEY", "0") == "1"
+    
+    # Prefect configuration
+    PREFECT_ENABLED: bool = os.environ.get("PREFECT_ENABLED", "0") == "1"
+    PREFECT_API_URL: Optional[str] = os.environ.get("PREFECT_API_URL")
+    PREFECT_API_KEY: Optional[str] = os.environ.get("PREFECT_API_KEY")
+    
+    # Vertex AI configuration
+    VERTEX_PROJECT_ID: str = os.environ.get("VERTEX_PROJECT_ID", "")
+    VERTEX_LOCATION: str = os.environ.get("VERTEX_LOCATION", "us-central1")
+    
+    # LLM configuration
+    PRIMARY_MODEL: str = os.environ.get("PRIMARY_MODEL", "gemini-2.5-flash")
+    OPTIMIZER_MODEL: str = os.environ.get("OPTIMIZER_MODEL", "gemini-2.5-pro")
+    LLM_CACHE_ENABLED: bool = os.environ.get("LLM_CACHE_ENABLED", "1") == "1"
+    
+    # Application paths
+    DATA_DIR: str = os.environ.get("DATA_DIR", "data")
+    PROMPT_DIR: str = os.environ.get("PROMPT_DIR", "prompts")
+    EXPERIMENT_DIR: str = os.environ.get("EXPERIMENT_DIR", "experiments")
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+# Create settings instance
+settings = Settings()

@@ -353,9 +353,6 @@ class PromptOptimizationWorkflow:
                 "recoverable": False,
                 "recovery_log": recovery_log_path
             }
-
-            
-            # Save examples
             self.experiment_tracker.save_examples(experiment_id, examples_for_optimizer)
             
             # Save validation results

@@ -102,3 +102,38 @@ async def protected_route(current_user: UserResponse = Depends(get_current_activ
 @router.get("/admin", dependencies=[Depends(get_current_admin_user)])
 async def admin_route(current_user: UserResponse = Depends(get_current_admin_user)):
     return {"message": "Admin route accessed!"}
+"""
+Authentication utilities for the API
+"""
+import os
+from fastapi import Security, HTTPException, status, Depends
+from fastapi.security.api_key import APIKeyHeader
+from src.app.config import settings
+
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+def get_api_key(api_key_header: str = Security(api_key_header)):
+    """
+    Validate API key from request header
+    
+    Args:
+        api_key_header: The API key from the request header
+        
+    Returns:
+        The validated API key
+        
+    Raises:
+        HTTPException: If API key is invalid
+    """
+    # In development mode, allow no API key
+    if settings.ENVIRONMENT == "development" and not settings.ENFORCE_API_KEY:
+        return "development_key"
+    
+    if api_key_header == settings.API_KEY:
+        return api_key_header
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid API Key"
+    )
