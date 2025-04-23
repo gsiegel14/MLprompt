@@ -1,0 +1,41 @@
+
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="ml-settings-metrics">
+  <h1>Evaluation Metrics</h1>
+  
+  <a href="{{ url_for('ml_settings.create_metric_configuration') }}" class="btn btn-primary">Create New Configuration</a>
+  
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Metrics</th>
+        <th>Target Threshold</th>
+        <th>Default</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for config in configurations %}
+      <tr>
+        <td>{{ config.name }}</td>
+        <td>
+          {% for metric in config.metrics %}
+            <span class="badge bg-info">{{ metric }}</span>
+          {% endfor %}
+        </td>
+        <td>{{ config.target_threshold }}</td>
+        <td>{% if config.is_default %}✓{% endif %}</td>
+        <td>
+          <a href="{{ url_for('ml_settings.edit_metric_configuration', config_id=config.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+          <a href="{{ url_for('ml_settings.delete_metric_configuration', config_id=config.id) }}" class="btn btn-sm btn-danger"
+             onclick="return confirm('Are you sure you want to delete this configuration?')">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

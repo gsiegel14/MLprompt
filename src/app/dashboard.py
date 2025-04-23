@@ -523,3 +523,32 @@ def create_cost_chart(cost_data):
     
     # Convert to JSON for embedding in template
     return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+from flask import Flask, render_template
+from src.app.dashboard.ml_settings import ml_settings_bp
+import logging
+
+logger = logging.getLogger(__name__)
+
+def create_flask_app():
+    """Create Flask app for admin dashboard"""
+    app = Flask(__name__, template_folder='templates', static_folder='static')
+    app.config['SECRET_KEY'] = 'your-secret-key'  # Should use environment variables in production
+    
+    # Register blueprints
+    app.register_blueprint(ml_settings_bp)
+    
+    # Main dashboard route
+    @app.route('/')
+    def index():
+        return render_template('dashboard/index.html', title="Prompt Optimization Dashboard")
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('dashboard/error.html', error=e, title="Not Found"), 404
+    
+    @app.errorhandler(500)
+    def server_error(e):
+        return render_template('dashboard/error.html', error=e, title="Server Error"), 500
+    
+    return app

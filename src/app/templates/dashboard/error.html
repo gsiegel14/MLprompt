@@ -1,0 +1,13 @@
+
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="error-page text-center">
+    <div class="error-container p-5 bg-light rounded">
+        <h1 class="display-1 text-danger">{{ error.code }}</h1>
+        <h2>{{ title|default('Error') }}</h2>
+        <p class="lead">{{ error.description }}</p>
+        <a href="/dashboard" class="btn btn-primary mt-3">Return to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

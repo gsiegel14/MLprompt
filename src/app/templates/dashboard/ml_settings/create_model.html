@@ -1,0 +1,84 @@
+
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="ml-settings-create-model">
+  <h1>Create Model Configuration</h1>
+  
+  <form method="POST" action="{{ url_for('ml_settings.create_model_configuration') }}">
+    <div class="form-group">
+      <label for="name">Configuration Name</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="primary_model">Primary LLM Model</label>
+      <select class="form-control" id="primary_model" name="primary_model" required>
+        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+        <option value="claude-3-opus">Claude 3 Opus</option>
+        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+        <option value="claude-3-haiku">Claude 3 Haiku</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="optimizer_model">Optimizer LLM Model</label>
+      <select class="form-control" id="optimizer_model" name="optimizer_model" required>
+        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+        <option value="claude-3-opus">Claude 3 Opus</option>
+        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+      </select>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="temperature">Temperature</label>
+          <input type="number" class="form-control" id="temperature" name="temperature" value="0.0" min="0.0" max="1.0" step="0.1">
+          <small class="form-text text-muted">Controls randomness: 0 = deterministic, 1 = creative</small>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="max_tokens">Max Tokens</label>
+          <input type="number" class="form-control" id="max_tokens" name="max_tokens" value="1024" min="1">
+          <small class="form-text text-muted">Maximum number of tokens to generate</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="top_p">Top P</label>
+          <input type="number" class="form-control" id="top_p" name="top_p" value="1.0" min="0.0" max="1.0" step="0.1">
+          <small class="form-text text-muted">Token selection threshold (nucleus sampling)</small>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="top_k">Top K</label>
+          <input type="number" class="form-control" id="top_k" name="top_k" value="40" min="1">
+          <small class="form-text text-muted">Number of top tokens to consider</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-check mt-3">
+      <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+      <label class="form-check-label" for="is_default">Set as default configuration</label>
+    </div>
+    
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">Create Configuration</button>
+      <a href="{{ url_for('ml_settings.model_configurations') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -180,3 +180,65 @@
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="dashboard-home">
+    <div class="jumbotron mb-4 p-4 bg-light rounded">
+        <h1 class="display-4">Prompt Optimization Dashboard</h1>
+        <p class="lead">Monitor, configure, and optimize your machine learning prompt platform</p>
+        <hr class="my-4">
+        <p>Use the tools below to manage ML settings, view experiments, and track costs</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs me-2"></i> Machine Learning Settings</h5>
+                </div>
+                <div class="card-body">
+                    <p>Configure ML model parameters, evaluation metrics, and meta-learning systems for optimized prompt engineering.</p>
+                    <a href="{{ url_for('ml_settings.index') }}" class="btn btn-primary">ML Settings</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-flask me-2"></i> Experiments</h5>
+                </div>
+                <div class="card-body">
+                    <p>View and analyze your prompt optimization experiments with detailed metrics and visualization tools.</p>
+                    <a href="/dashboard/experiments" class="btn btn-primary">View Experiments</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-dollar-sign me-2"></i> Cost Tracking</h5>
+                </div>
+                <div class="card-body">
+                    <p>Monitor token usage, API costs, and resource utilization for your prompt optimization platform.</p>
+                    <a href="/dashboard/costs" class="btn btn-primary">View Costs</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-terminal me-2"></i> API Documentation</h5>
+                </div>
+                <div class="card-body">
+                    <p>Explore the API endpoints for integrating prompt optimization into your applications.</p>
+                    <a href="/api/v1/docs" class="btn btn-primary">API Docs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

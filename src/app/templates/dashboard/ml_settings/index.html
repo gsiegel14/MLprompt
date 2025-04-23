@@ -1,0 +1,34 @@
+
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="ml-settings-dashboard">
+  <h1>Machine Learning Settings</h1>
+  
+  <div class="card-grid">
+    <div class="card">
+      <h2>Model Configurations</h2>
+      <p>Configure LLM models, parameters, and inference settings</p>
+      <a href="{{ url_for('ml_settings.model_configurations') }}" class="btn btn-primary">Manage Models</a>
+    </div>
+    
+    <div class="card">
+      <h2>Evaluation Metrics</h2>
+      <p>Configure metrics, weights, and evaluation thresholds</p>
+      <a href="{{ url_for('ml_settings.metric_configurations') }}" class="btn btn-primary">Manage Metrics</a>
+    </div>
+    
+    <div class="card">
+      <h2>Meta-Learning</h2>
+      <p>Configure and train meta-models for prompt quality prediction</p>
+      <a href="{{ url_for('ml_settings.meta_learning_configurations') }}" class="btn btn-primary">Manage Meta-Learning</a>
+    </div>
+    
+    <div class="card">
+      <h2>Experiment Visualization</h2>
+      <p>Visualize experiment results and comparative performance</p>
+      <a href="{{ url_for('ml_settings.experiment_visualization') }}" class="btn btn-primary">View Experiments</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

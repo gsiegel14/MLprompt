@@ -1,0 +1,191 @@
+
+{% extends "dashboard/base.html" %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="ml-settings-visualization">
+  <h1>Experiment Visualization</h1>
+  
+  <div class="filter-bar">
+    <form id="filter-form">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="experiment-select">Experiment:</label>
+            <select id="experiment-select" name="experiment_id" class="form-control">
+              <option value="">Select an experiment</option>
+              {% for experiment in experiments %}
+              <option value="{{ experiment.id }}">{{ experiment.name or experiment.id }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="metric-select">Metric:</label>
+            <select id="metric-select" name="metric" class="form-control">
+              <option value="avg_score">Average Score</option>
+              <option value="exact_match_score">Exact Match</option>
+              <option value="perfect_match_percent">Perfect Match %</option>
+              <option value="bleu_score">BLEU</option>
+              <option value="rouge_l">ROUGE-L</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <div class="chart-container mb-4">
+    <canvas id="metrics-chart"></canvas>
+  </div>
+  
+  <div class="prompt-comparison">
+    <h2>Prompt Evolution</h2>
+    <div id="prompt-versions"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filterForm = document.getElementById('filter-form');
+  const metricsChart = document.getElementById('metrics-chart');
+  const promptVersions = document.getElementById('prompt-versions');
+  
+  let chart = null;
+  
+  filterForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const experimentId = document.getElementById('experiment-select').value;
+    const metric = document.getElementById('metric-select').value;
+    
+    if (!experimentId) return;
+    
+    // Fetch experiment metrics
+    fetch(`/api/v1/experiments/${experimentId}/metrics?metric=${metric}`)
+      .then(response => response.json())
+      .then(data => {
+        renderMetricsChart(data, metric);
+        renderPromptVersions(data.prompt_versions);
+      })
+      .catch(error => {
+        console.error('Error fetching experiment data:', error);
+      });
+  });
+  
+  function renderMetricsChart(data, metricName) {
+    const ctx = metricsChart.getContext('2d');
+    
+    // Format data for Chart.js
+    const labels = data.metrics_history.map((_, index) => `Iteration ${index}`);
+    const trainData = data.metrics_history.map(m => m[metricName] * 100); // Convert to percentage
+    
+    if (chart) {
+      chart.destroy();
+    }
+    
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: `${metricName} (%)`,
+            data: trainData,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: {
+              display: true,
+              text: 'Percentage (%)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Iteration'
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  function renderPromptVersions(versions) {
+    promptVersions.innerHTML = '';
+    
+    if (!versions || versions.length === 0) {
+      promptVersions.innerHTML = '<p>No prompt versions available for this experiment.</p>';
+      return;
+    }
+    
+    // Create an accordion for prompt versions
+    const accordion = document.createElement('div');
+    accordion.className = 'accordion';
+    
+    versions.forEach((version, index) => {
+      const panel = document.createElement('div');
+      panel.className = 'accordion-panel';
+      
+      const header = document.createElement('div');
+      header.className = 'accordion-header';
+      header.textContent = `Version ${index + 1} - Iteration ${version.iteration}`;
+      
+      const content = document.createElement('div');
+      content.className = 'accordion-content';
+      
+      // Create diffable view
+      const diffView = document.createElement('div');
+      diffView.className = 'diff-view';
+      
+      const systemPrompt = document.createElement('div');
+      systemPrompt.className = 'system-prompt';
+      systemPrompt.innerHTML = `<h4>System Prompt:</h4><pre>${version.system_prompt}</pre>`;
+      
+      const outputPrompt = document.createElement('div');
+      outputPrompt.className = 'output-prompt';
+      outputPrompt.innerHTML = `<h4>Output Prompt:</h4><pre>${version.output_prompt}</pre>`;
+      
+      diffView.appendChild(systemPrompt);
+      diffView.appendChild(outputPrompt);
+      content.appendChild(diffView);
+      
+      panel.appendChild(header);
+      panel.appendChild(content);
+      accordion.appendChild(panel);
+      
+      // Toggle accordion
+      header.addEventListener('click', function() {
+        this.classList.toggle('active');
+        const content = this.nextElementSibling;
+        if (content.style.maxHeight) {
+          content.style.maxHeight = null;
+        } else {
+          content.style.maxHeight = content.scrollHeight + 'px';
+        }
+      });
+    });
+    
+    promptVersions.appendChild(accordion);
+  }
+});
+</script>
+{% endblock %}

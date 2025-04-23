@@ -1,4 +1,3 @@
-
 """
 FastAPI app entry point
 """
@@ -47,11 +46,11 @@ app.include_router(api_router, prefix="/api/v1")
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"Starting Prompt Optimization Platform API v{app.version}")
-    
+
     # Check if Vertex AI project is configured
     if not settings.VERTEX_PROJECT_ID:
         logger.warning("VERTEX_PROJECT_ID not set - some features may not work properly")
-    
+
     # Initialize any required services
     # This could include setting up database connections, etc.
 
@@ -59,7 +58,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Shutting down Prompt Optimization Platform API")
-    
+
     # Clean up any resources
 """
 Application entry point for the Prompt Optimization Platform

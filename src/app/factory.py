@@ -129,3 +129,53 @@ def create_app() -> FastAPI:
             logger.error(f"Error during shutdown: {str(e)}")
     
     return fast_app
+from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+from src.api.routers import api_router
+from src.app.dashboard import create_flask_app
+from src.app.config import settings
+
+logger = logging.getLogger(__name__)
+
+def create_app() -> FastAPI:
+    """Application factory for creating the FastAPI app with Flask dashboard integration"""
+    
+    # Initialize FastAPI
+    app = FastAPI(
+        title="Prompt Optimization Platform",
+        description="ML-driven prompt optimization with Vertex AI and Prefect",
+        version="1.0.0"
+    )
+    
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # In production, specify origins
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Register API routes
+    app.include_router(api_router, prefix="/api/v1")
+    
+    # Create Flask dashboard app
+    flask_app = create_flask_app()
+    
+    # Mount Flask app at /dashboard
+    app.mount("/dashboard", WSGIMiddleware(flask_app))
+    
+    # Health check endpoint
+    @app.get("/health", tags=["Health"])
+    async def health_check():
+        return {"status": "ok"}
+    
+    # Root redirect to dashboard
+    @app.get("/", tags=["Root"])
+    async def root():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/dashboard")
+    
+    return app
