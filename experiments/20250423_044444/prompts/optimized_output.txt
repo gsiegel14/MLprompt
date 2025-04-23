@@ -1,0 +1,1 @@
+List the top 3 most likely diagnoses in order of probability, with brief explanations.

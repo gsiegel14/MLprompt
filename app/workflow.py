@@ -292,13 +292,13 @@ class PromptOptimizationWorkflow:
             }
             
             # Save prompts and results
-            self.experiment_tracker.save_prompt(experiment_id, 'system', 'original', system_prompt)
-            self.experiment_tracker.save_prompt(experiment_id, 'output', 'original', output_prompt)
-            self.experiment_tracker.save_prompt(experiment_id, 'system', 'optimized', optimized_system_prompt)
-            self.experiment_tracker.save_prompt(experiment_id, 'output', 'optimized', optimized_output_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'original_system', system_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'original_output', output_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'optimized_system', optimized_system_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'optimized_output', optimized_output_prompt)
             
             # Save examples
-            self.experiment_tracker.save_examples(experiment_id, 1, examples_for_optimizer)
+            self.experiment_tracker.save_examples(experiment_id, examples_for_optimizer)
             
             # Save validation results
             validation_examples = []
