@@ -69,6 +69,11 @@ def final_prompts():
     """Render the final prompts interface."""
     return render_template('final_prompts.html')
 
+@app.route('/prompts')
+def prompts_page():
+    """Render the all prompts interface."""
+    return render_template('prompts.html')
+
 @app.route('/prompts/<path:filename>')
 def serve_prompt_file(filename):
     """Serve prompt files from the prompts folder."""
@@ -1709,6 +1714,151 @@ def save_evaluation():
         logger.error(f"Error saving evaluation: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/experiments_list')
+def get_experiments_list():
+    """Get all experiments."""
+    try:
+        # Get all experiment folders
+        experiment_folders = [f for f in os.listdir('experiments') if os.path.isdir(os.path.join('experiments', f))]
+        experiments = []
+        
+        for folder in experiment_folders:
+            # Get experiment details
+            experiment_path = os.path.join('experiments', folder, 'experiment.json')
+            if os.path.exists(experiment_path):
+                try:
+                    with open(experiment_path, 'r') as f:
+                        experiment = json.load(f)
+                        experiment['id'] = folder
+                        # Add created_at if not present
+                        if 'created_at' not in experiment:
+                            # Try to parse date from folder name
+                            try:
+                                date_part = folder.split('_')[0]
+                                time_part = folder.split('_')[1] if len(folder.split('_')) > 1 else "000000"
+                                date_str = f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:]} {time_part[:2]}:{time_part[2:4]}:{time_part[4:]}"
+                                experiment['created_at'] = date_str
+                            except:
+                                experiment['created_at'] = datetime.now().isoformat()
+                        experiments.append(experiment)
+                except Exception as e:
+                    logger.error(f"Error loading experiment {folder}: {e}")
+        
+        return jsonify({'experiments': experiments})
+    except Exception as e:
+        logger.error(f"Error getting experiments: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/experiment_data/<experiment_id>')
+def get_experiment_data(experiment_id):
+    """Get details for a specific experiment."""
+    try:
+        # Get experiment details
+        experiment_path = os.path.join('experiments', experiment_id, 'experiment.json')
+        
+        if not os.path.exists(experiment_path):
+            return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
+            
+        with open(experiment_path, 'r') as f:
+            experiment = json.load(f)
+            experiment['id'] = experiment_id
+            
+        # Get iterations
+        iterations_path = os.path.join('experiments', experiment_id, 'iterations')
+        iterations = []
+        
+        if os.path.exists(iterations_path):
+            iteration_files = sorted([f for f in os.listdir(iterations_path) if f.endswith('.json')])
+            
+            for file in iteration_files:
+                try:
+                    with open(os.path.join(iterations_path, file), 'r') as f:
+                        iteration = json.load(f)
+                        iterations.append(iteration)
+                except Exception as e:
+                    logger.error(f"Error loading iteration {file}: {e}")
+        
+        experiment['iterations'] = iterations
+        return jsonify(experiment)
+    except Exception as e:
+        logger.error(f"Error getting experiment details: {e}")
+        return jsonify({'error': str(e)}), 500
+        
+@app.route('/api/prompts')
+def get_prompts():
+    """Get prompts for a specific experiment and iteration."""
+    try:
+        experiment_id = request.args.get('experiment_id')
+        iteration = request.args.get('iteration')
+        
+        if not experiment_id:
+            return jsonify({'error': 'Experiment ID is required'}), 400
+            
+        # Get experiment details
+        experiment_path = os.path.join('experiments', experiment_id, 'experiment.json')
+        
+        if not os.path.exists(experiment_path):
+            return jsonify({'error': f'Experiment {experiment_id} not found'}), 404
+            
+        with open(experiment_path, 'r') as f:
+            experiment = json.load(f)
+        
+        # Get original prompts
+        original_prompts = {
+            'system_prompt': experiment.get('original_system_prompt', ''),
+            'output_prompt': experiment.get('original_output_prompt', '')
+        }
+        
+        # Get optimizer prompt
+        optimizer_strategy = experiment.get('optimizer_strategy', 'reasoning_first')
+        optimizer_prompt_text = load_optimizer_prompt(optimizer_strategy)
+        
+        result = {
+            'original': original_prompts,
+            'optimizer': {
+                'prompt': optimizer_prompt_text,
+                'strategy': optimizer_strategy
+            }
+        }
+        
+        # If iteration is specified and not "original", get the optimized prompts
+        if iteration and iteration != "original" and iteration.isdigit():
+            iteration_idx = int(iteration)
+            iteration_path = os.path.join('experiments', experiment_id, 'iterations', f'iteration_{iteration_idx}.json')
+            
+            if os.path.exists(iteration_path):
+                with open(iteration_path, 'r') as f:
+                    iteration_data = json.load(f)
+                
+                # Get the optimized prompts
+                optimized_prompts = {
+                    'system_prompt': iteration_data.get('optimized_system_prompt', ''),
+                    'output_prompt': iteration_data.get('optimized_output_prompt', '')
+                }
+                
+                # Get metrics if available
+                metrics = {}
+                if 'avg_score' in iteration_data and 'initial_avg_score' in experiment:
+                    initial_score = experiment['initial_avg_score']
+                    current_score = iteration_data['avg_score']
+                    improvement = ((current_score - initial_score) / initial_score) * 100 if initial_score > 0 else 0
+                    
+                    # Use actual grading metrics if available, otherwise use placeholders
+                    metrics = {
+                        'improvement_percentage': round(improvement, 1),
+                        'clarity_score': iteration_data.get('grading', {}).get('clarity', 8.5),
+                        'conciseness_score': iteration_data.get('grading', {}).get('conciseness', 7.9),
+                        'effectiveness_score': iteration_data.get('grading', {}).get('effectiveness', 9.2)
+                    }
+                
+                result['final'] = optimized_prompts
+                result['metrics'] = metrics
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error getting prompts: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

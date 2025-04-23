@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadExperiments() {
         showSpinner();
         
-        fetch('/api/experiments')
+        fetch('/api/experiments_list')
             .then(response => response.json())
             .then(data => {
                 if (data.experiments && data.experiments.length > 0) {
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         showSpinner();
         
-        fetch(`/api/experiments/${experimentId}`)
+        fetch(`/api/experiment_data/${experimentId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.iterations && data.iterations.length > 0) {
