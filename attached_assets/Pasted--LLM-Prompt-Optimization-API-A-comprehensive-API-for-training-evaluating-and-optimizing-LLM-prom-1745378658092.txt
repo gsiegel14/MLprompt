@@ -1,0 +1,440 @@
+# LLM Prompt Optimization API
+
+A comprehensive API for training, evaluating, and optimizing LLM prompts through an ML-driven workflow.
+
+## Overview
+
+This API provides endpoints for managing the complete lifecycle of prompt engineering:
+- LLM inference for testing prompts
+- Evaluation using Hugging Face metrics
+- Version-controlled prompt management
+- Automated optimization experiments
+
+## Authentication
+
+All API calls require authentication using JWT bearer tokens:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Tokens can be obtained from the `/auth/token` endpoint with valid credentials.
+
+## Core Endpoints
+
+### 1. LLM Inference API
+
+#### 1.1 Single Completion
+
+**Endpoint**: `POST /api/v1/inference/complete`
+
+**Purpose**: Send a prompt to the LLM to get a response for a single input.
+
+**Request**:
+```json
+{
+  "system_prompt": "You are a helpful assistant...",
+  "output_prompt": "Respond concisely to...",
+  "user_input": "What is machine learning?",
+  "temperature": 0.0,
+  "max_tokens": 1024
+}
+```
+
+**Response**:
+```json
+{
+  "model_response": "Machine learning is a subset of artificial intelligence...",
+  "metadata": {
+    "tokens_used": 205,
+    "latency_ms": 450
+  }
+}
+```
+
+#### 1.2 Batch Processing
+
+**Endpoint**: `POST /api/v1/inference/batch`
+
+**Purpose**: Process multiple inputs in a single request for efficiency.
+
+**Request**:
+```json
+{
+  "prompt_id": "uuid-of-stored-prompt", 
+  "inputs": ["Question 1", "Question 2", "..."],
+  "temperature": 0.0
+}
+```
+
+**Response**:
+```json
+{
+  "results": [
+    "Response for input 1",
+    "Response for input 2",
+    "..."
+  ],
+  "metadata": {
+    "total_tokens": 1250,
+    "total_time_ms": 2300
+  }
+}
+```
+
+### 2. Evaluation API
+
+#### 2.1 Evaluate Predictions
+
+**Endpoint**: `POST /api/v1/evaluate`
+
+**Purpose**: Score model outputs against ground truth using Hugging Face metrics.
+
+**Request**:
+```json
+{
+  "predictions": ["Prediction 1", "Prediction 2", "..."],
+  "references": ["Reference 1", "Reference 2", "..."],
+  "metrics": ["exact_match", "bleu", "rouge"]
+}
+```
+
+**Response**:
+```json
+{
+  "exact_match_score": 0.75,
+  "bleu_score": 0.82,
+  "rouge_1": 0.79,
+  "rouge_2": 0.68,
+  "rouge_l": 0.71
+}
+```
+
+#### 2.2 Dataset Evaluation
+
+**Endpoint**: `POST /api/v1/inference/evaluate`
+
+**Purpose**: Evaluate a prompt on an entire dataset.
+
+**Request**:
+```json
+{
+  "prompt_id": "prompt-uuid",
+  "dataset_id": "dataset-uuid",
+  "split": "train|validation|test",
+  "metrics": ["exact_match", "bleu"]
+}
+```
+
+**Response**:
+```json
+{
+  "aggregate_metrics": {
+    "exact_match_score": 0.67,
+    "bleu_score": 0.75
+  },
+  "example_count": 100,
+  "evaluation_id": "uuid-for-retrieving-detailed-results"
+}
+```
+
+### 3. Prompt Management API
+
+#### 3.1 Create Prompt
+
+**Endpoint**: `POST /api/v1/prompts`
+
+**Purpose**: Store a new prompt in the system.
+
+**Request**:
+```json
+{
+  "system_prompt": "You are a helpful assistant...",
+  "output_prompt": "Respond concisely and directly...",
+  "name": "Translation Assistant v1",
+  "metadata": {
+    "task": "translation",
+    "target_language": "french"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "prompt_id": "uuid-of-created-prompt",
+  "version": 1,
+  "created_at": "2023-10-27T14:30:00Z"
+}
+```
+
+#### 3.2 Get Prompt
+
+**Endpoint**: `GET /api/v1/prompts/{id}`
+
+**Purpose**: Retrieve a stored prompt.
+
+**Response**:
+```json
+{
+  "id": "prompt-uuid",
+  "system_prompt": "You are a helpful assistant...",
+  "output_prompt": "Respond concisely and directly...",
+  "version": 3,
+  "parent_id": "previous-version-uuid",
+  "created_at": "2023-10-28T09:15:00Z",
+  "metadata": {
+    "task": "translation",
+    "target_language": "french"
+  }
+}
+```
+
+#### 3.3 Update Prompt
+
+**Endpoint**: `PUT /api/v1/prompts/{id}`
+
+**Purpose**: Create a new version of an existing prompt.
+
+**Request**:
+```json
+{
+  "system_prompt": "Updated system instructions...",
+  "output_prompt": "Updated output instructions...",
+  "metadata": {
+    "comment": "Added more specific translation instructions"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "prompt_id": "new-version-uuid",
+  "parent_id": "previous-version-uuid",
+  "version": 4,
+  "created_at": "2023-10-29T10:45:00Z"
+}
+```
+
+### 4. Experiment Management API
+
+#### 4.1 Create Experiment
+
+**Endpoint**: `POST /api/v1/experiments`
+
+**Purpose**: Start a prompt optimization experiment.
+
+**Request**:
+```json
+{
+  "name": "French Translation Optimization",
+  "initial_prompt_id": "prompt-uuid",
+  "dataset_id": "dataset-uuid",
+  "metrics": ["exact_match", "bleu"],
+  "max_epochs": 10,
+  "target_threshold": 0.8,
+  "optimizer_config": {
+    "strategy": "llm_editor",
+    "sample_k": 5
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "experiment_id": "experiment-uuid",
+  "status": "created",
+  "created_at": "2023-10-30T08:00:00Z"
+}
+```
+
+#### 4.2 Start Experiment
+
+**Endpoint**: `POST /api/v1/experiments/{id}/start`
+
+**Purpose**: Begin execution of a created experiment.
+
+**Response**:
+```json
+{
+  "experiment_id": "experiment-uuid",
+  "status": "running",
+  "estimated_completion": "2023-10-30T09:30:00Z"
+}
+```
+
+#### 4.3 Get Experiment Results
+
+**Endpoint**: `GET /api/v1/experiments/{id}/metrics`
+
+**Purpose**: Retrieve results of an experiment.
+
+**Response**:
+```json
+{
+  "experiment_id": "experiment-uuid",
+  "status": "completed",
+  "epochs_completed": 7,
+  "best_prompt_id": "optimized-prompt-uuid",
+  "best_epoch": 5,
+  "metrics_history": [
+    {
+      "epoch": 0,
+      "train_exact_match_score": 0.45,
+      "val_exact_match_score": 0.47
+    },
+    {
+      "epoch": 1,
+      "train_exact_match_score": 0.58,
+      "val_exact_match_score": 0.55
+    },
+    "..."
+  ],
+  "final_metrics": {
+    "test_exact_match_score": 0.79,
+    "test_bleu_score": 0.83
+  }
+}
+```
+
+### 5. Dataset Management API
+
+#### 5.1 Upload Dataset
+
+**Endpoint**: `POST /api/v1/datasets`
+
+**Purpose**: Upload a new dataset for training/evaluation.
+
+**Request**: Multipart form data with CSV/JSON file
+
+**Response**:
+```json
+{
+  "dataset_id": "dataset-uuid",
+  "name": "English-French Translations",
+  "row_count": 1000,
+  "columns": ["english", "french"],
+  "created_at": "2023-10-25T15:20:00Z"
+}
+```
+
+#### 5.2 Get Dataset Sample
+
+**Endpoint**: `GET /api/v1/datasets/{id}/sample?n=5`
+
+**Purpose**: Retrieve sample data from a dataset.
+
+**Response**:
+```json
+{
+  "dataset_id": "dataset-uuid",
+  "samples": [
+    {
+      "user_input": "Hello world",
+      "ground_truth": "Bonjour le monde"
+    },
+    "..."
+  ]
+}
+```
+
+## Integration Examples
+
+### Complete Optimization Workflow
+
+```python
+# 1. Create a prompt
+response = requests.post(
+    "https://api.example.com/api/v1/prompts",
+    json={
+        "system_prompt": "You are a translator that converts English to French.",
+        "output_prompt": "Translate the following to French:"
+    }
+)
+prompt_id = response.json()["prompt_id"]
+
+# 2. Upload a dataset
+with open("translations.csv", "rb") as f:
+    response = requests.post(
+        "https://api.example.com/api/v1/datasets",
+        files={"file": f}
+    )
+dataset_id = response.json()["dataset_id"]
+
+# 3. Create and start an experiment
+response = requests.post(
+    "https://api.example.com/api/v1/experiments",
+    json={
+        "name": "Translation Optimizer",
+        "initial_prompt_id": prompt_id,
+        "dataset_id": dataset_id,
+        "metrics": ["exact_match", "bleu"],
+        "max_epochs": 5
+    }
+)
+experiment_id = response.json()["experiment_id"]
+
+requests.post(f"https://api.example.com/api/v1/experiments/{experiment_id}/start")
+
+# 4. Wait for completion and get results
+while True:
+    response = requests.get(f"https://api.example.com/api/v1/experiments/{experiment_id}/metrics")
+    if response.json()["status"] in ["completed", "failed"]:
+        break
+    time.sleep(60)
+
+results = response.json()
+best_prompt_id = results["best_prompt_id"]
+
+# 5. Use the optimized prompt for inference
+response = requests.post(
+    "https://api.example.com/api/v1/inference/complete",
+    json={
+        "prompt_id": best_prompt_id,
+        "user_input": "How are you today?"
+    }
+)
+print(response.json()["model_response"])  # "Comment allez-vous aujourd'hui?"
+```
+
+## Supported Metrics
+
+The API integrates with Hugging Face Evaluate for free, high-quality metrics:
+
+| Metric | Use Case | Description |
+|--------|----------|-------------|
+| `exact_match` | QA, Classification | Exact string matching between prediction and reference |
+| `bleu` | Translation | Bilingual Evaluation Understudy - standard MT metric |
+| `rouge` | Summarization | Recall-Oriented Understudy for Gisting Evaluation |
+| `bertscore` | General NLG | Semantic similarity using BERT embeddings |
+| `f1` | Classification | Harmonic mean of precision and recall |
+
+Custom metrics can be configured for specific tasks.
+
+## Error Handling
+
+All endpoints follow standard HTTP status codes:
+- 200: Success
+- 400: Bad Request (invalid parameters)
+- 401: Unauthorized
+- 404: Resource Not Found
+- 500: Server Error
+
+Error responses include descriptive messages:
+
+```json
+{
+  "error": "Invalid metric name 'custom_metric'",
+  "detail": "Available metrics: exact_match, bleu, rouge, bertscore, f1"
+}
+```
+
+## Rate Limits
+
+- Free tier: 100 requests/hour
+- Basic tier: 1,000 requests/hour
+- Premium tier: 10,000 requests/hour
+
+Batch endpoints count as a single request but may have size limitations. 

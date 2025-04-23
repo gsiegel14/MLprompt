@@ -1,9 +1,14 @@
 """
-Prompt Optimization Workflow: Two-Stage Training Cycle
+Prompt Optimization Workflow: Four-Stage API Call Sequence
 
-This module implements the specific workflow for refining prompts using a two-stage 
-process involving a Primary LLM and an Optimizer LLM within each training run, 
-followed by a separate validation step.
+This module implements the enhanced workflow for refining prompts using a four-stage
+process involving:
+1. Google Vertex AI - Primary LLM inference
+2. Google Vertex AI - Evaluation API call 
+3. Google Vertex AI - Optimizer LLM for prompt refinement
+4. Hugging Face - External validation metrics
+
+Each training run follows this sequence, with results tracked for comparison.
 """
 
 import os
@@ -17,6 +22,7 @@ from app.evaluator import calculate_score, evaluate_batch
 from app.llm_client import get_llm_response
 from app.optimizer import optimize_prompts, load_optimizer_prompt
 from app.experiment_tracker import ExperimentTracker
+from app.huggingface_client import evaluate_metrics, compute_bleu_score, compute_exact_match, compute_rouge
 
 logger = logging.getLogger(__name__)
 
