@@ -226,10 +226,10 @@ def huggingface_metrics_api():
         logger.error(f"Error in Hugging Face metrics endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Four-API Workflow Endpoint
-@app.route('/api/workflow/four_api', methods=['POST'])
-def four_api_workflow_api():
-    """Run the complete 4-API workflow."""
+# Five-API Workflow Endpoint
+@app.route('/api/workflow/five_api', methods=['POST'])
+def five_api_workflow_api():
+    """Run the complete 5-API workflow."""
     try:
         data = request.json
         system_prompt = data.get('system_prompt', '')
@@ -242,7 +242,7 @@ def four_api_workflow_api():
             return jsonify({'error': 'System prompt is required'}), 400
         
         # Run the workflow
-        result = prompt_workflow.run_four_api_workflow(
+        result = prompt_workflow.run_five_api_workflow(
             system_prompt=system_prompt,
             output_prompt=output_prompt,
             batch_size=batch_size,
@@ -255,7 +255,7 @@ def four_api_workflow_api():
             
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in four_api_workflow endpoint: {e}")
+        logger.error(f"Error in five_api_workflow endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Experiment History API Endpoint
