@@ -170,12 +170,11 @@ class PromptOptimizationWorkflow:
             
             # Optimize the prompts
             optimization_result = optimize_prompts(
-                system_prompt,
-                output_prompt,
-                examples_for_optimizer,
-                optimizer_prompt,
-                optimizer_strategy,
-                self.config.get('optimizer', {})
+                current_system_prompt=system_prompt,
+                current_output_prompt=output_prompt,
+                examples=examples_for_optimizer,
+                optimizer_system_prompt=optimizer_prompt,
+                strategy=optimizer_strategy
             )
             
             if not optimization_result:
@@ -593,11 +592,11 @@ class PromptOptimizationWorkflow:
                     optimization_start_time = time.time()
                     
                     optimization_result = optimize_prompts(
-                        current_system_prompt,
-                        current_output_prompt,
-                        optimization_examples,
-                        optimizer_prompt,
-                        optimizer_strategy
+                        current_system_prompt=current_system_prompt,
+                        current_output_prompt=current_output_prompt,
+                        examples=optimization_examples,
+                        optimizer_system_prompt=optimizer_prompt,
+                        strategy=optimizer_strategy
                     )
                     
                     optimization_duration = time.time() - optimization_start_time

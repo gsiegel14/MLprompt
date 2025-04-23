@@ -266,8 +266,8 @@ class WorkflowIntegrationTester:
                 current_system_prompt=self.test_system_prompt,
                 current_output_prompt=self.test_output_prompt,
                 examples=examples_for_optimizer,
-                optimizer_prompt=optimizer_prompt,
-                optimizer_strategy=self.test_optimizer_strategy
+                optimizer_system_prompt=optimizer_prompt,
+                strategy=self.test_optimizer_strategy
             )
             
             if not optimization_result:
