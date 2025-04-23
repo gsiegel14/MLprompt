@@ -258,3 +258,164 @@ async def get_available_strategies():
     except Exception as e:
         logger.error(f"Error getting optimization strategies: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting optimization strategies: {str(e)}")
+"""
+API endpoints for prompt optimization
+"""
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Query
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+import os
+from datetime import datetime
+import json
+
+from src.app.config import settings
+from src.app.auth import verify_api_key
+from src.flows.prompt_optimization_flow import prompt_optimization_flow
+from src.app.utils.logger import setup_logging
+
+# Setup logging
+logger = setup_logging("optimization_api")
+
+router = APIRouter()
+
+class PromptOptimizationRequest(BaseModel):
+    """Request model for prompt optimization"""
+    system_prompt_path: str
+    output_prompt_path: str
+    dataset_path: str
+    metric_names: Optional[List[str]] = None
+    target_metric: Optional[str] = "avg_score"
+    target_threshold: Optional[float] = 0.9
+    patience: Optional[int] = 3
+    max_iterations: Optional[int] = 10
+    batch_size: Optional[int] = 10
+    sample_k: Optional[int] = 5
+    optimizer_strategy: Optional[str] = "reasoning_first"
+
+class PromptOptimizationResponse(BaseModel):
+    """Response model for prompt optimization"""
+    experiment_id: str
+    status: str
+    flow_run_id: Optional[str] = None
+    message: str
+
+@router.post("/optimize", response_model=PromptOptimizationResponse, dependencies=[Depends(verify_api_key)])
+async def optimize_prompts(
+    request: PromptOptimizationRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Start a prompt optimization workflow
+    
+    This endpoint triggers a Prefect flow to optimize prompts using the 5-step process:
+    1. Primary LLM Inference
+    2. Hugging Face Evaluation
+    3. Optimizer LLM
+    4. Refined LLM Inference
+    5. Second Evaluation
+    """
+    try:
+        # Validate file paths exist
+        for path in [request.system_prompt_path, request.output_prompt_path, request.dataset_path]:
+            if not os.path.exists(path):
+                raise HTTPException(status_code=404, detail=f"File not found: {path}")
+        
+        # Generate experiment ID
+        experiment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Start the Prefect flow (sync for now, could be async)
+        def run_optimization_flow():
+            try:
+                flow_state = prompt_optimization_flow(
+                    system_prompt_path=request.system_prompt_path,
+                    output_prompt_path=request.output_prompt_path,
+                    dataset_path=request.dataset_path,
+                    metric_names=request.metric_names,
+                    target_metric=request.target_metric,
+                    target_threshold=request.target_threshold,
+                    patience=request.patience,
+                    max_iterations=request.max_iterations,
+                    batch_size=request.batch_size,
+                    sample_k=request.sample_k,
+                    optimizer_strategy=request.optimizer_strategy,
+                    experiment_id=experiment_id
+                )
+                
+                # Save the state with the experiment ID for tracking
+                experiment_dir = os.path.join("experiments", experiment_id)
+                os.makedirs(experiment_dir, exist_ok=True)
+                with open(os.path.join(experiment_dir, "flow_state.json"), "w") as f:
+                    json.dump(
+                        {
+                            "status": "completed", 
+                            "result": flow_state,
+                            "completed_at": datetime.now().isoformat()
+                        }, 
+                        f, 
+                        indent=2, 
+                        default=str
+                    )
+                
+                logger.info(f"Optimization flow completed for experiment {experiment_id}")
+            except Exception as e:
+                logger.error(f"Error in optimization flow for experiment {experiment_id}: {str(e)}")
+                # Save error state
+                experiment_dir = os.path.join("experiments", experiment_id)
+                os.makedirs(experiment_dir, exist_ok=True)
+                with open(os.path.join(experiment_dir, "flow_state.json"), "w") as f:
+                    json.dump(
+                        {
+                            "status": "failed", 
+                            "error": str(e),
+                            "failed_at": datetime.now().isoformat()
+                        }, 
+                        f, 
+                        indent=2
+                    )
+        
+        # Run in background
+        background_tasks.add_task(run_optimization_flow)
+        
+        return PromptOptimizationResponse(
+            experiment_id=experiment_id,
+            status="running",
+            message=f"Optimization flow started with experiment ID: {experiment_id}"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error starting optimization flow: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start optimization flow: {str(e)}")
+
+@router.get("/experiments/{experiment_id}", dependencies=[Depends(verify_api_key)])
+async def get_experiment_status(experiment_id: str):
+    """Get the status of an optimization experiment"""
+    experiment_dir = os.path.join("experiments", experiment_id)
+    
+    if not os.path.exists(experiment_dir):
+        raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+    
+    # Check if the flow state file exists
+    flow_state_path = os.path.join(experiment_dir, "flow_state.json")
+    if os.path.exists(flow_state_path):
+        with open(flow_state_path, "r") as f:
+            flow_state = json.load(f)
+        return flow_state
+    
+    # Check if any iterations have been completed
+    iterations = [d for d in os.listdir(experiment_dir) if d.startswith("iteration_")]
+    if iterations:
+        return {
+            "status": "running",
+            "iterations_completed": len(iterations),
+            "last_update": datetime.fromtimestamp(
+                os.path.getmtime(os.path.join(experiment_dir, iterations[-1]))
+            ).isoformat()
+        }
+    
+    # If directory exists but no state file or iterations, it's just starting
+    return {
+        "status": "starting",
+        "created_at": datetime.fromtimestamp(
+            os.path.getctime(experiment_dir)
+        ).isoformat()
+    }
