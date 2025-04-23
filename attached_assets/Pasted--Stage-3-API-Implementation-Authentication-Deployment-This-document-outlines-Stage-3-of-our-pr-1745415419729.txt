@@ -1,0 +1,715 @@
+# Stage 3: API Implementation, Authentication & Deployment
+
+This document outlines Stage 3 of our prompt optimization platform development, focusing on implementing the API layer, adding authentication, creating a monitoring interface, and establishing a deployment pipeline.
+
+## Overview
+
+After completing the core optimization engine (Stage 1) and optimizing for token efficiency (Stage 2), we now need to make the platform accessible through well-defined APIs, secure it with proper authentication, build a monitoring interface, and prepare it for deployment.
+
+## API Implementation
+
+Our API will follow the design outlined in APIinfo.md, implementing these core endpoints:
+
+1. **Inference API**
+   - POST /api/v1/inference/complete for single completions
+   - POST /api/v1/inference/batch for batch processing
+
+2. **Evaluation API**
+   - POST /api/v1/evaluate for scoring predictions against ground truth
+   - POST /api/v1/inference/evaluate for comprehensive dataset evaluation
+
+3. **Prompt Management API**
+   - POST /api/v1/prompts for storing new prompts
+   - GET /api/v1/prompts/{id} for retrieving prompts
+   - PUT /api/v1/prompts/{id} for updating prompts
+
+4. **Experiment Management API**
+   - POST /api/v1/experiments for creating new experiments
+   - POST /api/v1/experiments/{id}/start for starting execution
+   - GET /api/v1/experiments/{id}/metrics for retrieving results
+
+5. **Dataset Management API**
+   - POST /api/v1/datasets for uploading new datasets
+   - GET /api/v1/datasets/{id}/sample for retrieving samples
+
+Implementation steps:
+
+1. Create Pydantic models for request/response validation in src/api/models.py:
+```python
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+from enum import Enum
+
+class PromptCreate(BaseModel):
+    system_prompt: str
+    output_prompt: str
+    name: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class PromptResponse(BaseModel):
+    prompt_id: str
+    system_prompt: str
+    output_prompt: str
+    version: int
+    parent_id: Optional[str] = None
+    created_at: datetime
+    metadata: Dict[str, Any]
+
+class InferenceRequest(BaseModel):
+    system_prompt: Optional[str] = None
+    output_prompt: Optional[str] = None
+    prompt_id: Optional[str] = None
+    user_input: str
+    temperature: float = 0.0
+    max_tokens: int = 1024
+
+# Additional model definitions...
+```
+
+2. Implement each endpoint following this pattern in src/api/endpoints/:
+```python
+from fastapi import APIRouter, HTTPException, Depends
+from src.api.models import PromptCreate, PromptResponse
+from src.app.services.prompt_service import PromptService
+from src.app.auth import get_current_user
+
+router = APIRouter(prefix="/prompts", tags=["Prompts"])
+
+@router.post("/", response_model=PromptResponse)
+async def create_prompt(prompt_data: PromptCreate, current_user = Depends(get_current_user)):
+    try:
+        prompt_service = PromptService()
+        result = await prompt_service.create_prompt(
+            system_prompt=prompt_data.system_prompt,
+            output_prompt=prompt_data.output_prompt,
+            name=prompt_data.name,
+            metadata=prompt_data.metadata,
+            created_by=current_user.id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+3. Implement the backend service layer in src/app/services/:
+```python
+class PromptService:
+    def __init__(self):
+        self.storage = GCSStorage()  # Or other implementation
+        
+    async def create_prompt(self, system_prompt, output_prompt, name=None, metadata=None, created_by=None):
+        # Create a new PromptState
+        prompt = PromptState(
+            system_prompt=system_prompt,
+            output_prompt=output_prompt,
+            metadata=metadata or {}
+        )
+        
+        # Add additional metadata
+        if name:
+            prompt.metadata["name"] = name
+        if created_by:
+            prompt.metadata["created_by"] = created_by
+            
+        # Save to storage
+        path = f"gs://{settings.GCS_BUCKET_NAME}/prompts/{prompt.id}.json"
+        prompt.save(path)
+        
+        return {
+            "prompt_id": prompt.id,
+            "system_prompt": prompt.system_prompt,
+            "output_prompt": prompt.output_prompt,
+            "version": prompt.version,
+            "parent_id": prompt.parent_id,
+            "created_at": prompt.created_at,
+            "metadata": prompt.metadata
+        }
+```
+
+## Authentication & Security
+
+1. Implement JWT authentication in src/app/auth.py:
+```python
+from datetime import datetime, timedelta
+from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel
+from src.app.config import settings
+
+# Models
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+class User(BaseModel):
+    id: str
+    username: str
+    email: Optional[str] = None
+    disabled: Optional[bool] = None
+
+# Setup
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Functions
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(hours=settings.JWT_EXPIRATION_HOURS))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+        
+    # In a real app, you'd fetch the user from a database
+    # This is a simplified example
+    user = User(id="123", username=token_data.username, disabled=False)
+    if user is None:
+        raise credentials_exception
+    return user
+```
+
+2. Add token endpoint to src/app/main.py:
+```python
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    # In a real app, you'd verify username/password against a database
+    # This is a simplified example for testing
+    if form_data.username != "test" or form_data.password != "test123":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(hours=settings.JWT_EXPIRATION_HOURS)
+    access_token = create_access_token(
+        data={"sub": form_data.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+```
+
+## Google Secret Manager Integration
+
+1. Add the necessary dependency to requirements.txt:
+```
+google-cloud-secret-manager>=2.12.0
+```
+
+2. Create a utility for accessing secrets in src/app/utils/secret_manager.py:
+```python
+from google.cloud import secretmanager
+from src.app.config import settings
+
+class SecretManagerClient:
+    def __init__(self):
+        self.client = secretmanager.SecretManagerServiceClient()
+        self.project_id = settings.GCP_PROJECT_ID
+    
+    def get_secret(self, secret_id, version_id="latest"):
+        """Retrieve a secret from Google Secret Manager.
+        
+        Args:
+            secret_id: The ID of the secret to retrieve
+            version_id: The version of the secret, defaults to "latest"
+            
+        Returns:
+            The secret value as a string
+        """
+        name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
+        response = self.client.access_secret_version(request={"name": name})
+        return response.payload.data.decode("UTF-8")
+```
+
+3. Update the Settings class in src/app/config.py to use Secret Manager:
+```python
+from functools import lru_cache
+from pydantic import BaseSettings
+from src.app.utils.secret_manager import SecretManagerClient
+
+class Settings(BaseSettings):
+    # General settings
+    APP_NAME: str = "Prompt Optimization Platform"
+    GCP_PROJECT_ID: str
+    
+    # Secret keys with default dummy values for local development
+    JWT_SECRET_KEY: str = "dummy_secret_key"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = 24
+    
+    # Other settings
+    GCS_BUCKET_NAME: str
+    VERTEX_LOCATION: str = "us-central1"
+    
+    # Flag to determine if we should load secrets from Secret Manager
+    USE_SECRET_MANAGER: bool = False
+    
+    class Config:
+        env_file = ".env"
+
+@lru_cache()
+def get_settings():
+    settings = Settings()
+    
+    # If in production, load secrets from Secret Manager
+    if settings.USE_SECRET_MANAGER:
+        try:
+            secret_client = SecretManagerClient()
+            settings.JWT_SECRET_KEY = secret_client.get_secret("jwt-secret-key")
+            # Load other secrets as needed
+        except Exception as e:
+            print(f"Error loading secrets: {e}")
+            # Continue with default/env values if Secret Manager fails
+    
+    return settings
+
+settings = get_settings()
+```
+
+4. Create secrets in Google Secret Manager (CLI commands):
+```bash
+# Create the JWT secret key
+echo "your-secure-jwt-secret" | gcloud secrets create jwt-secret-key \
+    --replication-policy="automatic" \
+    --data-file=-
+
+# Grant service account access to secrets
+gcloud secrets add-iam-policy-binding jwt-secret-key \
+    --member="serviceAccount:your-service-account@your-project.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+```
+
+5. Update the Dockerfile to include the Google Cloud credentials:
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ /app/src/
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV USE_SECRET_MANAGER=true
+
+# Run the application
+CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+6. Update the deployment scripts to include the appropriate IAM setup:
+```bash
+#!/bin/bash
+# setup-iam.sh
+
+# Create a service account for the application
+gcloud iam service-accounts create prompt-optimizer-sa \
+    --display-name="Prompt Optimizer Service Account"
+
+# Grant Secret Manager access
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:prompt-optimizer-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+
+# Grant other necessary permissions (Storage, Vertex AI, etc.)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:prompt-optimizer-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/storage.objectAdmin"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:prompt-optimizer-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/aiplatform.user"
+
+# Create and download a key file (for local development)
+gcloud iam service-accounts keys create key.json \
+    --iam-account=prompt-optimizer-sa@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+## Monitoring Interface
+
+1. Create basic HTML templates in src/app/templates/:
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prompt Optimization Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Prompt Optimization Platform</h1>
+        
+        <div class="card">
+            <h2>Active Experiments</h2>
+            <table id="experiments-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>Create New Experiment</h2>
+            <form id="new-experiment-form">
+                <!-- Form fields -->
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+</body>
+</html>
+```
+
+2. Add static assets in src/app/static/:
+```css
+/* styles.css */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f7f9fc;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Additional styling */
+```
+
+3. Create JavaScript for the dashboard in src/app/static/js/:
+```javascript
+// main.js
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch active experiments
+    fetchExperiments();
+    
+    // Setup form handlers
+    document.getElementById('new-experiment-form').addEventListener('submit', createExperiment);
+});
+
+async function fetchExperiments() {
+    try {
+        const response = await fetch('/api/v1/experiments');
+        const data = await response.json();
+        
+        const tableBody = document.querySelector('#experiments-table tbody');
+        tableBody.innerHTML = '';
+        
+        data.forEach(exp => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${exp.id}</td>
+                <td>${exp.name}</td>
+                <td>${exp.status}</td>
+                <td>${new Date(exp.created_at).toLocaleString()}</td>
+                <td>
+                    <button onclick="viewExperiment('${exp.id}')">View</button>
+                    ${exp.status === 'created' ? `<button onclick="startExperiment('${exp.id}')">Start</button>` : ''}
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error fetching experiments:', error);
+    }
+}
+
+// Additional functions for handling experiments
+```
+
+4. Add templates to FastAPI in src/app/main.py:
+```python
+from fastapi import FastAPI, Request, Depends
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
+
+app = FastAPI(title="Prompt Optimization Platform API")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+# Templates
+templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+@app.get("/", include_in_schema=False)
+async def index(request: Request, current_user = Depends(get_current_user)):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# API routes
+```
+
+## Deployment Pipeline
+
+1. Create Dockerfile in the project root:
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ /app/src/
+
+# Set environment variables
+ENV PYTHONPATH=/app
+
+# Run the application
+CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+2. Create docker-compose.yml for local development:
+```yaml
+version: '3'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
+    
+  prefect:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: prefect agent start -q default
+    depends_on:
+      - api
+```
+
+3. Create deployment scripts:
+```bash
+#!/bin/bash
+# deploy.sh
+
+# Build the Docker image
+docker build -t prompt-optimizer:latest .
+
+# Push to container registry (example for Google Artifact Registry)
+docker tag prompt-optimizer:latest gcr.io/$PROJECT_ID/prompt-optimizer:latest
+docker push gcr.io/$PROJECT_ID/prompt-optimizer:latest
+
+# Deploy to Cloud Run or Kubernetes
+gcloud run deploy prompt-optimizer \
+  --image gcr.io/$PROJECT_ID/prompt-optimizer:latest \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+4. GitHub Actions workflow in .github/workflows/ci-cd.yml:
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.10
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    - name: Run tests
+      run: |
+        pytest --cov=src
+        
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    - name: Build and Push Docker image
+      run: |
+        gcloud auth configure-docker
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/prompt-optimizer:latest .
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/prompt-optimizer:latest
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy prompt-optimizer \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/prompt-optimizer:latest \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated
+```
+
+## Testing Strategy
+
+1. Create unit tests for API endpoints in tests/api/:
+```python
+# tests/api/test_prompts.py
+from fastapi.testclient import TestClient
+from src.app.main import app
+
+client = TestClient(app)
+
+def test_create_prompt():
+    response = client.post(
+        "/api/v1/prompts",
+        json={
+            "system_prompt": "Test system prompt",
+            "output_prompt": "Test output prompt",
+            "name": "Test Prompt"
+        },
+        headers={"Authorization": "Bearer test_token"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "prompt_id" in data
+    assert data["system_prompt"] == "Test system prompt"
+    assert data["output_prompt"] == "Test output prompt"
+    
+# Additional test cases...
+```
+
+2. Create integration tests for Prefect flows:
+```python
+# tests/flows/test_optimization_flow.py
+import pytest
+from unittest.mock import patch, MagicMock
+from src.flows.prompt_optimization_flow import prompt_optimization_flow
+
+@pytest.fixture
+def mock_vertex_client():
+    with patch("src.app.clients.vertex_client.VertexAIClient") as mock:
+        client_instance = MagicMock()
+        mock.return_value = client_instance
+        yield client_instance
+
+@pytest.fixture
+def mock_evaluator():
+    with patch("src.app.clients.hf_evaluator.EvaluatorService") as mock:
+        evaluator_instance = MagicMock()
+        evaluator_instance.evaluate.return_value = {"exact_match_score": 0.75}
+        mock.return_value = evaluator_instance
+        yield evaluator_instance
+
+def test_optimization_flow(mock_vertex_client, mock_evaluator):
+    # Setup test data
+    test_data = {
+        "vertex_project_id": "test-project",
+        "vertex_location": "us-central1",
+        "primary_model_name": "gemini-1.5-flash-001",
+        "optimizer_model_name": "gemini-1.5-pro-001",
+        "dataset_path": "tests/data/test_dataset.csv",
+        "system_prompt_path": "tests/data/test_system_prompt.txt",
+        "output_prompt_path": "tests/data/test_output_prompt.txt",
+        "max_iterations": 2
+    }
+    
+    # Configure mocks
+    mock_vertex_client.batch_predict.return_value = ["Test response 1", "Test response 2"]
+    mock_vertex_client.generate_response.return_value = '{"system_prompt": "New system prompt", "output_prompt": "New output prompt"}'
+    
+    # Run the flow
+    result = prompt_optimization_flow(**test_data)
+    
+    # Assertions
+    assert "final_state_path" in result
+    assert "iterations_completed" in result
+    assert result["iterations_completed"] > 0
+    
+    # Verify mock calls
+    assert mock_vertex_client.batch_predict.called
+    assert mock_vertex_client.generate_response.called
+    assert mock_evaluator.evaluate.called
+```
+
+## To-Do List:
+
+1. Install Google Secret Manager client library
+2. Create SecretManagerClient utility class
+3. Update Settings class to use Secret Manager
+4. Modify authentication module to use secured JWT keys
+5. Create necessary secrets in Google Secret Manager
+6. Update IAM permissions for service accounts
+7. Implement Pydantic models in src/api/models.py
+8. Create API routers for endpoints in src/api/endpoints/
+9. Implement JWT authentication in src/app/auth.py
+10. Add token endpoint to src/app/main.py
+11. Create service layer classes in src/app/services/
+12. Develop monitoring dashboard templates in src/app/templates/
+13. Add static assets (CSS, JavaScript) for dashboard
+14. Connect templates to FastAPI routes
+15. Create Dockerfile and docker-compose.yml
+16. Write deployment scripts
+18. Write unit tests for API endpoints
+19. Implement integration tests for flows
+20. Create user documentation
+21. Set up monitoring and logging
+22. Configure security headers and CORS
+23. Implement rate limiting for API endpoints
+24. Add health check endpoints
+25. Create database schema for user management (if needed)
+26. Set up backup and disaster recovery procedures
