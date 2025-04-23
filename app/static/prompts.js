@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const effectivenessScore = document.getElementById('effectiveness-score');
     
     // Initialize
+    resetMetrics();
     loadExperiments();
     
     // Set up event listeners
@@ -229,11 +230,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     finalSystemPrompt.textContent = "Select an iteration to view optimized prompts";
                     finalOutputPrompt.textContent = "Select an iteration to view optimized prompts";
                     
-                    // Reset metrics
-                    improvementPercentage.textContent = "--";
-                    clarityScore.textContent = "--";
-                    concisenessScore.textContent = "--";
-                    effectivenessScore.textContent = "--";
+                    // Reset all metrics
+                    resetMetrics();
                 }
             })
             .catch(error => {
@@ -295,6 +293,81 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
+    /**
+     * Reset all metrics and charts
+     */
+    function resetMetrics() {
+        // Reset metric display elements
+        improvementPercentage.textContent = "--";
+        clarityScore.textContent = "--";
+        concisenessScore.textContent = "--";
+        effectivenessScore.textContent = "--";
+        
+        // Reset training and validation accuracy if they exist
+        if (document.getElementById('training-accuracy')) {
+            document.getElementById('training-accuracy').textContent = "--";
+        }
+        if (document.getElementById('validation-accuracy')) {
+            document.getElementById('validation-accuracy').textContent = "--";
+        }
+        
+        // Reset chart to default values if it exists
+        const metricsChartElement = document.getElementById('metrics-chart');
+        if (metricsChartElement) {
+            // Destroy existing chart if it exists
+            if (window.metricsChart) {
+                window.metricsChart.destroy();
+            }
+            
+            // Create a default empty chart
+            const ctx = metricsChartElement.getContext('2d');
+            window.metricsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Training Dataset', 'Validation Dataset', 'Original Prompts', 'Optimized Prompts'],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.3)',
+                            'rgba(54, 162, 235, 0.3)',
+                            'rgba(255, 159, 64, 0.3)',
+                            'rgba(153, 102, 255, 0.3)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 0.5)',
+                            'rgba(54, 162, 235, 0.5)',
+                            'rgba(255, 159, 64, 0.5)',
+                            'rgba(153, 102, 255, 0.5)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Accuracy (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'No Data Available - Select an Iteration'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
     /**
      * Update metrics chart to display training vs validation accuracy
      */
