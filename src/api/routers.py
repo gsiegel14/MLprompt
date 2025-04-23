@@ -120,3 +120,10 @@ api_router.include_router(
     tags=["Costs"],
     dependencies=[Depends(get_api_key)]
 )
+
+api_router.include_router(
+    ml_settings.router,
+    prefix="/ml-settings",
+    tags=["ML Settings"],
+    dependencies=[Depends(get_api_key)]
+)

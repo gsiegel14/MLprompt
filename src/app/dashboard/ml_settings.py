@@ -1,43 +1,43 @@
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+"""
+ML Settings Dashboard Controller
+"""
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from sqlalchemy.orm import Session
-from src.app.utils.ml_settings_service import MLSettingsService
-from src.app.models.ml_models import ModelConfiguration, MetricConfiguration, MetaLearningConfiguration
-import logging
-from src.app.db.database import get_db
 import json
+import os
+from datetime import datetime
 
-logger = logging.getLogger(__name__)
+from src.app.utils.ml_settings_service import MLSettingsService
 
 ml_settings_bp = Blueprint('ml_settings', __name__, url_prefix='/ml-settings')
 
+def get_db():
+    """Get database session from app context"""
+    return current_app.extensions['db_session']
+
 @ml_settings_bp.route('/')
 def index():
-    """Render the ML settings dashboard"""
+    """ML settings dashboard overview"""
     return render_template('dashboard/ml_settings/index.html')
 
 # Model Configuration Routes
 @ml_settings_bp.route('/models')
-def model_configurations():
-    """Render the model configurations page"""
-    try:
-        db = next(get_db())
-        service = MLSettingsService(db)
-        configurations = service.get_model_configurations()
-        return render_template('dashboard/ml_settings/models.html', configurations=configurations)
-    except Exception as e:
-        logger.error(f"Error loading model configurations: {str(e)}")
-        flash(f"Error loading model configurations: {str(e)}", "danger")
-        return render_template('dashboard/ml_settings/models.html', configurations=[])
+def models():
+    """Display all model configurations"""
+    db = get_db()
+    service = MLSettingsService(db)
+    models = service.get_model_configs()
+    return render_template('dashboard/ml_settings/models.html', models=models)
 
 @ml_settings_bp.route('/models/create', methods=['GET', 'POST'])
-def create_model_configuration():
+def create_model():
     """Create a new model configuration"""
     if request.method == 'POST':
+        db = get_db()
+        service = MLSettingsService(db)
+        
         try:
-            db = next(get_db())
-            service = MLSettingsService(db)
-            
             config_data = {
                 "name": request.form.get('name'),
                 "primary_model": request.form.get('primary_model'),
@@ -46,23 +46,28 @@ def create_model_configuration():
                 "max_tokens": int(request.form.get('max_tokens', 1024)),
                 "top_p": float(request.form.get('top_p', 1.0)),
                 "top_k": int(request.form.get('top_k', 40)),
-                "is_default": 'is_default' in request.form
+                "is_default": request.form.get('is_default') == 'on'
             }
             
-            service.create_model_configuration(config_data)
-            flash("Model configuration created successfully!", "success")
-            return redirect(url_for('ml_settings.model_configurations'))
+            model = service.create_model_config(config_data)
+            flash(f"Model configuration '{model.name}' created successfully!", "success")
+            return redirect(url_for('ml_settings.models'))
         except Exception as e:
-            logger.error(f"Error creating model configuration: {str(e)}")
-            flash(f"Error creating model configuration: {str(e)}", "danger")
+            flash(f"Error creating model configuration: {str(e)}", "error")
     
+    # GET request
     return render_template('dashboard/ml_settings/create_model.html')
 
-@ml_settings_bp.route('/models/edit/<config_id>', methods=['GET', 'POST'])
-def edit_model_configuration(config_id):
+@ml_settings_bp.route('/models/<model_id>/edit', methods=['GET', 'POST'])
+def edit_model(model_id):
     """Edit a model configuration"""
-    db = next(get_db())
+    db = get_db()
     service = MLSettingsService(db)
+    model = service.get_model_config(model_id)
+    
+    if not model:
+        flash("Model configuration not found", "error")
+        return redirect(url_for('ml_settings.models'))
     
     if request.method == 'POST':
         try:
@@ -74,107 +79,112 @@ def edit_model_configuration(config_id):
                 "max_tokens": int(request.form.get('max_tokens', 1024)),
                 "top_p": float(request.form.get('top_p', 1.0)),
                 "top_k": int(request.form.get('top_k', 40)),
-                "is_default": 'is_default' in request.form
+                "is_default": request.form.get('is_default') == 'on'
             }
             
-            service.update_model_configuration(config_id, config_data)
-            flash("Model configuration updated successfully!", "success")
-            return redirect(url_for('ml_settings.model_configurations'))
+            updated_model = service.update_model_config(model_id, config_data)
+            flash(f"Model configuration '{updated_model.name}' updated successfully!", "success")
+            return redirect(url_for('ml_settings.models'))
         except Exception as e:
-            logger.error(f"Error updating model configuration: {str(e)}")
-            flash(f"Error updating model configuration: {str(e)}", "danger")
+            flash(f"Error updating model configuration: {str(e)}", "error")
     
-    config = service.get_model_configuration(config_id)
-    if not config:
-        flash("Configuration not found", "danger")
-        return redirect(url_for('ml_settings.model_configurations'))
-    
-    return render_template('dashboard/ml_settings/create_model.html', config=config, edit_mode=True)
+    # GET request
+    return render_template('dashboard/ml_settings/create_model.html', model=model)
 
-@ml_settings_bp.route('/models/delete/<config_id>')
-def delete_model_configuration(config_id):
+@ml_settings_bp.route('/models/<model_id>/delete', methods=['POST'])
+def delete_model(model_id):
     """Delete a model configuration"""
-    try:
-        db = next(get_db())
-        service = MLSettingsService(db)
-        
-        if service.delete_model_configuration(config_id):
-            flash("Model configuration deleted successfully!", "success")
-        else:
-            flash("Configuration not found", "danger")
-    except Exception as e:
-        logger.error(f"Error deleting model configuration: {str(e)}")
-        flash(f"Error deleting model configuration: {str(e)}", "danger")
+    db = get_db()
+    service = MLSettingsService(db)
     
-    return redirect(url_for('ml_settings.model_configurations'))
+    if service.delete_model_config(model_id):
+        flash("Model configuration deleted successfully", "success")
+    else:
+        flash("Error deleting model configuration", "error")
+    
+    return redirect(url_for('ml_settings.models'))
 
 # Metric Configuration Routes
 @ml_settings_bp.route('/metrics')
-def metric_configurations():
-    """Render the metric configurations page"""
-    try:
-        db = next(get_db())
+def metrics():
+    """Display all metric configurations"""
+    db = get_db()
+    service = MLSettingsService(db)
+    metrics = service.get_metric_configs()
+    return render_template('dashboard/ml_settings/metrics.html', metrics=metrics)
+
+@ml_settings_bp.route('/metrics/create', methods=['GET', 'POST'])
+def create_metric():
+    """Create a new metric configuration"""
+    if request.method == 'POST':
+        db = get_db()
         service = MLSettingsService(db)
-        configurations = service.get_metric_configurations()
-        return render_template('dashboard/ml_settings/metrics.html', configurations=configurations)
-    except Exception as e:
-        logger.error(f"Error loading metric configurations: {str(e)}")
-        flash(f"Error loading metric configurations: {str(e)}", "danger")
-        return render_template('dashboard/ml_settings/metrics.html', configurations=[])
+        
+        try:
+            # Parse metrics list and weights
+            metrics_list = request.form.get('metrics', '').split(',')
+            metrics_list = [m.strip() for m in metrics_list if m.strip()]
+            
+            weights_str = request.form.get('metric_weights', '{}')
+            try:
+                metric_weights = json.loads(weights_str)
+            except json.JSONDecodeError:
+                metric_weights = {}
+            
+            config_data = {
+                "name": request.form.get('name'),
+                "metrics": metrics_list,
+                "metric_weights": metric_weights,
+                "target_threshold": float(request.form.get('target_threshold', 0.8))
+            }
+            
+            metric = service.create_metric_config(config_data)
+            flash(f"Metric configuration '{metric.name}' created successfully!", "success")
+            return redirect(url_for('ml_settings.metrics'))
+        except Exception as e:
+            flash(f"Error creating metric configuration: {str(e)}", "error")
+    
+    # GET request
+    return render_template('dashboard/ml_settings/metrics.html', mode="create")
 
 # Meta-Learning Configuration Routes
 @ml_settings_bp.route('/meta-learning')
-def meta_learning_configurations():
-    """Render the meta-learning configurations page"""
-    try:
-        db = next(get_db())
-        service = MLSettingsService(db)
-        configurations = service.get_meta_learning_configurations()
-        return render_template('dashboard/ml_settings/meta_learning.html', configurations=configurations)
-    except Exception as e:
-        logger.error(f"Error loading meta-learning configurations: {str(e)}")
-        flash(f"Error loading meta-learning configurations: {str(e)}", "danger")
-        return render_template('dashboard/ml_settings/meta_learning.html', configurations=[])
+def meta_learning():
+    """Display all meta-learning configurations"""
+    db = get_db()
+    service = MLSettingsService(db)
+    configs = service.get_meta_learning_configs()
+    return render_template('dashboard/ml_settings/meta_learning.html', configs=configs)
 
-@ml_settings_bp.route('/meta-learning/train', methods=['POST'])
-def train_meta_model():
-    """Train a meta-learning model"""
-    try:
-        config_id = request.form.get('config_id')
-        
-        if not config_id:
-            return jsonify({"status": "error", "message": "No configuration ID provided"})
-        
-        # Here we would start background processing with a task queue like Celery
-        # For now, we'll simulate a task ID
-        import uuid
-        task_id = str(uuid.uuid4())
-        
-        # In a real implementation, you would use:
-        # from src.app.tasks.ml_tasks import train_meta_model_task
-        # task = train_meta_model_task.delay(config_id)
-        # task_id = task.id
-        
-        return jsonify({"status": "training_started", "task_id": task_id})
-    except Exception as e:
-        logger.error(f"Error starting meta-model training: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)})
-
-# Experiment Visualization Routes
+# Visualization Routes
 @ml_settings_bp.route('/visualization')
-def experiment_visualization():
-    """Render the experiment visualization page"""
-    try:
-        # In a real implementation, you would fetch experiments from your database
-        # For now, we'll create some dummy data
-        experiments = [
-            {"id": "exp1", "name": "Experiment A"},
-            {"id": "exp2", "name": "Experiment B"},
-            {"id": "exp3", "name": "Experiment C"}
-        ]
-        
-        return render_template('dashboard/ml_settings/visualization.html', experiments=experiments)
-    except Exception as e:
-        logger.error(f"Error loading experiment visualization: {str(e)}")
-        flash(f"Error loading experiment visualization: {str(e)}", "danger")
-        return render_template('dashboard/ml_settings/visualization.html', experiments=[])
+def visualization():
+    """Visualization dashboard for experiments"""
+    db = get_db()
+    service = MLSettingsService(db)
+    experiments = service.get_experiments(limit=10)
+    return render_template('dashboard/ml_settings/visualization.html', experiments=experiments)
+
+@ml_settings_bp.route('/api/experiments/<experiment_id>')
+def get_experiment_data(experiment_id):
+    """API endpoint to get experiment data for visualizations"""
+    db = get_db()
+    service = MLSettingsService(db)
+    experiment = service.get_experiment(experiment_id)
+    
+    if not experiment:
+        return jsonify({"error": "Experiment not found"}), 404
+    
+    # Load detailed metrics from experiment directory if available
+    results_data = {}
+    if experiment.results_path and os.path.exists(experiment.results_path):
+        try:
+            with open(os.path.join(experiment.results_path, 'metrics.json'), 'r') as f:
+                results_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+    
+    return jsonify({
+        "experiment": experiment.to_dict(),
+        "detailed_metrics": results_data
+    })

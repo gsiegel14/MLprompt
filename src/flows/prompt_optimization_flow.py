@@ -6,8 +6,8 @@ import time
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from prefect import flow, task
-from prefect.task_runners import SequentialTaskRunner
+from prefect import flow, task, get_run_logger
+from typing import Dict, List, Any, Optional
 
 from src.app.models.prompt_state import PromptState
 from src.app.clients.vertex_client import VertexAIClient

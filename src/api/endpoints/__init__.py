@@ -13,7 +13,8 @@ from src.api.endpoints import (
     prompts,
     datasets,
     cost_tracking,
-    inference
+    inference,
+    ml_settings
 )
 
 # Ensure all endpoint modules are properly initialized
@@ -23,5 +24,6 @@ __all__ = [
     'prompts',
     'datasets',
     'cost_tracking',
-    'inference'
+    'inference',
+    'ml_settings'
 ]

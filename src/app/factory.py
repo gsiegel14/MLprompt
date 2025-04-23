@@ -133,9 +133,29 @@ from fastapi import FastAPI
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.ext.declarative import declarative_base
+
 from src.api.routers import api_router
 from src.app.dashboard import create_flask_app
 from src.app.config import settings
+
+# Set up database
+Base = declarative_base()
+db_url = getattr(settings, 'DATABASE_URL', 'sqlite:///./prompt_optimization.db')
+engine = create_engine(db_url)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db_session = scoped_session(SessionLocal)
+
+# Dependency to get DB session
+def get_db_session():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 logger = logging.getLogger(__name__)
 

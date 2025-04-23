@@ -119,6 +119,28 @@ mode = "sequential"
 task = "shell.exec"
 args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
 
+[[workflows.workflow]]
+name = "Initialize Database"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
+
+[[workflows.workflow]]
+name = "Start Application with Database"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
+
 [[ports]]
 localPort = 5000
 externalPort = 80

@@ -1,7 +1,83 @@
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any, Union
+"""
+API models and schemas for the Prompt Optimization Platform
+"""
+from pydantic import BaseModel, Field, validator
+from typing import Dict, List, Any, Optional
 from datetime import datetime
-import uuid
+from enum import Enum
+
+# ML Settings Models
+class ModelConfigurationCreate(BaseModel):
+    name: str
+    primary_model: str
+    optimizer_model: str
+    temperature: float = 0.0
+    max_tokens: int = 1024
+    top_p: float = 1.0
+    top_k: int = 40
+    is_default: bool = False
+
+class ModelConfigurationUpdate(BaseModel):
+    name: Optional[str] = None
+    primary_model: Optional[str] = None
+    optimizer_model: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    top_p: Optional[float] = None
+    top_k: Optional[int] = None
+    is_default: Optional[bool] = None
+
+class ModelConfigurationResponse(BaseModel):
+    id: str
+    name: str
+    primary_model: str
+    optimizer_model: str
+    temperature: float
+    max_tokens: int
+    top_p: float
+    top_k: int
+    is_default: bool
+
+class MetricConfigurationCreate(BaseModel):
+    name: str
+    metrics: List[str]
+    metric_weights: Dict[str, float] = Field(default_factory=dict)
+    target_threshold: float = 0.8
+
+class MetricConfigurationUpdate(BaseModel):
+    name: Optional[str] = None
+    metrics: Optional[List[str]] = None
+    metric_weights: Optional[Dict[str, float]] = None
+    target_threshold: Optional[float] = None
+
+class MetricConfigurationResponse(BaseModel):
+    id: str
+    name: str
+    metrics: List[str]
+    metric_weights: Dict[str, float]
+    target_threshold: float
+
+class MetaLearningConfigurationCreate(BaseModel):
+    name: str
+    model_type: str = "xgboost"
+    hyperparameters: Dict[str, Any] = Field(default_factory=dict)
+    feature_selection: Dict[str, Any] = Field(default_factory=dict)
+    is_active: bool = True
+
+class MetaLearningConfigurationUpdate(BaseModel):
+    name: Optional[str] = None
+    model_type: Optional[str] = None
+    hyperparameters: Optional[Dict[str, Any]] = None
+    feature_selection: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+
+class MetaLearningConfigurationResponse(BaseModel):
+    id: str
+    name: str
+    model_type: str
+    hyperparameters: Dict[str, Any]
+    feature_selection: Dict[str, Any]
+    is_active: bool
 
 # Base models
 class IDModel(BaseModel):
@@ -127,6 +203,7 @@ class InferenceResponse(BaseModel):
     metrics: Optional[Dict[str, float]] = None
 
 # ML Settings models
+
 class ModelConfigurationBase(BaseModel):
     name: str
     primary_model: str
