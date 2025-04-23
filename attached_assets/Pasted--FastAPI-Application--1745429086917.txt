@@ -1,0 +1,707 @@
+                   ┌───────────────────────────┐
+                   │    FastAPI Application    │
+                   │    (Main Entry Point)     │
+                   └───────────┬───────────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+    ┌───────────▼────────────┐  ┌─────────────▼─────────────┐
+    │     Flask Dashboard    │  │      Prefect Flows        │
+    │  (Monitoring & Admin)  │  │  (Workflow Orchestration) │
+    └───────────┬────────────┘  └─────────────┬─────────────┘
+                │                              │
+                └──────────────┬──────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │   Shared Services   │
+                    │ (Auth, DB, Caching) │
+                    └─────────────────────┘
+
+                    Prerequisites
+Stages 1-3 have been completed, providing:
+Core prompt optimization engine with Vertex AI and HuggingFace
+Token efficiency and cost optimization mechanisms
+API layer, authentication, and monitoring components
+Basic deployment pipeline
+
+# src/app/factory.py
+from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
+from flask import Flask
+from prefect.client import get_client
+from src.api.routers import api_router
+from src.app.config import settings
+from src.app.dashboard import create_flask_app
+
+def create_app() -> FastAPI:
+    """Application factory for creating integrated FastAPI/Flask app"""
+    
+    # Initialize FastAPI
+    fast_app = FastAPI(
+        title="Prompt Optimization Platform",
+        description="ML-driven prompt optimization with Vertex AI and Prefect",
+        version="1.0.0"
+    )
+    
+    # Register API routes
+    fast_app.include_router(api_router, prefix="/api/v1")
+    
+    # Create Flask dashboard
+    flask_app = create_flask_app()
+    
+    # Mount Flask app under the /dashboard path
+    fast_app.mount("/dashboard", WSGIMiddleware(flask_app))
+    
+    # Configure startup and shutdown handlers
+    @fast_app.on_event("startup")
+    async def startup_event():
+        # Connect to Prefect
+        await initialize_prefect_connection()
+        
+        # Initialize caching layer
+        initialize_cache()
+        
+        # Other startup tasks...
+    
+    @fast_app.on_event("shutdown")
+    async def shutdown_event():
+        # Cleanup connections
+        pass
+    
+    return fast_app
+
+    # src/app/dashboard.py
+from flask import Flask, render_template, request, jsonify
+from flask_login import LoginManager, login_required
+from prefect.client import get_client
+from src.app.auth import authenticate_user
+from src.app.services.experiment_service import ExperimentService
+from src.app.services.prompt_service import PromptService
+from src.app.utils.cost_tracking import TokenCostTracker
+
+def create_flask_app():
+    """Create Flask app for admin dashboard"""
+    app = Flask(__name__, template_folder='templates', static_folder='static')
+    app.config['SECRET_KEY'] = '...'  # Should use settings or Secret Manager
+    
+    # Configure login manager
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    
+    # Admin dashboard routes
+    @app.route('/')
+    @login_required
+    def dashboard():
+        return render_template('dashboard.html')
+    
+    @app.route('/experiments')
+    @login_required
+    def experiments():
+        service = ExperimentService()
+        experiments = service.list_experiments()
+        return render_template('experiments.html', experiments=experiments)
+    
+    # API endpoints for dashboard (consumed by JavaScript)
+    @app.route('/api/stats')
+    @login_required
+    def stats():
+        cost_tracker = TokenCostTracker()
+        usage_report = cost_tracker.get_usage_report()
+        
+        # Get Prefect stats
+        prefect_client = get_client()
+        flow_runs = prefect_client.read_flow_runs()
+        
+        return jsonify({
+            'token_usage': usage_report,
+            'flow_runs': flow_runs,
+            'other_stats': {}
+        })
+    
+    return app
+
+    # src/app/services/prefect_service.py
+from prefect import get_client
+from prefect.deployments import Deployment
+from prefect.server.schemas.schedules import CronSchedule
+
+class PrefectService:
+    """Service for interacting with Prefect from the API"""
+    
+    async def get_flow_runs(self, limit=20):
+        """Get recent flow runs"""
+        async with get_client() as client:
+            return await client.read_flow_runs(limit=limit)
+    
+    async def create_experiment_deployment(self, name, params):
+        """Create a Prefect deployment for an experiment"""
+        from src.flows.prompt_optimization_flow import prompt_optimization_flow
+        
+        deployment = await Deployment.build_from_flow(
+            flow=prompt_optimization_flow,
+            name=name,
+            parameters=params,
+            tags=["experiment", f"name:{name}"]
+        )
+        
+        deployment_id = await deployment.apply()
+        return deployment_id
+    
+    async def start_experiment(self, deployment_id, params=None):
+        """Start a flow run for an experiment"""
+        async with get_client() as client:
+            flow_run = await client.create_flow_run_from_deployment(
+                deployment_id=deployment_id,
+                parameters=params
+            )
+            return flow_run.id
+    
+    async def create_scheduled_experiment(self, name, params, cron):
+        """Create a scheduled experiment that runs on a cron schedule"""
+        from src.flows.prompt_optimization_flow import prompt_optimization_flow
+        
+        deployment = await Deployment.build_from_flow(
+            flow=prompt_optimization_flow,
+            name=name,
+            parameters=params,
+            tags=["experiment", f"name:{name}", "scheduled"],
+            schedule=CronSchedule(cron=cron)
+        )
+        
+        deployment_id = await deployment.apply()
+        return deployment_id
+
+        # src/app/services/cache_service.py
+import redis
+import json
+import pickle
+from functools import wraps
+from datetime import timedelta
+from src.app.config import settings
+
+class CacheService:
+    """Redis-based caching service for API responses and expensive operations"""
+    
+    def __init__(self):
+        self.redis = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD
+        )
+    
+    def cache(self, key, data, ttl=3600):
+        """Cache data with an expiration time"""
+        try:
+            serialized = pickle.dumps(data)
+            self.redis.setex(key, ttl, serialized)
+            return True
+        except:
+            return False
+    
+    def get(self, key):
+        """Retrieve cached data"""
+        try:
+            data = self.redis.get(key)
+            if data:
+                return pickle.loads(data)
+            return None
+        except:
+            return None
+    
+    def delete(self, key):
+        """Delete cached data"""
+        return self.redis.delete(key)
+    
+    def clear_pattern(self, pattern):
+        """Clear all keys matching a pattern"""
+        keys = self.redis.keys(pattern)
+        if keys:
+            return self.redis.delete(*keys)
+        return 0
+
+# Decorator for caching API responses
+def cache_response(ttl=3600):
+    """Decorator to cache API responses"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Generate cache key from function name and arguments
+            key = f"api:{func.__name__}:{hash(str(args))}-{hash(str(kwargs))}"
+            
+            # Check cache first
+            cache_service = CacheService()
+            cached_result = cache_service.get(key)
+            
+            if cached_result is not None:
+                return cached_result
+            
+            # Execute function if not cached
+            result = await func(*args, **kwargs)
+            
+            # Cache the result
+            cache_service.cache(key, result, ttl)
+            
+            return result
+        return wrapper
+    return decorator
+
+    # src/app/services/cache_service.py
+import redis
+import json
+import pickle
+from functools import wraps
+from datetime import timedelta
+from src.app.config import settings
+
+class CacheService:
+    """Redis-based caching service for API responses and expensive operations"""
+    
+    def __init__(self):
+        self.redis = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD
+        )
+    
+    def cache(self, key, data, ttl=3600):
+        """Cache data with an expiration time"""
+        try:
+            serialized = pickle.dumps(data)
+            self.redis.setex(key, ttl, serialized)
+            return True
+        except:
+            return False
+    
+    def get(self, key):
+        """Retrieve cached data"""
+        try:
+            data = self.redis.get(key)
+            if data:
+                return pickle.loads(data)
+            return None
+        except:
+            return None
+    
+    def delete(self, key):
+        """Delete cached data"""
+        return self.redis.delete(key)
+    
+    def clear_pattern(self, pattern):
+        """Clear all keys matching a pattern"""
+        keys = self.redis.keys(pattern)
+        if keys:
+            return self.redis.delete(*keys)
+        return 0
+
+# Decorator for caching API responses
+def cache_response(ttl=3600):
+    """Decorator to cache API responses"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Generate cache key from function name and arguments
+            key = f"api:{func.__name__}:{hash(str(args))}-{hash(str(kwargs))}"
+            
+            # Check cache first
+            cache_service = CacheService()
+            cached_result = cache_service.get(key)
+            
+            if cached_result is not None:
+                return cached_result
+            
+            # Execute function if not cached
+            result = await func(*args, **kwargs)
+            
+            # Cache the result
+            cache_service.cache(key, result, ttl)
+            
+            return result
+        return wrapper
+    return decorator
+
+    # src/app/db/models.py
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, ForeignKey, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+import datetime
+import uuid
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    experiments = relationship("Experiment", back_populates="user")
+    prompts = relationship("DBPrompt", back_populates="user")
+
+class DBPrompt(Base):
+    __tablename__ = "prompts"
+    
+    id = Column(String, primary_key=True)
+    system_prompt = Column(String, nullable=False)
+    output_prompt = Column(String, nullable=False)
+    version = Column(Integer, default=1)
+    parent_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    metadata = Column(JSON, default=dict)
+    user_id = Column(String, ForeignKey("users.id"))
+    
+    user = relationship("User", back_populates="prompts")
+    experiments = relationship("Experiment", back_populates="prompt")
+
+class Experiment(Base):
+    __tablename__ = "experiments"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    prompt_id = Column(String, ForeignKey("prompts.id"))
+    dataset_id = Column(String, nullable=False)
+    status = Column(String, default="created")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    metrics = Column(JSON, default=dict)
+    prefect_deployment_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    
+    user = relationship("User", back_populates="experiments")
+    prompt = relationship("DBPrompt", back_populates="experiments")
+
+# src/app/db/database.py
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from src.app.config import settings
+
+# Create engine
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create all tables
+Base = declarative_base()
+
+def get_db():
+    """Get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+        # kubernetes/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prompt-optimizer-api
+  labels:
+    app: prompt-optimizer-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: prompt-optimizer-api
+  template:
+    metadata:
+      labels:
+        app: prompt-optimizer-api
+    spec:
+      containers:
+      - name: prompt-optimizer-api
+        image: gcr.io/PROJECT_ID/prompt-optimizer:VERSION
+        ports:
+        - containerPort: 8000
+        env:
+        - name: USE_SECRET_MANAGER
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: prompt-optimizer-secrets
+              key: database-url
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: prompt-optimizer-secrets
+              key: gcp-project-id
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prompt-optimizer-api
+spec:
+  selector:
+    app: prompt-optimizer-api
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prompt-optimizer-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "prompt-optimizer-ip"
+    networking.gke.io/managed-certificates: "prompt-optimizer-cert"
+spec:
+  rules:
+  - host: api.prompt-optimizer.example.com
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: prompt-optimizer-api
+            port:
+              number: 80
+
+
+              # kubernetes/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prompt-optimizer-api
+  labels:
+    app: prompt-optimizer-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: prompt-optimizer-api
+  template:
+    metadata:
+      labels:
+        app: prompt-optimizer-api
+    spec:
+      containers:
+      - name: prompt-optimizer-api
+        image: gcr.io/PROJECT_ID/prompt-optimizer:VERSION
+        ports:
+        - containerPort: 8000
+        env:
+        - name: USE_SECRET_MANAGER
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: prompt-optimizer-secrets
+              key: database-url
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            secretKeyRef:
+              name: prompt-optimizer-secrets
+              key: gcp-project-id
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prompt-optimizer-api
+spec:
+  selector:
+    app: prompt-optimizer-api
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prompt-optimizer-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "prompt-optimizer-ip"
+    networking.gke.io/managed-certificates: "prompt-optimizer-cert"
+spec:
+  rules:
+  - host: api.prompt-optimizer.example.com
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: prompt-optimizer-api
+            port:
+              number: 80
+
+# src/app/db/models.py
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, ForeignKey, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+import datetime
+import uuid
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    experiments = relationship("Experiment", back_populates="user")
+    prompts = relationship("DBPrompt", back_populates="user")
+
+class DBPrompt(Base):
+    __tablename__ = "prompts"
+    
+    id = Column(String, primary_key=True)
+    system_prompt = Column(String, nullable=False)
+    output_prompt = Column(String, nullable=False)
+    version = Column(Integer, default=1)
+    parent_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    metadata = Column(JSON, default=dict)
+    user_id = Column(String, ForeignKey("users.id"))
+    
+    user = relationship("User", back_populates="prompts")
+    experiments = relationship("Experiment", back_populates="prompt")
+
+class Experiment(Base):
+    __tablename__ = "experiments"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    prompt_id = Column(String, ForeignKey("prompts.id"))
+    dataset_id = Column(String, nullable=False)
+    status = Column(String, default="created")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    metrics = Column(JSON, default=dict)
+    prefect_deployment_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    
+    user = relationship("User", back_populates="experiments")
+    prompt = relationship("DBPrompt", back_populates="experiments")
+
+# src/app/db/database.py
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from src.app.config import settings
+
+# Create engine
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create all tables
+Base = declarative_base()
+
+def get_db():
+    """Get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+              
+
+
+              Application Integration
+[ ] Create application factory for FastAPI/Flask integration
+[ ] Implement shared authentication between FastAPI and Flask
+[ ] Set up unified logging across all components
+[ ] Integrate Prefect client with FastAPI
+Database & Storage
+[ ] Set up PostgreSQL or Cloud SQL integration
+[ ] Create SQLAlchemy models for all entities
+[ ] Implement database migration system with Alembic
+[ ] Configure connection pooling and timeouts
+Caching & Performance
+[ ] Implement Redis caching service
+[ ] Add cache decorators for API endpoints
+[ ] Set up token usage tracking with Redis
+[ ] Configure request/response compression
+Background Processing
+[ ] Set up Celery for async task processing
+[ ] Implement tasks for dataset processing
+[ ] Create tasks for batch inference
+[ ] Add periodic tasks for metrics collection
+Metrics & Monitoring
+[ ] Implement Prometheus metrics collection
+[ ] Create Grafana dashboards for key metrics
+[ ] Set up structured logging with JSON format
+[ ] Implement distributed tracing
+Enhanced Dashboard
+[ ] Create Flask dashboard templates
+[ ] Implement experiment monitoring UI
+[ ] Add cost tracking visualization
+[ ] Create prompt comparison views
+Deployment
+[ ] Create Kubernetes manifests for all components
+[ ] Implement Terraform for infrastructure
+[ ] Set up CI/CD pipeline with security scanning
+[ ] Configure autoscaling for all components
+Testing
+[ ] Write integration tests for the full stack
+[ ] Create load tests for API endpoints
+[ ] Implement end-to-end tests with real LLMs
+[ ] Set up continuous performance testing
+Security
+[ ] Implement proper RBAC for all endpoints
+[ ] Set up WAF rules for API protection
+[ ] Configure TLS for all communication
+[ ] Implement audit logging
+Documentation
+[ ] Create API documentation with Swagger/OpenAPI
+[ ] Write user guide for the platform
+[ ] Document deployment procedures
+[ ] Create runbooks for common issues
