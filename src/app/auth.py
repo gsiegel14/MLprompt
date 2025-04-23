@@ -1,119 +1,145 @@
 
-"""
-Authentication module for the Prompt Optimization Platform
-"""
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, List
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import ValidationError
 
-from src.app.config import settings
+from src.api.models import TokenData, UserResponse
+from src.app.config import get_settings
 
-# Models
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+settings = get_settings()
 
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-class User(BaseModel):
-    username: str
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    disabled: Optional[bool] = False
-
-class UserInDB(User):
-    hashed_password: str
-
-# Security setup
+# Password hashing utility
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# For demonstration/development, a simple user database
-# In production, this would be replaced with a real database
-FAKE_USERS_DB = {
-    "testuser": {
-        "username": "testuser",
-        "full_name": "Test User",
-        "email": "testuser@example.com",
-        "hashed_password": pwd_context.hash("password123"),
-        "disabled": False,
-    },
-    "admin": {
-        "username": "admin",
-        "full_name": "Admin User",
-        "email": "admin@example.com",
-        "hashed_password": pwd_context.hash("admin123"),
-        "disabled": False,
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/token",
+    scopes={
+        "prompts": "Read and write prompts",
+        "experiments": "Manage optimization experiments",
+        "inference": "Run model inference",
+        "datasets": "Manage datasets",
+        "admin": "Administrative access"
     }
-}
+)
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
+
+def verify_password(plain_password, hashed_password):
+    """Verify a password against its hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password: str) -> str:
-    """Hash a password for storing."""
+
+def get_password_hash(password):
+    """Generate a password hash."""
     return pwd_context.hash(password)
 
-def get_user(db: Dict[str, Dict[str, Any]], username: str) -> Optional[UserInDB]:
-    """Get a user from the database."""
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+
+async def get_user(username: str):
+    """Retrieve a user by username from the database."""
+    # This would be replaced with a database query
+    # For now, a mock implementation for development
+    if username == "admin":
+        return {
+            "user_id": "admin-user-id",
+            "username": "admin",
+            "email": "admin@example.com",
+            "full_name": "Admin User",
+            "hashed_password": get_password_hash("adminpassword"),
+            "is_active": True,
+            "scopes": ["prompts", "experiments", "inference", "datasets", "admin"],
+            "created_at": datetime.now() - timedelta(days=30)
+        }
     return None
 
-def authenticate_user(db: Dict[str, Dict[str, Any]], username: str, password: str) -> Optional[User]:
-    """Authenticate a user."""
-    user = get_user(db, username)
+
+async def authenticate_user(username: str, password: str):
+    """Authenticate a user by username and password."""
+    user = await get_user(username)
     if not user:
-        return None
-    if not verify_password(password, user.hashed_password):
-        return None
+        return False
+    if not verify_password(password, user["hashed_password"]):
+        return False
     return user
 
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create a JWT access token with expiration."""
     to_encode = data.copy()
+    
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        
     to_encode.update({"exp": expire})
-    # In production, use a secure key stored in Secret Manager
-    secret_key = settings.JWT_SECRET_KEY
-    encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=settings.JWT_ALGORITHM)
-    return encoded_jwt
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt, expire
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    """Get the current user from a JWT token."""
+
+async def get_current_user(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
+    """Validate the token and get the current user."""
+    if security_scopes.scopes:
+        authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    else:
+        authenticate_value = "Bearer"
+        
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        headers={"WWW-Authenticate": authenticate_value},
     )
+    
     try:
-        # In production, use a secure key stored in Secret Manager
-        secret_key = settings.JWT_SECRET_KEY
-        payload = jwt.decode(token, secret_key, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
-    except JWTError:
+        token_scopes = payload.get("scopes", [])
+        token_data = TokenData(username=username, scopes=token_scopes)
+    except (JWTError, ValidationError):
         raise credentials_exception
-    user = get_user(FAKE_USERS_DB, username=token_data.username)
+        
+    user = await get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
-    return user
+        
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not enough permissions. Required scope: {scope}",
+                headers={"WWW-Authenticate": authenticate_value},
+            )
+            
+    return UserResponse(
+        user_id=user["user_id"],
+        username=user["username"],
+        email=user["email"],
+        full_name=user["full_name"],
+        is_active=user["is_active"],
+        created_at=user["created_at"]
+    )
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+
+async def get_current_active_user(current_user: UserResponse = Depends(get_current_user)):
     """Get the current active user."""
-    if current_user.disabled:
+    if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+# Optional: Function to check admin permissions
+async def get_current_admin_user(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get the current user and verify they have admin privileges."""
+    # This would check admin status in a real system
+    if current_user.username != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can perform this action"
+        )
     return current_user

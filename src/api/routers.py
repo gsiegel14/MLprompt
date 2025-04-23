@@ -1,39 +1,63 @@
 
-"""
-API router configuration
-"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from datetime import datetime
 
-from src.api.endpoints import prompts, optimization, cost_tracking, experiments, datasets, inference
-from src.app.auth import Token, authenticate_user, create_access_token, FAKE_USERS_DB
-from src.app.config import settings
+from src.api.endpoints import (
+    prompts,
+    optimization,
+    cost_tracking,
+    experiments,
+    datasets,
+    inference
+)
 
-api_router = APIRouter()
+api_router = APIRouter(prefix="/api/v1")
 
 # Include all endpoint routers
-api_router.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
-api_router.include_router(optimization.router, prefix="/optimization", tags=["optimization"])
-api_router.include_router(cost_tracking.router, prefix="/cost_tracking", tags=["cost_tracking"])
-api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
-api_router.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
-api_router.include_router(inference.router, prefix="/inference", tags=["inference"])
+api_router.include_router(prompts.router)
+api_router.include_router(optimization.router)
+api_router.include_router(experiments.router)
+api_router.include_router(datasets.router)
+api_router.include_router(inference.router)
+api_router.include_router(cost_tracking.router)
 
-@api_router.post("/token", response_model=Token, tags=["authentication"])
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+
+@api_router.get("/health")
+async def health_check():
     """
-    OAuth2 compatible token login, get an access token for future requests
+    Health check endpoint for API
     """
-    user = authenticate_user(FAKE_USERS_DB, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0"
+        }
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@api_router.get("/")
+async def api_root():
+    """
+    API root endpoint with documentation
+    """
+    return JSONResponse(
+        status_code=200,
+        content={
+            "name": "Prompt Optimization Platform API",
+            "version": "1.0.0",
+            "description": "API for optimizing LLM prompts using machine learning",
+            "documentation": "/docs",
+            "endpoints": [
+                {"path": "/prompts", "description": "Prompt management"},
+                {"path": "/optimization", "description": "Prompt optimization workflows"},
+                {"path": "/experiments", "description": "Experiment management"},
+                {"path": "/datasets", "description": "Dataset management"},
+                {"path": "/inference", "description": "Model inference"},
+                {"path": "/cost", "description": "Cost tracking"}
+            ],
+            "health": "/api/v1/health"
+        }
+    )

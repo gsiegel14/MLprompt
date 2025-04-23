@@ -1,191 +1,386 @@
 
-"""
-API endpoints for experiment management
-"""
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-import logging
-import os
-import json
-from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends, Security, BackgroundTasks
+from fastapi.security import SecurityScopes
+from typing import List, Optional, Dict
+import uuid
 from datetime import datetime
+import json
+import os
+import asyncio
 
-from src.api.models import ExperimentData, ExperimentList
-from src.app.auth import get_current_active_user, User
+from src.api.models import (
+    ExperimentCreate, ExperimentResponse, ExperimentMetrics,
+    ExperimentStatus, OptimizationStrategy
+)
+from src.app.auth import get_current_active_user
+from src.flows.prompt_optimization_flow import run_optimization_flow
 
-router = APIRouter(prefix="/experiments", tags=["experiments"])
-logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/experiments", tags=["Experiments"])
 
-# In-memory cache of active experiments 
-# In a production app, this would be stored in a database
-active_experiments = {}
+# Mock database for development - would be replaced with real database in production
+EXPERIMENTS = {}
 
-@router.post("/{experiment_id}/start")
+@router.post("/", response_model=ExperimentResponse)
+async def create_experiment(
+    experiment: ExperimentCreate,
+    current_user = Security(get_current_active_user, scopes=["experiments"])
+):
+    """
+    Create a new prompt optimization experiment
+    """
+    try:
+        experiment_id = str(uuid.uuid4())
+        now = datetime.now()
+        
+        # Create experiment record
+        experiment_record = {
+            "experiment_id": experiment_id,
+            "name": experiment.name,
+            "description": experiment.description,
+            "prompt_id": experiment.prompt_id,
+            "dataset_id": experiment.dataset_id,
+            "status": ExperimentStatus.PENDING,
+            "optimization_strategy": experiment.optimization_strategy,
+            "current_iteration": 0,
+            "max_iterations": experiment.max_iterations,
+            "evaluation_metrics": experiment.evaluation_metrics,
+            "created_at": now,
+            "last_updated": now,
+            "created_by": current_user.user_id,
+            "metadata": experiment.metadata
+        }
+        
+        # In a real implementation, this would save to database
+        EXPERIMENTS[experiment_id] = experiment_record
+        
+        # Also save to filesystem for development
+        os.makedirs("data/experiments", exist_ok=True)
+        with open(f"data/experiments/{experiment_id}.json", "w") as f:
+            json.dump(experiment_record, f)
+        
+        # Return response
+        return ExperimentResponse(
+            experiment_id=experiment_id,
+            name=experiment.name,
+            description=experiment.description,
+            prompt_id=experiment.prompt_id,
+            dataset_id=experiment.dataset_id,
+            status=ExperimentStatus.PENDING,
+            current_iteration=0,
+            max_iterations=experiment.max_iterations,
+            created_at=now,
+            last_updated=now,
+            metadata=experiment.metadata
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{experiment_id}/start", response_model=ExperimentResponse)
 async def start_experiment(
     experiment_id: str,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_active_user)
+    current_user = Security(get_current_active_user, scopes=["experiments"])
 ):
-    """Start an experiment by ID"""
-    # Check if experiment exists
-    experiments_dir = "experiments"
-    experiment_dir = os.path.join(experiments_dir, experiment_id)
-    
-    if not os.path.exists(experiment_dir):
-        raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
-    
-    # Function to run the experiment
-    def run_experiment():
+    """
+    Start a pending experiment
+    """
+    # Try to load from filesystem if not in memory
+    if experiment_id not in EXPERIMENTS:
         try:
-            logger.info(f"Starting experiment {experiment_id}")
-            # Here we would trigger the actual workflow
-            # For now, we'll just mark it as running
-            active_experiments[experiment_id] = {
-                "status": "running",
-                "started_at": datetime.now().isoformat(),
-                "started_by": current_user.username
-            }
-            
-            # In a real implementation, this would call the workflow
-            # flow = prompt_optimization_flow(...)
-            
-            # Mark as completed when done
-            active_experiments[experiment_id]["status"] = "completed"
-            active_experiments[experiment_id]["completed_at"] = datetime.now().isoformat()
-            
-            logger.info(f"Experiment {experiment_id} completed")
-        except Exception as e:
-            logger.error(f"Error in experiment {experiment_id}: {str(e)}")
-            active_experiments[experiment_id]["status"] = "failed"
-            active_experiments[experiment_id]["error"] = str(e)
+            with open(f"data/experiments/{experiment_id}.json", "r") as f:
+                EXPERIMENTS[experiment_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Experiment with ID {experiment_id} not found")
     
-    # Add task to background tasks
-    background_tasks.add_task(run_experiment)
+    experiment = EXPERIMENTS[experiment_id]
     
-    return {
-        "experiment_id": experiment_id,
-        "status": "started",
-        "message": f"Experiment {experiment_id} started"
-    }
+    # Check if experiment can be started
+    if experiment["status"] not in [ExperimentStatus.PENDING, ExperimentStatus.FAILED]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Experiment has status {experiment['status']} and cannot be started"
+        )
+    
+    # Update status
+    experiment["status"] = ExperimentStatus.RUNNING
+    experiment["last_updated"] = datetime.now()
+    
+    # Save updated state
+    with open(f"data/experiments/{experiment_id}.json", "w") as f:
+        json.dump(experiment, f)
+    
+    # Start experiment in background
+    background_tasks.add_task(
+        _run_experiment_flow,
+        experiment_id=experiment_id,
+        prompt_id=experiment["prompt_id"],
+        dataset_id=experiment["dataset_id"],
+        max_iterations=experiment["max_iterations"],
+        optimization_strategy=experiment["optimization_strategy"],
+        metrics=experiment["evaluation_metrics"]
+    )
+    
+    # Return updated experiment
+    return ExperimentResponse(
+        experiment_id=experiment["experiment_id"],
+        name=experiment["name"],
+        description=experiment["description"],
+        prompt_id=experiment["prompt_id"],
+        dataset_id=experiment["dataset_id"],
+        status=ExperimentStatus.RUNNING,
+        current_iteration=experiment["current_iteration"],
+        max_iterations=experiment["max_iterations"],
+        created_at=experiment["created_at"] if isinstance(experiment["created_at"], datetime) else datetime.fromisoformat(experiment["created_at"]),
+        last_updated=experiment["last_updated"] if isinstance(experiment["last_updated"], datetime) else datetime.fromisoformat(experiment["last_updated"]),
+        metadata=experiment["metadata"]
+    )
 
-@router.get("/{experiment_id}/metrics")
+
+@router.get("/{experiment_id}", response_model=ExperimentResponse)
+async def get_experiment(
+    experiment_id: str,
+    current_user = Security(get_current_active_user, scopes=["experiments"])
+):
+    """
+    Get experiment details by ID
+    """
+    # Try to load from filesystem if not in memory
+    if experiment_id not in EXPERIMENTS:
+        try:
+            with open(f"data/experiments/{experiment_id}.json", "r") as f:
+                EXPERIMENTS[experiment_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Experiment with ID {experiment_id} not found")
+    
+    experiment = EXPERIMENTS[experiment_id]
+    
+    return ExperimentResponse(
+        experiment_id=experiment["experiment_id"],
+        name=experiment["name"],
+        description=experiment["description"],
+        prompt_id=experiment["prompt_id"],
+        dataset_id=experiment["dataset_id"],
+        status=experiment["status"],
+        current_iteration=experiment["current_iteration"],
+        max_iterations=experiment["max_iterations"],
+        created_at=experiment["created_at"] if isinstance(experiment["created_at"], datetime) else datetime.fromisoformat(experiment["created_at"]),
+        last_updated=experiment["last_updated"] if isinstance(experiment["last_updated"], datetime) else datetime.fromisoformat(experiment["last_updated"]),
+        metadata=experiment["metadata"]
+    )
+
+
+@router.get("/", response_model=List[ExperimentResponse])
+async def list_experiments(
+    status: Optional[ExperimentStatus] = None,
+    current_user = Security(get_current_active_user, scopes=["experiments"])
+):
+    """
+    List all experiments, optionally filtered by status
+    """
+    # Load experiments from filesystem for development
+    if not EXPERIMENTS:
+        os.makedirs("data/experiments", exist_ok=True)
+        for filename in os.listdir("data/experiments"):
+            if filename.endswith(".json"):
+                try:
+                    with open(f"data/experiments/{filename}", "r") as f:
+                        experiment = json.load(f)
+                        EXPERIMENTS[experiment["experiment_id"]] = experiment
+                except:
+                    continue
+    
+    results = []
+    
+    for experiment_id, experiment in EXPERIMENTS.items():
+        # Filter by status if provided
+        if status and experiment["status"] != status:
+            continue
+            
+        results.append(ExperimentResponse(
+            experiment_id=experiment["experiment_id"],
+            name=experiment["name"],
+            description=experiment["description"],
+            prompt_id=experiment["prompt_id"],
+            dataset_id=experiment["dataset_id"],
+            status=experiment["status"],
+            current_iteration=experiment["current_iteration"],
+            max_iterations=experiment["max_iterations"],
+            created_at=experiment["created_at"] if isinstance(experiment["created_at"], datetime) else datetime.fromisoformat(experiment["created_at"]),
+            last_updated=experiment["last_updated"] if isinstance(experiment["last_updated"], datetime) else datetime.fromisoformat(experiment["last_updated"]),
+            metadata=experiment["metadata"]
+        ))
+    
+    return results
+
+
+@router.get("/{experiment_id}/metrics", response_model=ExperimentMetrics)
 async def get_experiment_metrics(
     experiment_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user = Security(get_current_active_user, scopes=["experiments"])
 ):
-    """Get metrics for an experiment"""
-    experiments_dir = "experiments"
-    experiment_dir = os.path.join(experiments_dir, experiment_id)
+    """
+    Get metrics for an experiment
+    """
+    # Try to load from filesystem if not in memory
+    if experiment_id not in EXPERIMENTS:
+        try:
+            with open(f"data/experiments/{experiment_id}.json", "r") as f:
+                EXPERIMENTS[experiment_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Experiment with ID {experiment_id} not found")
     
-    if not os.path.exists(experiment_dir):
-        raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+    # Load metrics
+    try:
+        with open(f"data/experiments/{experiment_id}/metrics.json", "r") as f:
+            metrics_data = json.load(f)
+    except:
+        # Return empty metrics if not found
+        return ExperimentMetrics(
+            experiment_id=experiment_id,
+            iterations=[],
+            best_iteration=0,
+            best_metrics={},
+            comparison={}
+        )
     
-    # Check for metrics files
-    metrics_files = []
-    for f in os.listdir(experiment_dir):
-        if f.startswith('metrics_') and f.endswith('.json'):
-            metrics_files.append(f)
+    # Find best iteration
+    best_iteration = 0
+    best_score = 0
+    primary_metric = "accuracy"  # Default to accuracy
     
-    if not metrics_files:
-        # Check newer directory structure
-        metrics_dir = os.path.join(experiment_dir, "validation")
-        if os.path.exists(metrics_dir) and os.path.exists(os.path.join(metrics_dir, "metrics.json")):
-            with open(os.path.join(metrics_dir, "metrics.json"), 'r') as f:
-                metrics = json.load(f)
-            return {
-                "experiment_id": experiment_id,
-                "metrics": metrics
+    for i, iteration in enumerate(metrics_data["iterations"]):
+        if iteration["metrics"].get(primary_metric, 0) > best_score:
+            best_score = iteration["metrics"].get(primary_metric, 0)
+            best_iteration = i
+    
+    # Compare first and best iteration
+    comparison = {}
+    if len(metrics_data["iterations"]) > 0:
+        first_metrics = metrics_data["iterations"][0]["metrics"]
+        best_metrics = metrics_data["iterations"][best_iteration]["metrics"]
+        
+        comparison = {
+            "initial": first_metrics,
+            "best": best_metrics,
+            "improvement": {
+                k: best_metrics.get(k, 0) - first_metrics.get(k, 0)
+                for k in first_metrics.keys()
             }
-        else:
-            raise HTTPException(status_code=404, detail=f"No metrics found for experiment {experiment_id}")
+        }
     
-    # Load the metrics from all iterations
-    all_metrics = []
-    for metrics_file in sorted(metrics_files):
-        with open(os.path.join(experiment_dir, metrics_file), 'r') as f:
-            metrics = json.load(f)
-            iteration = int(metrics_file.split('_')[1].split('.')[0])
-            all_metrics.append({
-                "iteration": iteration,
-                "metrics": metrics
-            })
-    
-    return {
-        "experiment_id": experiment_id,
-        "iterations": len(all_metrics),
-        "metrics_by_iteration": all_metrics
-    }
+    return ExperimentMetrics(
+        experiment_id=experiment_id,
+        iterations=metrics_data["iterations"],
+        best_iteration=best_iteration,
+        best_metrics=metrics_data["iterations"][best_iteration]["metrics"] if metrics_data["iterations"] else {},
+        comparison=comparison
+    )
 
-@router.get("/", response_model=ExperimentList)
-async def list_experiments(current_user: User = Depends(get_current_active_user)):
-    """List all experiments"""
-    experiments_dir = "experiments"
+
+@router.delete("/{experiment_id}")
+async def delete_experiment(
+    experiment_id: str,
+    current_user = Security(get_current_active_user, scopes=["experiments"])
+):
+    """
+    Delete an experiment by ID
+    """
+    # Check if experiment exists
+    if experiment_id not in EXPERIMENTS:
+        try:
+            with open(f"data/experiments/{experiment_id}.json", "r") as f:
+                EXPERIMENTS[experiment_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Experiment with ID {experiment_id} not found")
     
-    if not os.path.exists(experiments_dir):
-        return {"experiments": []}
+    # Cancel if running
+    experiment = EXPERIMENTS[experiment_id]
+    if experiment["status"] == ExperimentStatus.RUNNING:
+        experiment["status"] = ExperimentStatus.CANCELLED
+        with open(f"data/experiments/{experiment_id}.json", "w") as f:
+            json.dump(experiment, f)
     
-    experiments = []
-    for experiment_id in os.listdir(experiments_dir):
-        experiment_dir = os.path.join(experiments_dir, experiment_id)
+    # Delete from memory
+    del EXPERIMENTS[experiment_id]
+    
+    # In a production system, you might want to keep the data or mark as deleted
+    # rather than physically deleting it
+    
+    return {"message": f"Experiment {experiment_id} deleted successfully"}
+
+
+async def _run_experiment_flow(
+    experiment_id: str,
+    prompt_id: str,
+    dataset_id: str,
+    max_iterations: int,
+    optimization_strategy: str,
+    metrics: List[str]
+):
+    """
+    Background task to run the optimization flow
+    """
+    try:
+        # Get experiment record
+        experiment = EXPERIMENTS[experiment_id]
         
-        # Skip if not a directory
-        if not os.path.isdir(experiment_dir):
-            continue
+        # Create experiment directory
+        os.makedirs(f"data/experiments/{experiment_id}", exist_ok=True)
         
-        # Get metadata
-        created_at = datetime.fromtimestamp(os.path.getctime(experiment_dir)).isoformat()
+        # Initialize metrics tracking
+        metrics_data = {
+            "experiment_id": experiment_id,
+            "iterations": []
+        }
         
-        # Look for best metrics
-        best_metrics = {}
-        best_prompt_state = {}
-        
-        # Check for metrics files
-        for f in os.listdir(experiment_dir):
-            if f.startswith('metrics_') and f.endswith('.json'):
-                with open(os.path.join(experiment_dir, f), 'r') as file:
-                    metrics = json.load(file)
-                    if not best_metrics or metrics.get("overall_score", 0) > best_metrics.get("overall_score", 0):
-                        best_metrics = metrics
-                        
-                        # Load corresponding prompt state
-                        prompt_file = f.replace('metrics_', 'prompts_')
-                        if os.path.exists(os.path.join(experiment_dir, prompt_file)):
-                            with open(os.path.join(experiment_dir, prompt_file), 'r') as prompt_f:
-                                best_prompt_state = json.load(prompt_f)
-        
-        # Check newer directory structure
-        prompts_dir = os.path.join(experiment_dir, "prompts")
-        validation_dir = os.path.join(experiment_dir, "validation")
-        if os.path.exists(validation_dir) and os.path.exists(os.path.join(validation_dir, "metrics.json")):
-            with open(os.path.join(validation_dir, "metrics.json"), 'r') as f:
-                best_metrics = json.load(f)
+        # Run optimization flow for each iteration
+        for iteration in range(max_iterations):
+            # Update experiment status
+            experiment["current_iteration"] = iteration + 1
+            experiment["last_updated"] = datetime.now()
+            with open(f"data/experiments/{experiment_id}.json", "w") as f:
+                json.dump(experiment, f)
             
-            if os.path.exists(prompts_dir):
-                best_prompt_state = {
-                    "system_prompt": "",
-                    "output_prompt": ""
-                }
-                
-                if os.path.exists(os.path.join(prompts_dir, "optimized_system.txt")):
-                    with open(os.path.join(prompts_dir, "optimized_system.txt"), 'r') as f:
-                        best_prompt_state["system_prompt"] = f.read()
-                
-                if os.path.exists(os.path.join(prompts_dir, "optimized_output.txt")):
-                    with open(os.path.join(prompts_dir, "optimized_output.txt"), 'r') as f:
-                        best_prompt_state["output_prompt"] = f.read()
+            # Run optimization flow
+            iteration_results = await run_optimization_flow(
+                prompt_id=prompt_id,
+                dataset_id=dataset_id,
+                iteration=iteration,
+                strategy=optimization_strategy
+            )
+            
+            # Save iteration results
+            with open(f"data/experiments/{experiment_id}/iteration_{iteration}.json", "w") as f:
+                json.dump(iteration_results, f)
+            
+            # Update metrics
+            metrics_data["iterations"].append({
+                "iteration": iteration + 1,
+                "metrics": iteration_results["metrics"],
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            with open(f"data/experiments/{experiment_id}/metrics.json", "w") as f:
+                json.dump(metrics_data, f)
         
-        # Get count of iterations
-        iterations = len([f for f in os.listdir(experiment_dir) if f.startswith('metrics_') and f.endswith('.json')])
+        # Mark experiment as completed
+        experiment["status"] = ExperimentStatus.COMPLETED
+        experiment["last_updated"] = datetime.now()
+        with open(f"data/experiments/{experiment_id}.json", "w") as f:
+            json.dump(experiment, f)
+            
+    except Exception as e:
+        # Handle errors
+        print(f"Error in experiment {experiment_id}: {str(e)}")
         
-        experiments.append({
-            "id": experiment_id,
-            "created_at": created_at,
-            "iterations": iterations,
-            "best_metrics": best_metrics,
-            "best_prompt_state": best_prompt_state,
-            "status": active_experiments.get(experiment_id, {}).get("status", "completed")
-        })
-    
-    # Sort by created_at, newest first
-    experiments.sort(key=lambda x: x["created_at"], reverse=True)
-    
-    return {"experiments": experiments}
+        # Mark experiment as failed
+        experiment = EXPERIMENTS.get(experiment_id)
+        if experiment:
+            experiment["status"] = ExperimentStatus.FAILED
+            experiment["last_updated"] = datetime.now()
+            experiment["metadata"]["error"] = str(e)
+            
+            with open(f"data/experiments/{experiment_id}.json", "w") as f:
+                json.dump(experiment, f)

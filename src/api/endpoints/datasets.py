@@ -1,224 +1,206 @@
 
-"""
-API endpoints for dataset management
-"""
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
-import logging
-import os
+from fastapi import APIRouter, HTTPException, Depends, Security, Query
+from fastapi.security import SecurityScopes
+from typing import List, Optional, Dict
+import uuid
+from datetime import datetime
+import random
 import json
-import csv
-import io
-from typing import List, Dict, Any, Optional
+import os
 
-from src.api.models import Example
-from src.app.auth import get_current_active_user, User
-from src.app.config import settings
+from src.api.models import (
+    DatasetCreate, DatasetResponse, DatasetSample, DatasetItem
+)
+from src.app.auth import get_current_active_user
 
-router = APIRouter(prefix="/datasets", tags=["datasets"])
-logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
-@router.post("/upload")
-async def upload_dataset(
-    file: UploadFile = File(...),
-    dataset_name: str = Form(...),
-    dataset_type: str = Form(...),  # 'train' or 'validation'
-    current_user: User = Depends(get_current_active_user)
+# Mock database for development - would be replaced with real database in production
+DATASETS = {}
+
+@router.post("/", response_model=DatasetResponse)
+async def create_dataset(
+    dataset: DatasetCreate,
+    current_user = Security(get_current_active_user, scopes=["datasets"])
 ):
-    """Upload a dataset (CSV or JSON)"""
+    """
+    Create a new dataset for prompt optimization
+    """
     try:
-        # Ensure datasets directory exists
-        dataset_dir = os.path.join("data", dataset_type)
-        os.makedirs(dataset_dir, exist_ok=True)
+        dataset_id = str(uuid.uuid4())
+        now = datetime.now()
         
-        # Generate a unique filename
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{dataset_name}_{timestamp}"
-        
-        # Process file based on extension
-        extension = file.filename.split('.')[-1].lower()
-        examples = []
-        
-        # Read file content
-        content = await file.read()
-        
-        if extension == 'csv':
-            # Parse CSV
-            csv_text = content.decode('utf-8')
-            csv_reader = csv.DictReader(io.StringIO(csv_text))
-            
-            for row in csv_reader:
-                # Adapt field names if needed
-                example = {
-                    "user_input": row.get("user_input") or row.get("input") or row.get("question") or "",
-                    "ground_truth_output": row.get("ground_truth_output") or row.get("output") or row.get("answer") or "",
-                }
-                examples.append(example)
-                
-        elif extension == 'json':
-            # Parse JSON
-            json_data = json.loads(content)
-            
-            # Handle different JSON formats
-            if isinstance(json_data, list):
-                # Array of examples
-                examples = json_data
-            elif isinstance(json_data, dict) and "examples" in json_data:
-                # Object with examples array
-                examples = json_data["examples"]
-            else:
-                # Unknown format
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Invalid JSON format. Expected array of examples or object with 'examples' array"
-                )
-                
-            # Validate and normalize examples
-            normalized_examples = []
-            for example in examples:
-                normalized = {
-                    "user_input": example.get("user_input") or example.get("input") or example.get("question") or "",
-                    "ground_truth_output": example.get("ground_truth_output") or example.get("output") or example.get("answer") or "",
-                }
-                normalized_examples.append(normalized)
-            
-            examples = normalized_examples
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported file format: {extension}")
-        
-        # Limit the number of examples if needed
-        if len(examples) > settings.MAX_EXAMPLES:
-            examples = examples[:settings.MAX_EXAMPLES]
-            logger.warning(f"Dataset truncated to {settings.MAX_EXAMPLES} examples")
-        
-        # Save to file
-        output_path = os.path.join(dataset_dir, f"{filename}.json")
-        with open(output_path, 'w') as f:
-            json.dump({"examples": examples}, f, indent=2)
-        
-        # If this is set as current, save to current_{dataset_type}.json
-        current_path = os.path.join(dataset_dir, f"current_{dataset_type}.json")
-        with open(current_path, 'w') as f:
-            json.dump({"examples": examples}, f, indent=2)
-        
-        return {
-            "success": True,
-            "message": f"Dataset uploaded as {filename}.json",
-            "example_count": len(examples),
-            "dataset_type": dataset_type,
-            "is_current": True
+        # Create dataset record
+        dataset_record = {
+            "dataset_id": dataset_id,
+            "name": dataset.name,
+            "description": dataset.description,
+            "item_count": len(dataset.items),
+            "tags": dataset.tags,
+            "created_at": now,
+            "last_modified": now,
+            "created_by": current_user.user_id,
+            "metadata": dataset.metadata,
+            "items": [item.dict() for item in dataset.items]
         }
+        
+        # In a real implementation, this would save to database
+        DATASETS[dataset_id] = dataset_record
+        
+        # Also save to filesystem for development
+        os.makedirs("data/datasets", exist_ok=True)
+        with open(f"data/datasets/{dataset_id}.json", "w") as f:
+            json.dump(dataset_record, f)
+        
+        # Return response without items
+        return DatasetResponse(
+            dataset_id=dataset_id,
+            name=dataset.name,
+            description=dataset.description,
+            item_count=len(dataset.items),
+            tags=dataset.tags,
+            created_at=now,
+            last_modified=now,
+            metadata=dataset.metadata
+        )
+        
     except Exception as e:
-        logger.error(f"Error uploading dataset: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{dataset_id}/sample")
-async def get_dataset_sample(
-    dataset_id: str,
-    limit: int = 10,
-    current_user: User = Depends(get_current_active_user)
-):
-    """Get a sample of examples from a dataset"""
-    # Determine dataset path
-    if dataset_id == "current_train":
-        dataset_path = os.path.join("data", "train", "current_train.json")
-    elif dataset_id == "current_validation":
-        dataset_path = os.path.join("data", "validation", "current_validation.json")
-    else:
-        # Search in both train and validation
-        for dataset_type in ["train", "validation"]:
-            dataset_dir = os.path.join("data", dataset_type)
-            if os.path.exists(os.path.join(dataset_dir, f"{dataset_id}.json")):
-                dataset_path = os.path.join(dataset_dir, f"{dataset_id}.json")
-                break
-        else:
-            # Not found
-            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
-    
-    # Check if file exists
-    if not os.path.exists(dataset_path):
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
-    
-    # Load dataset
-    with open(dataset_path, 'r') as f:
-        data = json.load(f)
-    
-    # Extract examples
-    if isinstance(data, dict) and "examples" in data:
-        examples = data["examples"]
-    elif isinstance(data, list):
-        examples = data
-    else:
-        examples = []
-    
-    # Limit the number of examples
-    sample = examples[:limit]
-    
-    return {
-        "dataset_id": dataset_id,
-        "total_examples": len(examples),
-        "sample_size": len(sample),
-        "examples": sample
-    }
 
-@router.get("/")
-async def list_datasets(current_user: User = Depends(get_current_active_user)):
-    """List all available datasets"""
-    datasets = []
+@router.get("/{dataset_id}", response_model=DatasetResponse)
+async def get_dataset(
+    dataset_id: str,
+    current_user = Security(get_current_active_user, scopes=["datasets"])
+):
+    """
+    Get dataset metadata by ID
+    """
+    # Try to load from filesystem if not in memory
+    if dataset_id not in DATASETS:
+        try:
+            with open(f"data/datasets/{dataset_id}.json", "r") as f:
+                DATASETS[dataset_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Dataset with ID {dataset_id} not found")
     
-    # Process both train and validation directories
-    for dataset_type in ["train", "validation"]:
-        dataset_dir = os.path.join("data", dataset_type)
-        
-        if not os.path.exists(dataset_dir):
-            continue
-        
-        # Get current dataset
-        current_path = os.path.join(dataset_dir, f"current_{dataset_type}.json")
-        current_dataset = None
-        if os.path.exists(current_path):
-            current_dataset = f"current_{dataset_type}"
-        
-        # Get all datasets
-        for filename in os.listdir(dataset_dir):
-            if filename.endswith('.json'):
-                # Skip current dataset file
-                if filename == f"current_{dataset_type}.json":
-                    continue
-                
-                dataset_id = filename.replace('.json', '')
-                dataset_path = os.path.join(dataset_dir, filename)
-                
-                # Get metadata
-                created_at = os.path.getctime(dataset_path)
-                from datetime import datetime
-                created_at_str = datetime.fromtimestamp(created_at).isoformat()
-                
-                # Count examples
+    dataset = DATASETS[dataset_id]
+    
+    return DatasetResponse(
+        dataset_id=dataset["dataset_id"],
+        name=dataset["name"],
+        description=dataset["description"],
+        item_count=dataset["item_count"],
+        tags=dataset["tags"],
+        created_at=dataset["created_at"],
+        last_modified=dataset["last_modified"],
+        metadata=dataset["metadata"]
+    )
+
+
+@router.get("/", response_model=List[DatasetResponse])
+async def list_datasets(
+    tags: Optional[List[str]] = Query(None),
+    current_user = Security(get_current_active_user, scopes=["datasets"])
+):
+    """
+    List all datasets, optionally filtered by tags
+    """
+    # Load datasets from filesystem for development
+    if not DATASETS:
+        os.makedirs("data/datasets", exist_ok=True)
+        for filename in os.listdir("data/datasets"):
+            if filename.endswith(".json"):
                 try:
-                    with open(dataset_path, 'r') as f:
-                        data = json.load(f)
-                    
-                    if isinstance(data, dict) and "examples" in data:
-                        example_count = len(data["examples"])
-                    elif isinstance(data, list):
-                        example_count = len(data)
-                    else:
-                        example_count = 0
+                    with open(f"data/datasets/{filename}", "r") as f:
+                        dataset = json.load(f)
+                        DATASETS[dataset["dataset_id"]] = dataset
                 except:
-                    example_count = 0
-                
-                # Add to list
-                datasets.append({
-                    "id": dataset_id,
-                    "filename": filename,
-                    "type": dataset_type,
-                    "created_at": created_at_str,
-                    "example_count": example_count,
-                    "is_current": dataset_id == current_dataset
-                })
+                    continue
     
-    # Sort by created_at, newest first
-    datasets.sort(key=lambda x: x["created_at"], reverse=True)
+    results = []
     
-    return {"datasets": datasets}
+    for dataset_id, dataset in DATASETS.items():
+        # Filter by tags if provided
+        if tags and not all(tag in dataset["tags"] for tag in tags):
+            continue
+            
+        results.append(DatasetResponse(
+            dataset_id=dataset["dataset_id"],
+            name=dataset["name"],
+            description=dataset["description"],
+            item_count=dataset["item_count"],
+            tags=dataset["tags"],
+            created_at=dataset["created_at"] if isinstance(dataset["created_at"], datetime) else datetime.fromisoformat(dataset["created_at"]),
+            last_modified=dataset["last_modified"] if isinstance(dataset["last_modified"], datetime) else datetime.fromisoformat(dataset["last_modified"]),
+            metadata=dataset["metadata"]
+        ))
+    
+    return results
+
+
+@router.get("/{dataset_id}/sample", response_model=DatasetSample)
+async def sample_dataset(
+    dataset_id: str,
+    sample_size: int = Query(5, ge=1, le=100),
+    random_seed: Optional[int] = None,
+    current_user = Security(get_current_active_user, scopes=["datasets"])
+):
+    """
+    Get a random sample of items from a dataset
+    """
+    # Try to load from filesystem if not in memory
+    if dataset_id not in DATASETS:
+        try:
+            with open(f"data/datasets/{dataset_id}.json", "r") as f:
+                DATASETS[dataset_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Dataset with ID {dataset_id} not found")
+    
+    dataset = DATASETS[dataset_id]
+    items = dataset["items"]
+    
+    # Get random sample
+    if random_seed is not None:
+        random.seed(random_seed)
+    
+    sample_size = min(sample_size, len(items))
+    sampled_items = random.sample(items, sample_size)
+    
+    # Convert to DatasetItem objects
+    dataset_items = [DatasetItem(**item) for item in sampled_items]
+    
+    return DatasetSample(
+        items=dataset_items,
+        dataset_id=dataset_id,
+        sample_size=sample_size,
+        total_items=len(items)
+    )
+
+
+@router.delete("/{dataset_id}")
+async def delete_dataset(
+    dataset_id: str,
+    current_user = Security(get_current_active_user, scopes=["datasets"])
+):
+    """
+    Delete a dataset by ID
+    """
+    # Check if dataset exists
+    if dataset_id not in DATASETS:
+        try:
+            with open(f"data/datasets/{dataset_id}.json", "r") as f:
+                DATASETS[dataset_id] = json.load(f)
+        except:
+            raise HTTPException(status_code=404, detail=f"Dataset with ID {dataset_id} not found")
+    
+    # Delete from memory
+    del DATASETS[dataset_id]
+    
+    # Delete from filesystem
+    try:
+        os.remove(f"data/datasets/{dataset_id}.json")
+    except:
+        pass
+    
+    return {"message": f"Dataset {dataset_id} deleted successfully"}
