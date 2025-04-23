@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Start Application"
+runButton = "Fix and Restart Application"
 
 [[workflows.workflow]]
 name = "Project"
@@ -73,6 +73,19 @@ args = "python -m src.flows.prompt_optimization_flow"
 
 [[workflows.workflow]]
 name = "Fix and Test Application"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_quick.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
+
+[[workflows.workflow]]
+name = "Fix and Restart Application"
 author = 41794870
 mode = "sequential"
 
