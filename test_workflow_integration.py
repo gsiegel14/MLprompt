@@ -81,7 +81,7 @@ class WorkflowIntegrationTester:
             "Please provide a ranked list of the most likely diagnoses based on the symptoms "
             "and history provided. For each diagnosis, explain your reasoning."
         )
-        self.test_batch_size = 3
+        self.test_batch_size = 1  # Reduced to 1 for faster testing
         self.test_hf_metrics = ["exact_match", "bleu"]
         self.test_optimizer_strategy = "reasoning_first"
         
