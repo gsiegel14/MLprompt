@@ -102,11 +102,11 @@ def run_evaluation():
         # Validate request format
         if not request.is_json:
             return jsonify({'error': 'Request must be JSON format'}), 400
-            
+
         data = request.json
         if not isinstance(data, dict):
             return jsonify({'error': 'Invalid request format'}), 400
-            
+
         # Extract and validate required fields
         system_prompt = data.get('system_prompt', '')
         output_prompt = data.get('output_prompt', '')
@@ -116,10 +116,10 @@ def run_evaluation():
         # Validate prompt fields
         if not isinstance(system_prompt, str) or not isinstance(output_prompt, str):
             return jsonify({'error': 'System prompt and output prompt must be strings'}), 400
-            
+
         if not system_prompt.strip() or not output_prompt.strip():
             return jsonify({'error': 'System prompt and output prompt are required and cannot be empty'}), 400
-            
+
         # Validate examples format
         if examples_format not in ['text', 'csv']:
             return jsonify({'error': 'Invalid examples format. Must be "text" or "csv"'}), 400
@@ -127,14 +127,14 @@ def run_evaluation():
         # Validate examples content
         if not examples_content or not isinstance(examples_content, str):
             return jsonify({'error': 'Example data is required and must be a string'}), 400
-            
+
         # Size limits to prevent abuse
         if len(system_prompt) > 10000:
             return jsonify({'error': 'System prompt exceeds maximum length of 10,000 characters'}), 400
-            
+
         if len(output_prompt) > 5000:
             return jsonify({'error': 'Output prompt exceeds maximum length of 5,000 characters'}), 400
-            
+
         if len(examples_content) > 100000:
             return jsonify({'error': 'Examples content exceeds maximum length of 100,000 characters'}), 400
 
@@ -777,7 +777,7 @@ def train():
             experiment_tracker.save_iteration(
                 experiment_id=experiment_id,
                 iteration=iteration,
-                system_prompt=system_prompt,
+                system_prompt=systemprompt,
                 output_prompt=output_prompt,
                 metrics=initial_metrics,
                 examples=evaluation_results
@@ -1563,7 +1563,7 @@ Then calculate an overall score between 0.0 and 1.0."""
 {
   "clarity": <score_1_to_10>,
   "clarity_comment": "<brief_explanation>",
-  "conciseness": <score_1_to_10>,
+"conciseness": <score_1_to_10>,
   "conciseness_comment": "<brief_explanation>",
   "effectiveness": <score_1_to_10>,
   "effectiveness_comment": "<brief_explanation>",

@@ -55,6 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
         todos = todos.map(todo => {
             if (todo.id === id) {
                 todo.completed = !todo.completed;
+                
+                // If this is a task being completed, update the TODO.md file via API
+                if (todo.completed) {
+                    updateTodoMarkdown(todo.text, true);
+                } else {
+                    updateTodoMarkdown(todo.text, false);
+                }
             }
             return todo;
         });
@@ -118,6 +125,91 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update tasks left count
         const activeTodos = todos.filter(todo => !todo.completed);
         tasksLeft.textContent = `${activeTodos.length} task${activeTodos.length !== 1 ? 's' : ''} left`;
+        
+        // Update progress indicators
+        updateProgressIndicators();
+    }
+
+    function updateProgressIndicators() {
+        // Calculate completion percentages by priority
+        const highPriorityTasks = todos.filter(todo => todo.priority === 'high');
+        const mediumPriorityTasks = todos.filter(todo => todo.priority === 'medium');
+        const lowPriorityTasks = todos.filter(todo => todo.priority === 'low');
+        
+        const highCompleted = highPriorityTasks.filter(todo => todo.completed).length;
+        const mediumCompleted = mediumPriorityTasks.filter(todo => todo.completed).length;
+        const lowCompleted = lowPriorityTasks.filter(todo => todo.completed).length;
+        
+        const highPercentage = highPriorityTasks.length ? Math.round((highCompleted / highPriorityTasks.length) * 100) : 0;
+        const mediumPercentage = mediumPriorityTasks.length ? Math.round((mediumCompleted / mediumPriorityTasks.length) * 100) : 0;
+        const lowPercentage = lowPriorityTasks.length ? Math.round((lowCompleted / lowPriorityTasks.length) * 100) : 0;
+        const totalPercentage = todos.length ? Math.round((todos.filter(todo => todo.completed).length / todos.length) * 100) : 0;
+        
+        // If we have an existing progress container, remove it
+        const existingProgress = document.querySelector('.todo-progress-container');
+        if (existingProgress) {
+            existingProgress.remove();
+        }
+        
+        // Create progress indicators
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'todo-progress-container';
+        
+        progressContainer.innerHTML = `
+            <h3>Project Progress</h3>
+            <div class="progress-item">
+                <div class="progress-label">Overall: ${totalPercentage}%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${totalPercentage}%"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">High Priority: ${highPercentage}%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill high" style="width: ${highPercentage}%"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">Medium Priority: ${mediumPercentage}%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill medium" style="width: ${mediumPercentage}%"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">Low Priority: ${lowPercentage}%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill low" style="width: ${lowPercentage}%"></div>
+                </div>
+            </div>
+        `;
+        
+        // Insert before the todo list
+        todoList.parentNode.insertBefore(progressContainer, todoList);
+    }
+
+    // Optional: Sync changes to TODO.md file via API
+    async function updateTodoMarkdown(taskText, isCompleted) {
+        try {
+            // This would call an API endpoint to update the TODO.md file
+            // In a real implementation, you'd have an endpoint to handle this
+            console.log(`Task "${taskText}" marked as ${isCompleted ? 'completed' : 'incomplete'}`);
+            
+            // Mock API call for demonstration
+            /*
+            await fetch('/api/update_todo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    task: taskText,
+                    completed: isCompleted
+                }),
+            });
+            */
+        } catch (error) {
+            console.error('Error updating TODO.md:', error);
+        }
     }
 
     function saveTodos() {

@@ -4,41 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt ML - Todo List</title>
+    <title>ML Prompt Optimization Platform - Project Checklist</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Prompt Engineering ML Platform</h1>
+            <h1>ML Prompt Optimization - Project Checklist</h1>
             <nav>
-                <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">
-                    <i class="fa-solid fa-home me-1"></i> Home
-                </a>
-                <a href="{{ url_for('training') }}" class="btn btn-outline-secondary me-2">
-                    <i class="fa-solid fa-graduation-cap me-1"></i> Training
-                </a>
-                <a href="{{ url_for('history') }}" class="btn btn-outline-secondary me-2">
-                    <i class="fa-solid fa-clock-rotate-left me-1"></i> History
-                </a>
-                <a href="{{ url_for('todo') }}" class="btn btn-outline-secondary active">
-                    <i class="fa-solid fa-tasks me-1"></i> Todo
-                </a>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('training') }}">Training</a>
+                <a href="{{ url_for('prompt_page') }}">Prompts</a>
+                <a href="{{ url_for('history') }}">History</a>
+                <a href="{{ url_for('todo') }}" class="active">Checklist</a>
             </nav>
         </header>
         
         <main>
             <section class="todo-container">
-                <h2>Optimization Tasks</h2>
+                <h2>Project Implementation Checklist</h2>
+                <p>Track the progress of the ML Prompt Optimization Platform development</p>
+                
                 <div class="todo-input-container">
                     <input type="text" id="todo-input" placeholder="Add a new task...">
                     <select id="todo-priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
                     </select>
-                    <button id="add-todo-btn">Add Task</button>
+                    <button id="add-todo-btn">Add</button>
                 </div>
                 
                 <div class="todo-filters">
@@ -61,5 +56,222 @@
     </div>
     
     <script src="{{ url_for('static', filename='todo.js') }}"></script>
+    <script>
+        // Initialize with ML project-specific tasks when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const defaultTasks = [
+                // Priority 1: Critical Issues
+                {
+                    text: "Fix syntax error in llm_client.py that prevents application startup",
+                    priority: "high",
+                    completed: true
+                },
+                {
+                    text: "Complete integration between Prefect flows and the main application",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Set up proper Prefect agent configuration and deployment",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Fix workflow scheduling and execution with proper error handling",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Ensure proper integration between Flask and FastAPI components",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Implement comprehensive error handling and logging across all components",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Address memory management in batch processing of large datasets",
+                    priority: "high",
+                    completed: false
+                },
+                
+                // Priority 2: Core Functionality
+                {
+                    text: "Complete basic 5-step workflow implementation",
+                    priority: "high",
+                    completed: true
+                },
+                {
+                    text: "Enhance the API for optimization job submission and tracking",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Implement proper experiment tracking with metrics storage and retrieval",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Add comprehensive cross-validation capabilities",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Implement cost tracking and optimization metrics",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Create endpoints for batch processing with progress tracking",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Make the workflow compatible with different LLM providers",
+                    priority: "medium",
+                    completed: false
+                },
+                
+                // Priority 3: User Experience
+                {
+                    text: "Update UI to display Prefect workflow status in real-time",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Add visualization components for prompt evolution tracking",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Improve metrics dashboards with comparative analysis",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Create experiment comparison views",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Add real-time progress indicators for long-running tasks",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Implement user feedback collection on prompt effectiveness",
+                    priority: "low",
+                    completed: false
+                },
+                
+                // Priority 4: Performance & Scaling
+                {
+                    text: "Optimize memory usage in batch processing operations",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Implement caching for API responses to reduce LLM API calls",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Add rate limiting for API endpoints",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Implement backoff strategies for external API calls",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Set up proper logging and monitoring across all components",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Configure proper thread and process management",
+                    priority: "medium",
+                    completed: false
+                },
+                
+                // Priority 5: Security
+                {
+                    text: "Implement authentication system with API key verification",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Add proper API key and secrets management",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Set up secure environment variable handling for LLM credentials",
+                    priority: "high",
+                    completed: false
+                },
+                {
+                    text: "Implement input validation throughout the application",
+                    priority: "medium",
+                    completed: false
+                },
+                {
+                    text: "Add request rate limiting and abuse prevention",
+                    priority: "low",
+                    completed: false
+                },
+                
+                // Priority 6: Testing & Validation
+                {
+                    text: "Create unit tests for Prefect tasks",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Implement integration tests for the Prefect workflow",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Add end-to-end tests for API endpoints",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Set up automated testing pipeline",
+                    priority: "low",
+                    completed: false
+                },
+                {
+                    text: "Create performance benchmarks",
+                    priority: "low",
+                    completed: false
+                }
+            ];
+            
+            // Check if todo list already exists
+            const todos = JSON.parse(localStorage.getItem('mlprompt-todos') || '[]');
+            
+            // Only initialize if empty
+            if (todos.length === 0) {
+                // Add creation timestamp and ID to each task
+                const tasksWithMetadata = defaultTasks.map(task => ({
+                    ...task,
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    createdAt: new Date().toISOString()
+                }));
+                
+                // Save to local storage
+                localStorage.setItem('mlprompt-todos', JSON.stringify(tasksWithMetadata));
+                
+                // Force re-render
+                window.location.reload();
+            }
+        });
+    </script>
 </body>
 </html>

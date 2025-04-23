@@ -638,3 +638,54 @@ textarea, .results-section {
 #clear-completed:hover {
     color: #5a6268;
 }
+
+/* Project progress styles */
+.todo-progress-container {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.todo-progress-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #444;
+}
+
+.progress-item {
+    margin-bottom: 10px;
+}
+
+.progress-label {
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.progress-bar {
+    height: 12px;
+    background-color: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.high {
+    background-color: #dc3545;
+}
+
+.progress-fill.medium {
+    background-color: #ffc107;
+}
+
+.progress-fill.low {
+    background-color: #28a745;
+}
