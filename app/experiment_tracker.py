@@ -233,3 +233,154 @@ class ExperimentTracker:
         except Exception as e:
             logger.error(f"Error getting iterations for experiment {experiment_id}: {e}")
             return []
+            
+    def get_experiment_list(self):
+        """
+        Get a list of all experiments.
+        
+        Returns:
+            list: List of experiment metadata
+        """
+        try:
+            experiments = []
+            for exp_id in os.listdir(self.base_dir):
+                exp_dir = os.path.join(self.base_dir, exp_id)
+                if os.path.isdir(exp_dir):
+                    # Only consider directories that look like experiments
+                    # (have at least one metrics file)
+                    metrics_files = [f for f in os.listdir(exp_dir) 
+                                    if f.startswith('metrics_') and f.endswith('.json')]
+                    
+                    if metrics_files:
+                        # Get the timestamp from the directory name (expected format: YYYYMMDD_HHMMSS)
+                        try:
+                            timestamp = datetime.strptime(exp_id, "%Y%m%d_%H%M%S").timestamp()
+                        except:
+                            # If the directory name is not in the expected format, use the file modification time
+                            timestamp = os.path.getmtime(exp_dir)
+                        
+                        # Get the latest iteration number
+                        latest_iteration = max([int(f.split('_')[1].split('.')[0]) for f in metrics_files])
+                        
+                        # Load the latest metrics
+                        latest_metrics_file = os.path.join(exp_dir, f"metrics_{latest_iteration}.json")
+                        if os.path.exists(latest_metrics_file):
+                            with open(latest_metrics_file, 'r') as f:
+                                metrics_data = json.load(f)
+                                metrics = metrics_data.get('metrics', {})
+                        else:
+                            metrics = {}
+                        
+                        experiments.append({
+                            "experiment_id": exp_id,
+                            "timestamp": timestamp,
+                            "latest_iteration": latest_iteration,
+                            "metrics": metrics
+                        })
+            
+            # Sort by timestamp (newest first)
+            return sorted(experiments, key=lambda x: x.get('timestamp', 0), reverse=True)
+        except Exception as e:
+            logger.error(f"Error getting experiment list: {e}")
+            return []
+            
+    def save_prompt(self, experiment_id, prompt_type, content):
+        """
+        Save a prompt file for an experiment.
+        
+        Args:
+            experiment_id (str): Experiment identifier
+            prompt_type (str): Type of prompt (system, output, optimized_system, optimized_output)
+            content (str): Prompt content
+        
+        Returns:
+            bool: Success or failure
+        """
+        try:
+            # Create experiment directory if it doesn't exist
+            exp_dir = os.path.join(self.base_dir, experiment_id)
+            os.makedirs(exp_dir, exist_ok=True)
+            
+            # Create prompts directory if it doesn't exist
+            prompts_dir = os.path.join(exp_dir, 'prompts')
+            os.makedirs(prompts_dir, exist_ok=True)
+            
+            # Save prompt
+            prompt_file = os.path.join(prompts_dir, f"{prompt_type}.txt")
+            with open(prompt_file, 'w') as f:
+                f.write(content)
+            
+            logger.debug(f"Saved {prompt_type} prompt for experiment {experiment_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving prompt: {e}")
+            return False
+            
+    def save_examples(self, experiment_id, examples, iteration=1):
+        """
+        Save examples for an experiment.
+        
+        Args:
+            experiment_id (str): Experiment identifier
+            examples (list): Example data
+            iteration (int): Iteration number
+        
+        Returns:
+            bool: Success or failure
+        """
+        try:
+            # Create experiment directory if it doesn't exist
+            exp_dir = os.path.join(self.base_dir, experiment_id)
+            os.makedirs(exp_dir, exist_ok=True)
+            
+            # Create examples directory
+            examples_dir = os.path.join(exp_dir, 'examples')
+            os.makedirs(examples_dir, exist_ok=True)
+            
+            # Save examples
+            examples_file = os.path.join(examples_dir, f"examples_{iteration}.json")
+            with open(examples_file, 'w') as f:
+                json.dump(examples, f, indent=2)
+            
+            logger.debug(f"Saved {len(examples)} examples for experiment {experiment_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving examples: {e}")
+            return False
+            
+    def save_validation_results(self, experiment_id, results, metrics):
+        """
+        Save validation results for an experiment.
+        
+        Args:
+            experiment_id (str): Experiment identifier
+            results (list): Results data
+            metrics (dict): Metrics data
+        
+        Returns:
+            bool: Success or failure
+        """
+        try:
+            # Create experiment directory if it doesn't exist
+            exp_dir = os.path.join(self.base_dir, experiment_id)
+            os.makedirs(exp_dir, exist_ok=True)
+            
+            # Create validation directory
+            validation_dir = os.path.join(exp_dir, 'validation')
+            os.makedirs(validation_dir, exist_ok=True)
+            
+            # Save results
+            results_file = os.path.join(validation_dir, "results.json")
+            with open(results_file, 'w') as f:
+                json.dump(results, f, indent=2)
+            
+            # Save metrics
+            metrics_file = os.path.join(validation_dir, "metrics.json")
+            with open(metrics_file, 'w') as f:
+                json.dump(metrics, f, indent=2)
+            
+            logger.debug(f"Saved validation results for experiment {experiment_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving validation results: {e}")
+            return False

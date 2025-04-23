@@ -170,12 +170,37 @@ def optimize_api():
         )
         
         if not optimization_result:
-            return jsonify({'error': 'Optimization failed'}), 500
+            # If optimization fails, return the original prompts as a fallback
+            return jsonify({
+                'optimized_system_prompt': current_system_prompt,
+                'optimized_output_prompt': current_output_prompt,
+                'reasoning': 'Optimization failed, returning original prompts.',
+                'analysis': 'Could not generate analysis.'
+            })
+            
+        # Make sure all required fields are present
+        if 'optimized_system_prompt' not in optimization_result:
+            optimization_result['optimized_system_prompt'] = current_system_prompt
+            
+        if 'optimized_output_prompt' not in optimization_result:
+            optimization_result['optimized_output_prompt'] = current_output_prompt
+            
+        if 'reasoning' not in optimization_result:
+            optimization_result['reasoning'] = 'No reasoning provided.'
+            
+        if 'analysis' not in optimization_result:
+            optimization_result['analysis'] = 'No analysis provided.'
             
         return jsonify(optimization_result)
     except Exception as e:
         logger.error(f"Error in optimize endpoint: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Return a more graceful error response with the original prompts
+        return jsonify({
+            'optimized_system_prompt': current_system_prompt,
+            'optimized_output_prompt': current_output_prompt,
+            'reasoning': f'Error during optimization: {str(e)}',
+            'analysis': 'Could not generate analysis due to error.'
+        })
 
 # Hugging Face Metrics API Endpoint
 @app.route('/api/metrics/huggingface', methods=['POST'])
