@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-API Workflow | ML Prompt Optimization</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="bg-light p-3 rounded mb-4">
+            <h1 class="h3 mb-3">ML Prompt Optimization Platform</h1>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h4 mb-0">4-API Workflow: Complete Prompt Optimization</h2>
+                    <p class="text-muted small">
+                        Run the full 4-API workflow with Google Vertex AI and Hugging Face
+                    </p>
+                </div>
+                <div>
+                    <a href="/" class="btn btn-primary">
+                        <i class="fa-solid fa-home me-1"></i> Home
+                    </a>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="btn-group" role="group">
+                    <a href="/training" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-graduation-cap me-1"></i> Training
+                    </a>
+                    <a href="/evaluation" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-chart-simple me-1"></i> Evaluation
+                    </a>
+                    <a href="/prompts" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-file-code me-1"></i> All Prompts
+                    </a>
+                    <a href="/final_prompts" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-check-circle me-1"></i> Final Prompts
+                    </a>
+                    <a href="/history" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i> History
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+
+        <!-- API Workflow Explanation -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title h5">4-API Workflow Overview</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ol class="mb-0">
+                            <li><strong>Google Vertex API #1:</strong> Primary LLM inference</li>
+                            <li><strong>Google Vertex API #2:</strong> Internal evaluation</li>
+                            <li><strong>Google Vertex API #3:</strong> Optimizer LLM for prompt refinement</li>
+                            <li><strong>Hugging Face API:</strong> External validation metrics</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted small">
+                            This workflow tests your prompts on both training and validation data, measures performance
+                            with multiple metrics, optimizes the prompts using ML techniques, and validates the results
+                            with industry-standard Hugging Face metrics.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Prompt Input & Controls -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="h5 mb-0">Input Prompts</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="system-prompt" class="form-label">System Prompt</label>
+                            <div class="input-group">
+                                <textarea id="system-prompt" class="form-control" rows="5" placeholder="Enter your system prompt..."></textarea>
+                                <button class="btn btn-outline-secondary copy-button" type="button" data-target="system-prompt">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="output-prompt" class="form-label">Output Prompt</label>
+                            <div class="input-group">
+                                <textarea id="output-prompt" class="form-control" rows="5" placeholder="Enter your output prompt..."></textarea>
+                                <button class="btn btn-outline-secondary copy-button" type="button" data-target="output-prompt">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="h5 mb-0">Workflow Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="batch-size" class="form-label">Batch Size</label>
+                                    <input type="number" id="batch-size" class="form-control" min="1" max="25" value="10">
+                                    <div class="form-text">Number of examples to process (1-25)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="optimizer-strategy" class="form-label">Optimizer Strategy</label>
+                                    <select id="optimizer-strategy" class="form-select">
+                                        <option value="reasoning_first">Reasoning First</option>
+                                        <option value="full_rewrite">Full Rewrite</option>
+                                        <option value="targeted_edit">Targeted Edit</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Metrics Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Hugging Face Metrics</label>
+                            <div id="hf-metrics-container" class="d-flex flex-wrap gap-3">
+                                <!-- JS will populate this -->
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button id="run-workflow-button" class="btn btn-primary">
+                                <i class="fas fa-play-circle me-1"></i> Run 4-API Workflow
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="col-md-6">
+                <div id="workflow-results" class="card mb-4" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="h5 mb-0">Workflow Results</h3>
+                        <span class="badge bg-info">Experiment ID: <span id="experiment-id"></span></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <span class="badge bg-primary me-2">Training Examples: <span id="examples-count">0</span></span>
+                            <span class="badge bg-secondary">Validation Examples: <span id="validation-count">0</span></span>
+                        </div>
+
+                        <!-- Metrics Tabs -->
+                        <ul class="nav nav-tabs" id="metrics-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="internal-tab" data-bs-toggle="tab" data-bs-target="#internal-tab-pane" type="button" role="tab">
+                                    Internal Metrics
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="hf-tab" data-bs-toggle="tab" data-bs-target="#hf-tab-pane" type="button" role="tab">
+                                    Hugging Face Metrics
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="prompts-tab" data-bs-toggle="tab" data-bs-target="#prompts-tab-pane" type="button" role="tab">
+                                    Optimized Prompts
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="metrics-tabs-content">
+                            <!-- Internal Metrics Tab -->
+                            <div class="tab-pane fade show active" id="internal-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="internal-metrics">
+                                            <!-- JS will populate this -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Hugging Face Metrics Tab -->
+                            <div class="tab-pane fade" id="hf-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Original</th>
+                                                <th>Optimized</th>
+                                                <th>Improvement</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="hf-metrics">
+                                            <!-- JS will populate this -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Optimized Prompts Tab -->
+                            <div class="tab-pane fade" id="prompts-tab-pane" role="tabpanel" tabindex="0">
+                                <div class="accordion" id="promptsAccordion">
+                                    <!-- Original System Prompt -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#originalSystemPrompt">
+                                                Original System Prompt
+                                            </button>
+                                        </h2>
+                                        <div id="originalSystemPrompt" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                <div class="input-group">
+                                                    <textarea id="original-system-prompt" class="form-control" rows="5" readonly></textarea>
+                                                    <button class="btn btn-outline-secondary copy-button" type="button" data-target="original-system-prompt">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Original Output Prompt -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#originalOutputPrompt">
+                                                Original Output Prompt
+                                            </button>
+                                        </h2>
+                                        <div id="originalOutputPrompt" class="accordion-collapse collapse">
+                                            <div class="accordion-body">
+                                                <div class="input-group">
+                                                    <textarea id="original-output-prompt" class="form-control" rows="5" readonly></textarea>
+                                                    <button class="btn btn-outline-secondary copy-button" type="button" data-target="original-output-prompt">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Optimized System Prompt -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#optimizedSystemPrompt">
+                                                Optimized System Prompt
+                                            </button>
+                                        </h2>
+                                        <div id="optimizedSystemPrompt" class="accordion-collapse collapse show">
+                                            <div class="accordion-body">
+                                                <div class="input-group">
+                                                    <textarea id="optimized-system-prompt" class="form-control" rows="5" readonly></textarea>
+                                                    <button class="btn btn-outline-secondary copy-button" type="button" data-target="optimized-system-prompt">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Optimized Output Prompt -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#optimizedOutputPrompt">
+                                                Optimized Output Prompt
+                                            </button>
+                                        </h2>
+                                        <div id="optimizedOutputPrompt" class="accordion-collapse collapse show">
+                                            <div class="accordion-body">
+                                                <div class="input-group">
+                                                    <textarea id="optimized-output-prompt" class="form-control" rows="5" readonly></textarea>
+                                                    <button class="btn btn-outline-secondary copy-button" type="button" data-target="optimized-output-prompt">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Charts -->
+                <div id="metrics-charts-container" class="card mb-4" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="h5 mb-0">Metrics History</h3>
+                        <button id="reset-metrics-button" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash-alt me-1"></i> Reset
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h4 class="h6">Internal Performance</h4>
+                            <div style="height: 250px;">
+                                <canvas id="internal-metrics-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <h4 class="h6">Exact Match Comparison</h4>
+                            <div style="height: 250px;">
+                                <canvas id="hf-exact-match-chart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="h6">BLEU Score Comparison</h4>
+                            <div style="height: 250px;">
+                                <canvas id="hf-bleu-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='four_api_workflow.js') }}"></script>
+</body>
+</html>

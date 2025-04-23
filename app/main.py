@@ -69,6 +69,11 @@ def evaluation():
 def final_prompts():
     """Render the final prompts interface."""
     return render_template('final_prompts.html')
+    
+@app.route('/four_api_workflow_page')
+def four_api_workflow_page():
+    """Render the 4-API workflow interface."""
+    return render_template('four_api_workflow.html')
 
 @app.route('/prompts')
 def prompts_page():
