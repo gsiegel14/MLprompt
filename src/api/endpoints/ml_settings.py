@@ -221,3 +221,165 @@ async def get_meta_learning_configs(
     
     configs = service.get_meta_learning_configs(user_id=user.get("id") if user else None)
     return configs
+"""
+ML Settings API endpoints
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Dict, List, Any, Optional
+from pydantic import BaseModel
+
+from src.app.utils.ml_settings_service import (
+    get_model_configurations,
+    get_model_configuration,
+    create_model_configuration,
+    update_model_configuration,
+    delete_model_configuration,
+    get_metric_configurations,
+    create_metric_configuration,
+    get_meta_learning_configurations
+)
+from src.app.auth import get_api_key
+
+router = APIRouter()
+
+class ModelConfigBase(BaseModel):
+    name: str
+    primary_model: str
+    optimizer_model: str
+    temperature: float = 0.0
+    max_tokens: int = 1024
+    top_p: float = 1.0
+    top_k: int = 40
+    is_default: bool = False
+
+class ModelConfigCreate(ModelConfigBase):
+    pass
+
+class ModelConfigResponse(ModelConfigBase):
+    id: str
+    user_id: Optional[str] = None
+
+class MetricConfigBase(BaseModel):
+    name: str
+    metrics: List[str]
+    metric_weights: Dict[str, float] = {}
+    target_threshold: float = 0.8
+
+class MetricConfigCreate(MetricConfigBase):
+    pass
+
+class MetricConfigResponse(MetricConfigBase):
+    id: str
+    user_id: Optional[str] = None
+
+class MetaLearningConfigBase(BaseModel):
+    name: str
+    model_type: str = "xgboost"
+    hyperparameters: Dict[str, Any] = {}
+    feature_selection: Dict[str, Any] = {}
+    is_active: bool = True
+
+class MetaLearningConfigCreate(MetaLearningConfigBase):
+    pass
+
+class MetaLearningConfigResponse(MetaLearningConfigBase):
+    id: str
+    user_id: Optional[str] = None
+
+# Model Configuration Endpoints
+@router.get("/models", response_model=List[ModelConfigResponse])
+async def list_model_configurations(api_key: str = Depends(get_api_key)):
+    """Get all model configurations for the current user"""
+    return get_model_configurations(api_key)
+
+@router.get("/models/{model_id}", response_model=ModelConfigResponse)
+async def get_model_configuration_by_id(model_id: str, api_key: str = Depends(get_api_key)):
+    """Get a specific model configuration by ID"""
+    model_config = get_model_configuration(model_id, api_key)
+    if not model_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model configuration with ID {model_id} not found"
+        )
+    return model_config
+
+@router.post("/models", response_model=ModelConfigResponse, status_code=status.HTTP_201_CREATED)
+async def create_new_model_configuration(
+    model_config: ModelConfigCreate, 
+    api_key: str = Depends(get_api_key)
+):
+    """Create a new model configuration"""
+    return create_model_configuration(model_config.dict(), api_key)
+
+@router.put("/models/{model_id}", response_model=ModelConfigResponse)
+async def update_model_configuration_by_id(
+    model_id: str, 
+    model_config: ModelConfigBase,
+    api_key: str = Depends(get_api_key)
+):
+    """Update an existing model configuration"""
+    updated_config = update_model_configuration(model_id, model_config.dict(), api_key)
+    if not updated_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model configuration with ID {model_id} not found"
+        )
+    return updated_config
+
+@router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_model_configuration_by_id(model_id: str, api_key: str = Depends(get_api_key)):
+    """Delete a model configuration"""
+    success = delete_model_configuration(model_id, api_key)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model configuration with ID {model_id} not found"
+        )
+    return {"detail": "Model configuration deleted successfully"}
+
+# Metric Configuration Endpoints
+@router.get("/metrics", response_model=List[MetricConfigResponse])
+async def list_metric_configurations(api_key: str = Depends(get_api_key)):
+    """Get all metric configurations for the current user"""
+    return get_metric_configurations(api_key)
+
+@router.post("/metrics", response_model=MetricConfigResponse, status_code=status.HTTP_201_CREATED)
+async def create_new_metric_configuration(
+    metric_config: MetricConfigCreate, 
+    api_key: str = Depends(get_api_key)
+):
+    """Create a new metric configuration"""
+    return create_metric_configuration(metric_config.dict(), api_key)
+
+# Meta-Learning Configuration Endpoints
+@router.get("/meta-learning", response_model=List[MetaLearningConfigResponse])
+async def list_meta_learning_configurations(api_key: str = Depends(get_api_key)):
+    """Get all meta-learning configurations for the current user"""
+    return get_meta_learning_configurations(api_key)
+
+# Optimization Strategy Endpoints
+@router.get("/strategies")
+async def get_optimization_strategies(api_key: str = Depends(get_api_key)):
+    """Get available optimization strategies"""
+    from app.optimizer import get_optimization_strategies
+    return get_optimization_strategies()
+
+# Visualization Data Endpoints
+@router.get("/visualization/experiments")
+async def get_experiment_visualization_data(api_key: str = Depends(get_api_key)):
+    """Get experiment data for visualization"""
+    # This would fetch data from the database to populate visualizations
+    return {
+        "experiments": [
+            {
+                "id": "exp123",
+                "name": "Medical Diagnosis Optimization",
+                "date": "2023-05-10T14:30:00Z",
+                "iterations": 5,
+                "metrics": {
+                    "exact_match": [0.45, 0.52, 0.61, 0.68, 0.72],
+                    "bleu": [0.38, 0.45, 0.53, 0.59, 0.64]
+                }
+            }
+        ]
+    }

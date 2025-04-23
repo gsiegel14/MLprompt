@@ -1,210 +1,127 @@
 """
-API models and schemas for the Prompt Optimization Platform
+API data models
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from enum import Enum
+import uuid
 
-# ML Settings Models
-class ModelConfigurationCreate(BaseModel):
-    name: str
-    primary_model: str
-    optimizer_model: str
-    temperature: float = 0.0
-    max_tokens: int = 1024
-    top_p: float = 1.0
-    top_k: int = 40
-    is_default: bool = False
 
-class ModelConfigurationUpdate(BaseModel):
-    name: Optional[str] = None
-    primary_model: Optional[str] = None
-    optimizer_model: Optional[str] = None
-    temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
-    top_p: Optional[float] = None
-    top_k: Optional[int] = None
-    is_default: Optional[bool] = None
+class ExperimentStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
-class ModelConfigurationResponse(BaseModel):
-    id: str
-    name: str
-    primary_model: str
-    optimizer_model: str
-    temperature: float
-    max_tokens: int
-    top_p: float
-    top_k: int
-    is_default: bool
 
-class MetricConfigurationCreate(BaseModel):
-    name: str
-    metrics: List[str]
-    metric_weights: Dict[str, float] = Field(default_factory=dict)
-    target_threshold: float = 0.8
+class OptimizationStrategy(str, Enum):
+    REASONING_FIRST = "reasoning_first"
+    FULL_REWRITE = "full_rewrite"
+    TARGETED_EDIT = "targeted_edit"
+    EXAMPLE_ADDITION = "example_addition"
+    MEDICAL_DIAGNOSTIC = "medical_diagnostic"
 
-class MetricConfigurationUpdate(BaseModel):
-    name: Optional[str] = None
-    metrics: Optional[List[str]] = None
-    metric_weights: Optional[Dict[str, float]] = None
-    target_threshold: Optional[float] = None
 
-class MetricConfigurationResponse(BaseModel):
-    id: str
-    name: str
-    metrics: List[str]
-    metric_weights: Dict[str, float]
-    target_threshold: float
-
-class MetaLearningConfigurationCreate(BaseModel):
-    name: str
-    model_type: str = "xgboost"
-    hyperparameters: Dict[str, Any] = Field(default_factory=dict)
-    feature_selection: Dict[str, Any] = Field(default_factory=dict)
-    is_active: bool = True
-
-class MetaLearningConfigurationUpdate(BaseModel):
-    name: Optional[str] = None
-    model_type: Optional[str] = None
-    hyperparameters: Optional[Dict[str, Any]] = None
-    feature_selection: Optional[Dict[str, Any]] = None
-    is_active: Optional[bool] = None
-
-class MetaLearningConfigurationResponse(BaseModel):
-    id: str
-    name: str
-    model_type: str
-    hyperparameters: Dict[str, Any]
-    feature_selection: Dict[str, Any]
-    is_active: bool
-
-# Base models
-class IDModel(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-
-# User models
-class UserBase(BaseModel):
-    username: str
-    email: str
-
-class UserCreate(UserBase):
-    password: str
-
-class User(UserBase):
-    id: str
-    is_active: bool
-
-    class Config:
-        orm_mode = True
-
-# Authentication models
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-# Prompt models
 class PromptBase(BaseModel):
+    """Base model for prompts"""
     system_prompt: str
     output_prompt: str
+    version: int = 1
+
 
 class PromptCreate(PromptBase):
-    name: str
-    description: Optional[str] = None
+    """Model for creating new prompts"""
+    pass
 
-class Prompt(PromptBase):
+
+class PromptResponse(PromptBase):
+    """Response model for returning prompts"""
     id: str
-    name: str
-    description: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
-    user_id: str
+    parent_id: Optional[str] = None
+    metadata: Dict[str, Any] = {}
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Dataset models
+
+class ExampleBase(BaseModel):
+    """Base model for examples"""
+    user_input: str
+    ground_truth_output: str
+
+
+class ExampleCreate(ExampleBase):
+    """Model for creating new examples"""
+    pass
+
+
+class ExampleResponse(ExampleBase):
+    """Response model for returning examples"""
+    id: str
+    model_response: Optional[str] = None
+    score: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DatasetBase(BaseModel):
+    """Base model for datasets"""
     name: str
     description: Optional[str] = None
 
-class DatasetCreate(DatasetBase):
-    examples: List[Dict[str, str]]
 
-class Dataset(DatasetBase):
+class DatasetCreate(DatasetBase):
+    """Model for creating new datasets"""
+    examples: List[ExampleCreate]
+
+
+class DatasetResponse(DatasetBase):
+    """Response model for returning datasets"""
     id: str
     created_at: datetime
-    updated_at: datetime
-    user_id: str
     example_count: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Experiment models
-class ExperimentBase(BaseModel):
-    name: str
-    description: Optional[str] = None
 
-class ExperimentCreate(ExperimentBase):
-    prompt_id: str
+class OptimizationJobBase(BaseModel):
+    """Base model for optimization jobs"""
+    system_prompt_id: str
+    output_prompt_id: str
     dataset_id: str
-    iterations: int = 3
+    metric_names: List[str] = ["exact_match", "bleu"]
+    target_metric: str = "exact_match"
+    target_threshold: float = 0.9
+    max_iterations: int = 3
+    strategy: OptimizationStrategy = OptimizationStrategy.REASONING_FIRST
 
-class Experiment(ExperimentBase):
+
+class OptimizationJobCreate(OptimizationJobBase):
+    """Model for creating new optimization jobs"""
+    pass
+
+
+class OptimizationJobResponse(OptimizationJobBase):
+    """Response model for returning optimization jobs"""
     id: str
-    prompt_id: str
-    dataset_id: str
-    iterations: int
-    status: str
+    status: ExperimentStatus
     created_at: datetime
-    updated_at: datetime
-    user_id: str
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    best_prompt_id: Optional[str] = None
+    iterations_completed: int = 0
+    best_metrics: Dict[str, float] = {}
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Optimization request and result models
-class OptimizationRequest(BaseModel):
-    system_prompt: str
-    output_prompt: str
-    examples: List[Dict[str, str]]
-    iterations: int = 3
-    metrics: List[str] = ["exact_match"]
 
-class OptimizationIteration(BaseModel):
-    iteration: int
-    system_prompt: str
-    output_prompt: str
-    metrics: Dict[str, float]
-    reasoning: Optional[str] = None
-
-class OptimizationResult(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    original_system_prompt: str
-    original_output_prompt: str
-    iterations: List[OptimizationIteration]
-    final_system_prompt: str
-    final_output_prompt: str
-    final_metrics: Dict[str, float]
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-# Inference models
-class InferenceRequest(BaseModel):
-    system_prompt: str
-    output_prompt: str
-    inputs: Dict[str, str]
-
-class InferenceResponse(BaseModel):
-    output: str
-    metrics: Optional[Dict[str, float]] = None
-
-# ML Settings models
-
-class ModelConfigurationBase(BaseModel):
+class ModelConfigBase(BaseModel):
+    """Base model for ML model configurations"""
     name: str
     primary_model: str
     optimizer_model: str
@@ -214,58 +131,96 @@ class ModelConfigurationBase(BaseModel):
     top_k: int = 40
     is_default: bool = False
 
-class ModelConfigurationCreate(ModelConfigurationBase):
+
+class ModelConfigCreate(ModelConfigBase):
+    """Model for creating new ML model configurations"""
     pass
 
-class ModelConfigurationResponse(ModelConfigurationBase):
+
+class ModelConfigResponse(ModelConfigBase):
+    """Response model for returning ML model configurations"""
     id: str
-    user_id: str
+    user_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class MetricConfigurationBase(BaseModel):
+
+class MetricConfigBase(BaseModel):
+    """Base model for metric configurations"""
     name: str
     metrics: List[str]
-    metric_weights: Dict[str, float] = Field(default_factory=dict)
+    metric_weights: Dict[str, float] = {}
     target_threshold: float = 0.8
 
-class MetricConfigurationCreate(MetricConfigurationBase):
+
+class MetricConfigCreate(MetricConfigBase):
+    """Model for creating new metric configurations"""
     pass
 
-class MetricConfigurationResponse(MetricConfigurationBase):
+
+class MetricConfigResponse(MetricConfigBase):
+    """Response model for returning metric configurations"""
     id: str
-    user_id: str
+    user_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class MetaLearningConfigurationBase(BaseModel):
+
+class MetaLearningConfigBase(BaseModel):
+    """Base model for meta-learning configurations"""
     name: str
     model_type: str = "xgboost"
-    hyperparameters: Dict[str, Any] = Field(default_factory=dict)
-    feature_selection: Dict[str, Any] = Field(default_factory=dict)
+    hyperparameters: Dict[str, Any] = {}
+    feature_selection: Dict[str, Any] = {}
     is_active: bool = True
 
-class MetaLearningConfigurationCreate(MetaLearningConfigurationBase):
+
+class MetaLearningConfigCreate(MetaLearningConfigBase):
+    """Model for creating new meta-learning configurations"""
     pass
 
-class MetaLearningConfigurationResponse(MetaLearningConfigurationBase):
+
+class MetaLearningConfigResponse(MetaLearningConfigBase):
+    """Response model for returning meta-learning configurations"""
     id: str
-    user_id: str
-    last_trained: Optional[datetime] = None
-    performance: Optional[float] = None
-    model_path: Optional[str] = None
+    user_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Experiment visualization models
-class PromptVersion(BaseModel):
-    version: int
-    system_prompt: str
-    output_prompt: str
 
-class ExperimentMetrics(BaseModel):
-    metrics_history: List[Dict[str, float]]
-    prompt_versions: List[PromptVersion]
+class ExperimentBase(BaseModel):
+    """Base model for experiments"""
+    name: str
+    description: Optional[str] = None
+    model_config_id: str
+    metric_config_id: str
+    dataset_id: str
+    max_iterations: int = 5
+    strategy: OptimizationStrategy = OptimizationStrategy.REASONING_FIRST
+
+
+class ExperimentCreate(ExperimentBase):
+    """Model for creating new experiments"""
+    pass
+
+
+class ExperimentResponse(ExperimentBase):
+    """Response model for returning experiments"""
+    id: str
+    user_id: Optional[str] = None
+    status: ExperimentStatus
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    iterations_completed: int = 0
+    current_best_score: float = 0.0
+    improvement_percentage: float = 0.0
+
+    class Config:
+        from_attributes = True

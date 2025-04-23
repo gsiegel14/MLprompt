@@ -72,7 +72,8 @@ from src.api.endpoints import (
     experiments,
     datasets,
     inference,
-    cost_tracking
+    cost_tracking,
+    ml_settings
 )
 
 # Create main API router

@@ -2,7 +2,7 @@
 """
 PromptState class for managing prompt versions
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import json
 import os
 from typing import Optional, Dict, Any

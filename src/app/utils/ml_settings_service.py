@@ -257,3 +257,149 @@ class MLSettingsService:
     def get_experiment(self, experiment_id: str) -> Optional[Experiment]:
         """Get a specific experiment"""
         return self.db.query(Experiment).filter_by(id=experiment_id).first()
+"""
+Service functions for ML settings management
+"""
+import uuid
+from typing import Dict, List, Any, Optional
+
+# This is a temporary in-memory store - would be replaced with database in production
+_model_configs = {}
+_metric_configs = {}
+_meta_learning_configs = {}
+
+def get_model_configurations(user_id: str) -> List[Dict[str, Any]]:
+    """Get all model configurations for a user"""
+    return [cfg for cfg in _model_configs.values() if cfg.get("user_id") == user_id]
+
+def get_model_configuration(config_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    """Get a specific model configuration by ID"""
+    config = _model_configs.get(config_id)
+    if config and config.get("user_id") == user_id:
+        return config
+    return None
+
+def create_model_configuration(config_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+    """Create a new model configuration"""
+    config_id = str(uuid.uuid4())
+    config = {
+        "id": config_id,
+        "user_id": user_id,
+        **config_data
+    }
+    _model_configs[config_id] = config
+    return config
+
+def update_model_configuration(config_id: str, config_data: Dict[str, Any], user_id: str) -> Optional[Dict[str, Any]]:
+    """Update an existing model configuration"""
+    if config_id in _model_configs and _model_configs[config_id].get("user_id") == user_id:
+        _model_configs[config_id].update(config_data)
+        return _model_configs[config_id]
+    return None
+
+def delete_model_configuration(config_id: str, user_id: str) -> bool:
+    """Delete a model configuration"""
+    if config_id in _model_configs and _model_configs[config_id].get("user_id") == user_id:
+        del _model_configs[config_id]
+        return True
+    return False
+
+def get_metric_configurations(user_id: str) -> List[Dict[str, Any]]:
+    """Get all metric configurations for a user"""
+    return [cfg for cfg in _metric_configs.values() if cfg.get("user_id") == user_id]
+
+def create_metric_configuration(config_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+    """Create a new metric configuration"""
+    config_id = str(uuid.uuid4())
+    config = {
+        "id": config_id,
+        "user_id": user_id,
+        **config_data
+    }
+    _metric_configs[config_id] = config
+    return config
+
+def get_meta_learning_configurations(user_id: str) -> List[Dict[str, Any]]:
+    """Get all meta-learning configurations for a user"""
+    return [cfg for cfg in _meta_learning_configs.values() if cfg.get("user_id") == user_id]
+
+def create_meta_learning_configuration(config_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
+    """Create a new meta-learning configuration"""
+    config_id = str(uuid.uuid4())
+    config = {
+        "id": config_id,
+        "user_id": user_id,
+        **config_data
+    }
+    _meta_learning_configs[config_id] = config
+    return config
+
+# Initialize with some default configurations for development
+def initialize_default_configs():
+    """Initialize default configurations for development"""
+    # Default user
+    default_user_id = "default_user"
+    
+    # Default model configurations
+    if not _model_configs:
+        create_model_configuration({
+            "name": "Standard Gemini Pro",
+            "primary_model": "gemini-1.5-pro",
+            "optimizer_model": "gemini-1.5-pro",
+            "temperature": 0.2,
+            "max_tokens": 1024,
+            "is_default": True
+        }, default_user_id)
+        
+        create_model_configuration({
+            "name": "Medical Expert",
+            "primary_model": "gemini-1.5-pro",
+            "optimizer_model": "gemini-1.5-pro",
+            "temperature": 0.1,
+            "max_tokens": 2048,
+            "top_p": 0.95
+        }, default_user_id)
+    
+    # Default metric configurations
+    if not _metric_configs:
+        create_metric_configuration({
+            "name": "Standard Metrics",
+            "metrics": ["exact_match", "bleu", "rouge"],
+            "metric_weights": {
+                "exact_match": 0.6,
+                "bleu": 0.3,
+                "rouge": 0.1
+            },
+            "target_threshold": 0.85
+        }, default_user_id)
+        
+        create_metric_configuration({
+            "name": "Medical Diagnosis Metrics",
+            "metrics": ["exact_match", "token_overlap", "clinical_accuracy"],
+            "metric_weights": {
+                "exact_match": 0.4,
+                "token_overlap": 0.3,
+                "clinical_accuracy": 0.3
+            },
+            "target_threshold": 0.90
+        }, default_user_id)
+    
+    # Default meta-learning configurations
+    if not _meta_learning_configs:
+        create_meta_learning_configuration({
+            "name": "XGBoost Default",
+            "model_type": "xgboost",
+            "hyperparameters": {
+                "n_estimators": 100,
+                "max_depth": 5,
+                "learning_rate": 0.1
+            },
+            "feature_selection": {
+                "primary_metrics": ["exact_match", "bleu"],
+                "feature_importance_threshold": 0.05
+            },
+            "is_active": True
+        }, default_user_id)
+
+# Initialize default configurations
+initialize_default_configs()

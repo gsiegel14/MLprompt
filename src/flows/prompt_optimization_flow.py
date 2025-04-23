@@ -517,7 +517,7 @@ def prompt_optimization_flow(
     3. Optimizer LLM
     4. Refined LLM Inference
     5. Second Evaluation
-    
+
     Args:
         system_prompt_path: Path to initial system prompt file
         output_prompt_path: Path to initial output prompt file
@@ -532,37 +532,37 @@ def prompt_optimization_flow(
         optimizer_strategy: Strategy for optimization
         experiment_id: Experiment ID to track in experiment history
         state_path: Optional path to existing state to resume
-    
+
     Returns:
         Dictionary with final results
     """
     logger = get_run_logger()
     logger.info(f"Starting prompt optimization flow with target {target_metric} >= {target_threshold}")
-    
+
     # Set default metric names if not provided
     if metric_names is None:
         metric_names = ["exact_match", "bleu"]
-    
+
     # Initialize experiment tracking
     if experiment_id is None:
         experiment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     # Create experiment directory
     experiment_dir = os.path.join("experiments", experiment_id)
     os.makedirs(experiment_dir, exist_ok=True)
-    
+
     # Initialize tracking variables
     no_improve_count = 0
     best_metric_value = 0.0
     best_state_path = None
-    
+
     # Track all results
     results_history = []
-    
+
     # Start the optimization loop
     for iteration in range(max_iterations):
         logger.info(f"Starting iteration {iteration+1}/{max_iterations}")
-        
+
         # 1. Load or initialize state and dataset
         state_data = load_state(
             system_prompt_path, 
@@ -570,14 +570,14 @@ def prompt_optimization_flow(
             dataset_path, 
             state_path
         )
-        
+
         # 2. Run primary inference (Step 1)
         dataset_with_preds = vertex_primary_inference(
             state_data["prompt_state"],
             state_data["dataset"],
             batch_size=batch_size
         )
-        
+
         # 3. Evaluate baseline performance (Step 2)
         baseline_result = hf_eval_baseline(
             dataset_with_preds,
@@ -585,10 +585,10 @@ def prompt_optimization_flow(
         )
         baseline_metrics = baseline_result["metrics"]
         dataset_with_scores = baseline_result["dataset"]
-        
+
         # Log baseline metrics
         logger.info(f"Baseline metrics: {json.dumps(baseline_metrics)}")
-        
+
         # 4. Generate refined prompts (Step 3)
         refined_prompt_state = vertex_optimizer_refine(
             state_data["prompt_state"],
@@ -597,24 +597,24 @@ def prompt_optimization_flow(
             optimizer_strategy=optimizer_strategy,
             sample_k=sample_k
         )
-        
+
         # 5. Run inference with refined prompts (Step 4)
         refined_dataset = vertex_refined_inference(
             refined_prompt_state,
             dataset_with_scores,
             batch_size=batch_size
         )
-        
+
         # 6. Evaluate refined performance (Step 5)
         refined_result = hf_eval_refined(
             refined_dataset,
             metric_names
         )
         refined_metrics = refined_result["metrics"]
-        
+
         # Log refined metrics
         logger.info(f"Refined metrics: {json.dumps(refined_metrics)}")
-        
+
         # 7. Compare and decide whether to continue
         decision = compare_and_log(
             baseline_metrics,
@@ -627,14 +627,14 @@ def prompt_optimization_flow(
             patience,
             no_improve_count
         )
-        
+
         # Update control variables
         no_improve_count = decision["no_improve_count"]
-        
+
         # Save iteration data
         iteration_dir = os.path.join(experiment_dir, f"iteration_{iteration+1}")
         os.makedirs(iteration_dir, exist_ok=True)
-        
+
         # Save prompts
         with open(os.path.join(iteration_dir, "original_system.txt"), "w") as f:
             f.write(state_data["prompt_state"]["system_prompt"])
@@ -644,7 +644,7 @@ def prompt_optimization_flow(
             f.write(refined_prompt_state["system_prompt"])
         with open(os.path.join(iteration_dir, "refined_output.txt"), "w") as f:
             f.write(refined_prompt_state["output_prompt"])
-        
+
         # Save metrics
         with open(os.path.join(iteration_dir, "metrics.json"), "w") as f:
             json.dump({
@@ -652,22 +652,22 @@ def prompt_optimization_flow(
                 "refined": refined_metrics,
                 "decision": decision
             }, f, indent=2)
-        
+
         # Save a sample of examples with both responses
         example_sample = [refined_dataset[i] for i in range(min(5, len(refined_dataset)))]
         with open(os.path.join(iteration_dir, "examples.json"), "w") as f:
             json.dump(example_sample, f, indent=2)
-        
+
         # Determine which state to save for the next iteration
         state_to_use = refined_prompt_state if decision["use_refined"] else state_data["prompt_state"]
         state_path = save_state(state_to_use, iteration+1)
-        
+
         # Track best state
         current_value = decision["target_value"]
         if current_value > best_metric_value:
             best_metric_value = current_value
             best_state_path = state_path
-            
+
             # Save best prompts
             if decision["use_refined"]:
                 with open(os.path.join(experiment_dir, "best_system_prompt.txt"), "w") as f:
@@ -679,7 +679,7 @@ def prompt_optimization_flow(
                     f.write(state_data["prompt_state"]["system_prompt"])
                 with open(os.path.join(experiment_dir, "best_output_prompt.txt"), "w") as f:
                     f.write(state_data["prompt_state"]["output_prompt"])
-        
+
         # Add to results history
         results_history.append({
             "iteration": iteration+1,
@@ -688,12 +688,12 @@ def prompt_optimization_flow(
             "decision": decision,
             "state_path": state_path
         })
-        
+
         # Check if we should stop early
         if decision["should_stop"]:
             logger.info(f"Early stopping at iteration {iteration+1}")
             break
-    
+
     # Create final summary
     final_results = {
         "experiment_id": experiment_id,
@@ -703,10 +703,10 @@ def prompt_optimization_flow(
         "history": results_history,
         "final_metrics": refined_metrics if decision.get("use_refined", False) else baseline_metrics
     }
-    
+
     # Save final results
     with open(os.path.join(experiment_dir, "final_results.json"), "w") as f:
         json.dump(final_results, f, indent=2)
-    
+
     logger.info(f"Optimization completed with best {target_metric}: {best_metric_value:.4f}")
     return final_results
