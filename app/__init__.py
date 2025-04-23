@@ -14,3 +14,4 @@ app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
 # Import routes at the end to avoid circular imports
 from app import main
+from app import api_endpoints  # Import API endpoints
