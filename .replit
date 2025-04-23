@@ -60,7 +60,16 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m scripts.start_prefect_agent.py"
+args = "python -m scripts.start_prefect_agent"
+
+[[workflows.workflow]]
+name = "Run Five-Step Workflow"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m src.flows.prompt_optimization_flow"
 
 [[ports]]
 localPort = 5000

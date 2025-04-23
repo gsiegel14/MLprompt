@@ -471,5 +471,3 @@ def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, co
     except Exception as e:
         logger.error(f"Error getting LLM response: {e}")
         raise
-
-    raise RuntimeError(f"Unexpected error in retry loop: {last_error}")
