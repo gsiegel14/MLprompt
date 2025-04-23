@@ -143,6 +143,13 @@ def run_evaluation():
                 score = calculate_score(model_response, ground_truth)
 
                 results.append({
+
+
+@app.route('/cost_dashboard')
+def cost_dashboard():
+    """Render the cost monitoring dashboard."""
+    return render_template('cost_dashboard.html')
+
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
                     'model_response': model_response,

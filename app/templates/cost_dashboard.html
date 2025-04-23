@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost Monitoring Dashboard - Prompt Optimization Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cost Monitoring Dashboard</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('history') }}">Experiment History</a>
+                <a href="{{ url_for('training') }}">Training</a>
+                <a href="{{ url_for('cost_dashboard') }}" class="active">Cost Dashboard</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Current Session Cost Summary</h2>
+                    <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+                </div>
+                <div class="card-body">
+                    <div class="cost-metrics">
+                        <div class="metric">
+                            <h3>Total API Calls</h3>
+                            <p id="total-api-calls">Loading...</p>
+                        </div>
+                        <div class="metric">
+                            <h3>Total Tokens</h3>
+                            <p id="total-tokens">Loading...</p>
+                        </div>
+                        <div class="metric">
+                            <h3>Estimated Cost</h3>
+                            <p id="total-cost">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="costByModelChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Token Usage Breakdown</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="tokenUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Historical Cost Reports</h2>
+                </div>
+                <div class="card-body">
+                    <table id="cost-reports-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Created At</th>
+                                <th>Total Cost</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Cost Tracking Actions</h2>
+                </div>
+                <div class="card-body">
+                    <div class="actions-container">
+                        <button id="save-report-btn" class="btn btn-primary">Save Current Report</button>
+                        <button id="reset-tracking-btn" class="btn btn-danger">Reset Cost Tracking</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch current cost report
+            fetchCurrentCostReport();
+            
+            // Fetch historical cost reports
+            fetchCostReports();
+            
+            // Setup button handlers
+            document.getElementById('refresh-btn').addEventListener('click', fetchCurrentCostReport);
+            document.getElementById('save-report-btn').addEventListener('click', saveCurrentReport);
+            document.getElementById('reset-tracking-btn').addEventListener('click', resetCostTracking);
+        });
+        
+        async function fetchCurrentCostReport() {
+            try {
+                const response = await fetch('/api/cost_tracking');
+                const data = await response.json();
+                
+                // Update metrics
+                document.getElementById('total-api-calls').textContent = data.total_api_calls || 0;
+                document.getElementById('total-tokens').textContent = 
+                    `${data.total_tokens?.input || 0} input + ${data.total_tokens?.output || 0} output = ${data.total_tokens?.total || 0}`;
+                document.getElementById('total-cost').textContent = `$${data.total_estimated_cost_usd || 0}`;
+                
+                // Create or update charts
+                createModelCostChart(data.models || {});
+                createTokenUsageChart(data.total_tokens || {input: 0, output: 0});
+                
+            } catch (error) {
+                console.error('Error fetching cost report:', error);
+            }
+        }
+        
+        function createModelCostChart(models) {
+            const ctx = document.getElementById('costByModelChart').getContext('2d');
+            
+            // Extract data from models object
+            const labels = Object.keys(models);
+            const costs = labels.map(model => models[model].estimated_cost || 0);
+            
+            // Destroy existing chart if it exists
+            if (window.modelCostChart) {
+                window.modelCostChart.destroy();
+            }
+            
+            window.modelCostChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cost by Model (USD)',
+                        data: costs,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Cost (USD)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createTokenUsageChart(tokenData) {
+            const ctx = document.getElementById('tokenUsageChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.tokenUsageChart) {
+                window.tokenUsageChart.destroy();
+            }
+            
+            window.tokenUsageChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Input Tokens', 'Output Tokens'],
+                    datasets: [{
+                        data: [tokenData.input || 0, tokenData.output || 0],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(75, 192, 192, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(75, 192, 192, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+        
+        async function fetchCostReports() {
+            try {
+                const response = await fetch('/api/cost_tracking/reports');
+                const reports = await response.json();
+                
+                const tableBody = document.querySelector('#cost-reports-table tbody');
+                tableBody.innerHTML = '';
+                
+                reports.forEach(report => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${report.filename}</td>
+                        <td>${new Date(report.created_at).toLocaleString()}</td>
+                        <td>$${typeof report.total_cost === 'number' ? report.total_cost.toFixed(4) : report.total_cost}</td>
+                        <td>
+                            <button onclick="viewReport('${report.filename}')" class="btn btn-sm btn-secondary">View</button>
+                            <button onclick="downloadReport('${report.filename}')" class="btn btn-sm btn-primary">Download</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching cost reports:', error);
+            }
+        }
+        
+        async function saveCurrentReport() {
+            try {
+                const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+                const response = await fetch('/api/cost_tracking/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: `cost_report_${timestamp}.json` })
+                });
+                
+                const data = await response.json();
+                alert(`Report saved: ${data.file_path}`);
+                
+                // Refresh the list of reports
+                fetchCostReports();
+                
+            } catch (error) {
+                console.error('Error saving cost report:', error);
+                alert('Error saving cost report');
+            }
+        }
+        
+        async function resetCostTracking() {
+            if (confirm('Are you sure you want to reset all cost tracking data? This cannot be undone.')) {
+                try {
+                    await fetch('/api/cost_tracking/reset', { method: 'POST' });
+                    alert('Cost tracking data has been reset');
+                    
+                    // Refresh the current report
+                    fetchCurrentCostReport();
+                    
+                } catch (error) {
+                    console.error('Error resetting cost tracking:', error);
+                    alert('Error resetting cost tracking');
+                }
+            }
+        }
+        
+        async function viewReport(filename) {
+            try {
+                const response = await fetch(`/api/cost_tracking/reports/${filename}`);
+                const data = await response.json();
+                
+                // Display report data in a modal or new page
+                const reportJson = JSON.stringify(data, null, 2);
+                const reportWindow = window.open('', '_blank');
+                reportWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Cost Report: ${filename}</title>
+                            <style>
+                                body { font-family: monospace; white-space: pre; }
+                            </style>
+                        </head>
+                        <body>${reportJson}</body>
+                    </html>
+                `);
+                
+            } catch (error) {
+                console.error('Error viewing report:', error);
+                alert('Error viewing report');
+            }
+        }
+        
+        function downloadReport(filename) {
+            window.location.href = `/api/cost_tracking/reports/${filename}`;
+        }
+    </script>
+</body>
+</html>
