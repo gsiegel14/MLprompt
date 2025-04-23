@@ -6,17 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prompt ML - Todo List</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Prompt Engineering ML Platform</h1>
             <nav>
-                <a href="{{ url_for('index') }}">Home</a>
-                <a href="{{ url_for('training') }}">Training</a>
-                <a href="{{ url_for('history') }}">History</a>
-                <a href="{{ url_for('todo') }}" class="active">Todo</a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">
+                    <i class="fa-solid fa-home me-1"></i> Home
+                </a>
+                <a href="{{ url_for('training') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fa-solid fa-graduation-cap me-1"></i> Training
+                </a>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> History
+                </a>
+                <a href="{{ url_for('todo') }}" class="btn btn-outline-secondary active">
+                    <i class="fa-solid fa-tasks me-1"></i> Todo
+                </a>
             </nav>
         </header>
         
