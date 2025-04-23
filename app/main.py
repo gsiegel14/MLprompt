@@ -14,6 +14,7 @@ from app.experiment_tracker import ExperimentTracker
 from app.data_module import DataModule
 from app.workflow import PromptOptimizationWorkflow
 from app.utils import parse_text_examples, parse_csv_file, is_allowed_file
+from app.huggingface_client import evaluate_metrics, validate_api_connection
 
 logger = logging.getLogger(__name__)
 
@@ -459,6 +460,102 @@ def optimize():
     except Exception as e:
         logger.error(f"Error in optimization: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/four_api_workflow', methods=['POST'])
+def four_api_workflow():
+    """
+    Run the enhanced 4-API call workflow:
+    1. Google Vertex API #1: Primary LLM inference
+    2. Google Vertex API #2: Internal evaluation
+    3. Google Vertex API #3: Optimizer LLM for prompt refinement
+    4. Hugging Face API: External validation metrics
+    """
+    try:
+        # Create a log file for this run
+        import traceback
+        from datetime import datetime
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f"logs/four_api_workflow_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        # Log start with request info
+        logger.info(f"========== 4-API WORKFLOW STARTED AT {log_timestamp} ==========")
+        
+        # Parse request data
+        data = request.json
+        if not data:
+            error_msg = "No JSON data received in request"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+            
+        # Extract request parameters
+        system_prompt = data.get('system_prompt', '')
+        output_prompt = data.get('output_prompt', '')
+        batch_size = int(data.get('batch_size', 10))
+        optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
+        hf_metrics = data.get('hf_metrics', ["exact_match", "bleu"])
+        
+        # Validate parameters
+        if not system_prompt or not output_prompt:
+            error_msg = "System prompt and output prompt are required"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+            
+        # Log details
+        logger.info(f"Request details: batch_size={batch_size}, strategy={optimizer_strategy}")
+        logger.info(f"System prompt length: {len(system_prompt)} chars")
+        logger.info(f"Output prompt length: {len(output_prompt)} chars")
+        logger.info(f"Hugging Face metrics: {hf_metrics}")
+        
+        # Check if Hugging Face token is available
+        try:
+            validate_api_connection()
+        except Exception as e:
+            logger.warning(f"Hugging Face API connection issue: {e}")
+            return jsonify({
+                'error': f"Hugging Face API connection issue: {str(e)}. Please check your HUGGING_FACE_TOKEN.",
+                'status': 'error'
+            }), 400
+        
+        # Run the 4-API workflow
+        results = prompt_workflow.run_four_api_workflow(
+            system_prompt=system_prompt,
+            output_prompt=output_prompt,
+            batch_size=batch_size,
+            optimizer_strategy=optimizer_strategy,
+            hf_metrics=hf_metrics
+        )
+        
+        # Check for errors
+        if 'error' in results:
+            logger.error(f"Error in 4-API workflow: {results['error']}")
+            return jsonify({
+                'error': results['error'],
+                'status': 'error'
+            }), 500
+            
+        # Return success response
+        return jsonify({
+            'status': 'success',
+            'experiment_id': results['experiment_id'],
+            'metrics': {
+                'internal': results['internal_metrics'],
+                'huggingface': results['huggingface_metrics']
+            },
+            'prompts': results['prompts'],
+            'examples_count': results['examples_count'],
+            'validation_count': results['validation_count']
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in 4-API workflow: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/train', methods=['POST'])
 def train():

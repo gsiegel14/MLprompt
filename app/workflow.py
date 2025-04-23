@@ -28,15 +28,18 @@ logger = logging.getLogger(__name__)
 
 class PromptOptimizationWorkflow:
     """
-    Implements the Two-Stage Training Cycle workflow for prompt optimization.
+    Implements the Four-Stage API Call workflow for prompt optimization.
     
-    Workflow:
-    1. Primary LLM Inference & Evaluation (Phase 1)
+    Enhanced Workflow:
+    1. Google Vertex API #1: Primary LLM Inference
        - Process training data with current prompts
+    2. Google Vertex API #2: Internal Evaluation
        - Evaluate responses against ground truth
-    2. Optimizer LLM Refinement (Phase 2)
+    3. Google Vertex API #3: Optimizer LLM Refinement
        - Analyze results and generate improved prompts
-    3. Validation (Separate phase)
+    4. Hugging Face API: External Validation Metrics
+       - Validate results using industry-standard metrics
+    5. Final Validation (Separate phase)
        - Compare different prompt versions on unseen data
     """
     
@@ -55,6 +58,241 @@ class PromptOptimizationWorkflow:
         
         # Ensure we have the optimizer directory
         os.makedirs(os.path.join('prompts', 'optimizer'), exist_ok=True)
+        os.makedirs(os.path.join('prompts', 'evaluator'), exist_ok=True)
+        os.makedirs(os.path.join('prompts', 'final'), exist_ok=True)
+        
+    def run_four_api_workflow(self,
+                             system_prompt: str,
+                             output_prompt: str,
+                             batch_size: int = 10,
+                             optimizer_strategy: str = 'reasoning_first',
+                             hf_metrics: List[str] = None) -> Dict[str, Any]:
+        """
+        Run the enhanced 4-API call workflow.
+        
+        This workflow uses:
+        1. Google Vertex API #1: Primary LLM inference
+        2. Google Vertex API #2: Internal evaluation
+        3. Google Vertex API #3: Optimizer LLM for prompt refinement
+        4. Hugging Face API: External validation metrics
+        
+        Args:
+            system_prompt: The system prompt
+            output_prompt: The output prompt
+            batch_size: Number of examples to process
+            optimizer_strategy: Strategy for optimization
+            hf_metrics: Hugging Face metrics to use (defaults to ["exact_match", "bleu"])
+            
+        Returns:
+            dict: Results of the workflow with all metrics
+        """
+        logger.info("=== STARTING 4-API WORKFLOW ===")
+        logger.info(f"System prompt length: {len(system_prompt)} chars")
+        logger.info(f"Output prompt length: {len(output_prompt)} chars")
+        
+        if hf_metrics is None:
+            hf_metrics = ["exact_match", "bleu"]
+            
+        # Create a new experiment
+        experiment_id = self.experiment_tracker.start_experiment()
+        logger.info(f"Started experiment {experiment_id}")
+        
+        try:
+            # Phase 1: Google Vertex API - Primary LLM Inference
+            logger.info("PHASE 1: Google Vertex API - Primary LLM Inference")
+            
+            # Get examples for testing
+            batch = self.data_module.get_batch(batch_size=batch_size, validation=False)
+            if not batch:
+                return {"error": "No examples available for testing"}
+                
+            logger.info(f"Got batch of {len(batch)} examples")
+            
+            # Process examples with Primary LLM
+            predictions = []
+            references = []
+            inputs = []
+            
+            for example in batch:
+                user_input = example.get('user_input', '')
+                ground_truth = example.get('ground_truth_output', '')
+                
+                # Call the Primary LLM
+                model_response = get_llm_response(
+                    system_prompt,
+                    user_input,
+                    output_prompt,
+                    self.config.get('gemini', {})
+                )
+                
+                predictions.append(model_response)
+                references.append(ground_truth)
+                inputs.append(user_input)
+            
+            # Phase 2: Google Vertex API - Internal Evaluation
+            logger.info("PHASE 2: Google Vertex API - Internal Evaluation")
+            
+            # Evaluate predictions using internal metrics
+            internal_metrics = evaluate_batch([
+                {
+                    'model_response': pred,
+                    'ground_truth_output': ref
+                } for pred, ref in zip(predictions, references)
+            ])
+            
+            logger.info(f"Internal evaluation metrics: {internal_metrics}")
+            
+            # Phase 3: Google Vertex API - Optimizer LLM
+            logger.info("PHASE 3: Google Vertex API - Optimizer LLM for prompt refinement")
+            
+            # Load the appropriate optimizer prompt
+            optimizer_prompt = load_optimizer_prompt('general')
+            
+            # Prepare examples with results for optimization
+            examples_for_optimizer = []
+            for i in range(len(predictions)):
+                examples_for_optimizer.append({
+                    'user_input': inputs[i],
+                    'ground_truth_output': references[i],
+                    'model_response': predictions[i],
+                    'score': calculate_score(predictions[i], references[i])
+                })
+            
+            # Optimize the prompts
+            optimization_result = optimize_prompts(
+                system_prompt,
+                output_prompt,
+                examples_for_optimizer,
+                optimizer_prompt,
+                optimizer_strategy,
+                self.config.get('optimizer', {})
+            )
+            
+            if not optimization_result:
+                return {"error": "Optimization failed"}
+                
+            optimized_system_prompt = optimization_result.get('optimized_system_prompt', system_prompt)
+            optimized_output_prompt = optimization_result.get('optimized_output_prompt', output_prompt)
+            
+            logger.info(f"Optimization complete - new system prompt length: {len(optimized_system_prompt)} chars")
+            logger.info(f"Optimization complete - new output prompt length: {len(optimized_output_prompt)} chars")
+            
+            # Phase 4: Hugging Face API - External Validation
+            logger.info("PHASE 4: Hugging Face API - External validation metrics")
+            
+            # Get validation examples
+            validation_batch = self.data_module.get_batch(batch_size=batch_size, validation=True)
+            if not validation_batch:
+                return {"error": "No validation examples available"}
+                
+            # Generate predictions with original prompts
+            original_predictions = []
+            original_references = []
+            
+            # Generate predictions with optimized prompts
+            optimized_predictions = []
+            optimized_references = []
+            
+            for example in validation_batch:
+                user_input = example.get('user_input', '')
+                ground_truth = example.get('ground_truth_output', '')
+                
+                # Original prompts
+                original_response = get_llm_response(
+                    system_prompt,
+                    user_input,
+                    output_prompt,
+                    self.config.get('gemini', {})
+                )
+                
+                # Optimized prompts
+                optimized_response = get_llm_response(
+                    optimized_system_prompt,
+                    user_input,
+                    optimized_output_prompt,
+                    self.config.get('gemini', {})
+                )
+                
+                original_predictions.append(original_response)
+                optimized_predictions.append(optimized_response)
+                
+                # Use the same reference for both
+                original_references.append(ground_truth)
+                optimized_references.append(ground_truth)
+            
+            # Evaluate with Hugging Face metrics
+            original_hf_metrics = evaluate_metrics(
+                original_predictions,
+                original_references,
+                hf_metrics
+            )
+            
+            optimized_hf_metrics = evaluate_metrics(
+                optimized_predictions,
+                optimized_references,
+                hf_metrics
+            )
+            
+            logger.info(f"Hugging Face metrics for original prompts: {original_hf_metrics}")
+            logger.info(f"Hugging Face metrics for optimized prompts: {optimized_hf_metrics}")
+            
+            # Save prompts and results
+            self.experiment_tracker.save_prompt(experiment_id, 'system', 'original', system_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'output', 'original', output_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'system', 'optimized', optimized_system_prompt)
+            self.experiment_tracker.save_prompt(experiment_id, 'output', 'optimized', optimized_output_prompt)
+            
+            # Save examples
+            self.experiment_tracker.save_examples(experiment_id, 1, examples_for_optimizer)
+            
+            # Save validation results
+            validation_examples = []
+            for i in range(len(optimized_predictions)):
+                validation_examples.append({
+                    'user_input': validation_batch[i].get('user_input', ''),
+                    'ground_truth_output': optimized_references[i],
+                    'original_response': original_predictions[i],
+                    'optimized_response': optimized_predictions[i]
+                })
+                
+            self.experiment_tracker.save_validation_results(
+                experiment_id, 
+                validation_examples,
+                {
+                    'original_metrics': original_hf_metrics,
+                    'optimized_metrics': optimized_hf_metrics
+                }
+            )
+            
+            # Compile the complete results
+            results = {
+                'experiment_id': experiment_id,
+                'internal_metrics': internal_metrics,
+                'huggingface_metrics': {
+                    'original': original_hf_metrics,
+                    'optimized': optimized_hf_metrics
+                },
+                'prompts': {
+                    'original': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt
+                    },
+                    'optimized': {
+                        'system_prompt': optimized_system_prompt,
+                        'output_prompt': optimized_output_prompt
+                    }
+                },
+                'examples_count': len(batch),
+                'validation_count': len(validation_batch)
+            }
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in 4-API workflow: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {"error": str(e)}
         
     def run_training_cycle(self, 
                           system_prompt: str, 
