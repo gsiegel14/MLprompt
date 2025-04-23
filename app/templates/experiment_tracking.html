@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiment Tracking - Prompt Optimization Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Experiment Tracking</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('training') }}">Training</a>
+                <a href="{{ url_for('evaluation') }}">Evaluation</a>
+                <a href="{{ url_for('history') }}">History</a>
+                <a href="{{ url_for('experiment_tracking') }}" class="active">Tracking</a>
+                <a href="{{ url_for('cost_dashboard') }}">Cost</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Experiment Performance Trends</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Metric Comparison Across Experiments</h2>
+                    <div class="form-group">
+                        <label for="metricSelect">Select Metric:</label>
+                        <select id="metricSelect" class="form-control">
+                            <option value="exact_match">Exact Match</option>
+                            <option value="semantic_similarity">Semantic Similarity</option>
+                            <option value="bleu">BLEU Score</option>
+                            <option value="overall_score">Overall Score</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Experiment Details</h2>
+                </div>
+                <div class="card-body">
+                    <table id="experimentTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Experiment ID</th>
+                                <th>Date</th>
+                                <th>Iterations</th>
+                                <th>Best Metric</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch experiment data
+            fetchExperimentData();
+            
+            // Add event listener for metric select change
+            document.getElementById('metricSelect').addEventListener('change', function() {
+                updateComparisonChart();
+            });
+        });
+        
+        let experimentData = [];
+        let performanceChart = null;
+        let comparisonChart = null;
+        
+        async function fetchExperimentData() {
+            try {
+                const response = await fetch('/api/visualization/experiment_metrics');
+                const data = await response.json();
+                
+                experimentData = data.experiments || [];
+                
+                // Update the UI with experiment data
+                updatePerformanceChart();
+                updateComparisonChart();
+                updateExperimentTable();
+                
+            } catch (error) {
+                console.error('Error fetching experiment data:', error);
+            }
+        }
+        
+        function updatePerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Limit to latest 5 experiments
+            const latestExperiments = [...experimentData].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            ).slice(0, 5).reverse();
+            
+            // Extract data for chart
+            const labels = latestExperiments.map(exp => exp.id.split('_')[1] || exp.id);
+            
+            // Create datasets for different metrics
+            const datasets = [
+                {
+                    label: 'Exact Match',
+                    data: latestExperiments.map(exp => {
+                        // Get the best metric from the last iteration
+                        const iterations = exp.metrics.sort((a, b) => b.iteration - a.iteration);
+                        return iterations.length > 0 ? 
+                            iterations[0].metrics.exact_match || 
+                            (iterations[0].metrics.scores ? iterations[0].metrics.scores.exact_match : 0) : 0;
+                    }),
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: false
+                },
+                {
+                    label: 'Semantic Similarity',
+                    data: latestExperiments.map(exp => {
+                        const iterations = exp.metrics.sort((a, b) => b.iteration - a.iteration);
+                        return iterations.length > 0 ? 
+                            iterations[0].metrics.semantic_similarity || 
+                            (iterations[0].metrics.scores ? iterations[0].metrics.scores.semantic_similarity : 0) : 0;
+                    }),
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false
+                }
+            ];
+            
+            // Destroy existing chart if it exists
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            // Create new chart
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1.0
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Performance Trends Across Recent Experiments'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateComparisonChart() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            const selectedMetric = document.getElementById('metricSelect').value;
+            
+            // Get all experiments with iterations
+            const experimentsWithIterations = experimentData.filter(exp => exp.metrics.length > 0);
+            
+            // Extract data for chart
+            const datasets = [];
+            
+            // Create a dataset for each experiment
+            experimentsWithIterations.forEach((exp, index) => {
+                // Sort iterations
+                const sortedIterations = [...exp.metrics].sort((a, b) => a.iteration - b.iteration);
+                
+                // Extract values for selected metric
+                const values = sortedIterations.map(iter => {
+                    if (selectedMetric in iter.metrics) {
+                        return iter.metrics[selectedMetric];
+                    } else if (iter.metrics.scores && selectedMetric in iter.metrics.scores) {
+                        return iter.metrics.scores[selectedMetric];
+                    } else {
+                        return 0;
+                    }
+                });
+                
+                // Generate a color
+                const hue = (index * 137) % 360;
+                const color = `hsl(${hue}, 70%, 60%)`;
+                
+                datasets.push({
+                    label: `Exp ${exp.id.split('_')[1] || exp.id}`,
+                    data: values,
+                    borderColor: color,
+                    backgroundColor: `hsla(${hue}, 70%, 60%, 0.2)`,
+                    fill: false
+                });
+            });
+            
+            // Get maximum number of iterations
+            const maxIterations = Math.max(
+                ...experimentsWithIterations.map(exp => exp.metrics.length)
+            );
+            
+            // Create labels for iterations
+            const labels = Array.from({length: maxIterations}, (_, i) => `Iteration ${i+1}`);
+            
+            // Destroy existing chart if it exists
+            if (comparisonChart) {
+                comparisonChart.destroy();
+            }
+            
+            // Create new chart
+            comparisonChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: selectedMetric === 'bleu' ? 1.0 : 1.0
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${selectedMetric.replace('_', ' ').toUpperCase()} Across Experiment Iterations`
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateExperimentTable() {
+            const tableBody = document.querySelector('#experimentTable tbody');
+            tableBody.innerHTML = '';
+            
+            // Sort experiments by date (newest first)
+            const sortedExperiments = [...experimentData].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            
+            sortedExperiments.forEach(exp => {
+                const row = document.createElement('tr');
+                
+                // Format date
+                const date = new Date(exp.created_at);
+                const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                
+                // Get best metric
+                let bestMetric = '';
+                if (exp.metrics.length > 0) {
+                    const lastIteration = [...exp.metrics].sort((a, b) => b.iteration - a.iteration)[0];
+                    if (lastIteration.metrics.overall_score) {
+                        bestMetric = lastIteration.metrics.overall_score.toFixed(2);
+                    } else if (lastIteration.metrics.scores && lastIteration.metrics.scores.overall_score) {
+                        bestMetric = lastIteration.metrics.scores.overall_score.toFixed(2);
+                    } else if (lastIteration.metrics.exact_match) {
+                        bestMetric = lastIteration.metrics.exact_match.toFixed(2);
+                    } else if (lastIteration.metrics.scores && lastIteration.metrics.scores.exact_match) {
+                        bestMetric = lastIteration.metrics.scores.exact_match.toFixed(2);
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${exp.id}</td>
+                    <td>${formattedDate}</td>
+                    <td>${exp.metrics.length}</td>
+                    <td>${bestMetric}</td>
+                    <td>
+                        <button onclick="viewExperiment('${exp.id}')" class="btn btn-sm btn-primary">View</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        function viewExperiment(expId) {
+            // Redirect to experiment details page
+            window.location.href = `/history?experiment=${expId}`;
+        }
+    </script>
+</body>
+</html>

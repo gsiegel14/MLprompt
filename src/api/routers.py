@@ -1,3 +1,4 @@
+
 """
 API router configuration
 """
@@ -5,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 
-from src.api.endpoints import prompts, optimization, cost_tracking
+from src.api.endpoints import prompts, optimization, cost_tracking, experiments, datasets, inference
 from src.app.auth import Token, authenticate_user, create_access_token, FAKE_USERS_DB
 from src.app.config import settings
 
@@ -15,6 +16,9 @@ api_router = APIRouter()
 api_router.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 api_router.include_router(optimization.router, prefix="/optimization", tags=["optimization"])
 api_router.include_router(cost_tracking.router, prefix="/cost_tracking", tags=["cost_tracking"])
+api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
+api_router.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
+api_router.include_router(inference.router, prefix="/inference", tags=["inference"])
 
 @api_router.post("/token", response_model=Token, tags=["authentication"])
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):

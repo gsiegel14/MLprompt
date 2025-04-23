@@ -147,6 +147,11 @@ def run_evaluation():
 
 @app.route('/cost_dashboard')
 def cost_dashboard():
+    """
+    Show cost tracking dashboard
+    """
+    return render_template('cost_dashboard.html')
+def cost_dashboard():
     """Render the cost monitoring dashboard."""
     return render_template('cost_dashboard.html')
 
@@ -1992,3 +1997,72 @@ def get_prompts():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+@app.route('/experiment_tracking')
+def experiment_tracking():
+    """
+    Show experiment tracking visualization
+    """
+    return render_template('experiment_tracking.html')
+
+@app.route('/api/visualization/experiment_metrics')
+def experiment_metrics_data():
+    """
+    Provide experiment metrics for visualization
+    """
+    # Get all experiments
+    experiments_dir = "experiments"
+    
+    if not os.path.exists(experiments_dir):
+        return jsonify({"experiments": []})
+    
+    experiments = []
+    for experiment_id in os.listdir(experiments_dir):
+        experiment_dir = os.path.join(experiments_dir, experiment_id)
+        
+        # Skip if not a directory
+        if not os.path.isdir(experiment_dir):
+            continue
+        
+        # Get metadata
+        created_at = datetime.fromtimestamp(os.path.getctime(experiment_dir)).isoformat()
+        
+        # Find metrics files
+        metrics_data = []
+        
+        # Check for metrics files
+        for f in os.listdir(experiment_dir):
+            if f.startswith('metrics_') and f.endswith('.json'):
+                with open(os.path.join(experiment_dir, f), 'r') as file:
+                    metrics = json.load(file)
+                    iteration = int(f.split('_')[1].split('.')[0])
+                    metrics_data.append({
+                        "iteration": iteration,
+                        "metrics": metrics
+                    })
+        
+        # Skip if no metrics
+        if not metrics_data:
+            # Check newer directory structure
+            validation_dir = os.path.join(experiment_dir, "validation")
+            if os.path.exists(validation_dir) and os.path.exists(os.path.join(validation_dir, "metrics.json")):
+                with open(os.path.join(validation_dir, "metrics.json"), 'r') as f:
+                    metrics = json.load(f)
+                    metrics_data.append({
+                        "iteration": 1,
+                        "metrics": metrics
+                    })
+            else:
+                continue
+        
+        experiments.append({
+            "id": experiment_id,
+            "created_at": created_at,
+            "metrics": metrics_data
+        })
+    
+    # Sort by created_at
+    experiments.sort(key=lambda x: x["created_at"])
+    
+    return jsonify({
+        "experiments": experiments
+    })
