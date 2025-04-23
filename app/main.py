@@ -148,6 +148,11 @@ def run_evaluation():
 @app.route('/cost_dashboard')
 def cost_dashboard():
     """
+    Render the cost monitoring dashboard
+    """
+    return render_template('cost_dashboard.html')
+def cost_dashboard():
+    """
     Show cost tracking dashboard
     """
     return render_template('cost_dashboard.html')
