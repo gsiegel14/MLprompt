@@ -1062,14 +1062,28 @@ def save_optimizer_prompt():
         logger.error(f"Error saving optimizer prompt: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get_optimization_strategies')
+@app.route('/get_available_strategies', methods=['GET'])
 def get_available_strategies():
     """Get available optimization strategies."""
     try:
-        strategies = get_optimization_strategies()
+        strategies = config.get('optimizer', {}).get('strategies', [])
+        if not strategies:
+            strategies = ['reasoning_first', 'full_rewrite', 'targeted_edit', 'example_addition']
         return jsonify({'strategies': strategies})
     except Exception as e:
         logger.error(f"Error getting optimization strategies: {e}")
+        return jsonify({'error': str(e)}), 500
+        
+@app.route('/get_optimization_strategies', methods=['GET'])
+def get_optimization_strategies():
+    """Get available optimization strategies for the 4-API workflow."""
+    try:
+        strategies = config.get('optimizer', {}).get('strategies', [])
+        if not strategies:
+            strategies = ['reasoning_first', 'full_rewrite', 'targeted_edit', 'example_addition']
+        return jsonify({'strategies': strategies})
+    except Exception as e:
+        logger.error(f"Error getting optimization strategies for 4-API workflow: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/reset_nejm_cache', methods=['POST'])
