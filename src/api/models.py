@@ -12,6 +12,16 @@ class PromptCreate(BaseModel):
     name: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     
+
+class PromptData(BaseModel):
+    """Model for prompt data input via API"""
+    system_prompt: str
+    output_prompt: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
     
 class PromptResponse(BaseModel):
     prompt_id: str

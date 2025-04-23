@@ -404,3 +404,106 @@ def log_api_call(logger=None):
                 
         return wrapper
     return decorator
+"""
+Centralized logging configuration for the prompt optimization platform.
+Provides structured JSON logging for production and readable logs for development.
+"""
+import os
+import sys
+import logging
+import json
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
+
+LOG_FORMAT_DEV = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_DIR = "logs"
+
+class JSONFormatter(logging.Formatter):
+    """JSON formatter for structured logging in production"""
+    
+    def format(self, record):
+        log_object = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno
+        }
+        
+        # Add exception info if available
+        if record.exc_info:
+            log_object["exception"] = {
+                "type": record.exc_info[0].__name__,
+                "message": str(record.exc_info[1]),
+                "traceback": self.formatException(record.exc_info)
+            }
+        
+        # Add extra fields if available
+        if hasattr(record, "extra"):
+            log_object["extra"] = record.extra
+            
+        return json.dumps(log_object)
+
+def configure_logging(app_name="prompt_optimizer", log_level=None, enable_json=None):
+    """
+    Configure application logging
+    
+    Args:
+        app_name: Name of the application for log identification
+        log_level: Override default log level
+        enable_json: Override default JSON formatting setting
+    """
+    # Determine environment
+    env = os.environ.get("ENVIRONMENT", "development")
+    
+    # Determine log level
+    if log_level is None:
+        log_level = os.environ.get("LOG_LEVEL", "INFO")
+    
+    numeric_level = getattr(logging, log_level.upper(), logging.INFO)
+    
+    # Determine if we should use JSON formatting
+    if enable_json is None:
+        enable_json = env == "production"
+    
+    # Create logs directory if it doesn't exist
+    os.makedirs(LOG_DIR, exist_ok=True)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(numeric_level)
+    
+    # Remove existing handlers to prevent duplication
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        f"{LOG_DIR}/{app_name}.log",
+        maxBytes=10 * 1024 * 1024,  # 10 MB
+        backupCount=5
+    )
+    
+    # Configure formatters based on environment
+    if enable_json:
+        formatter = JSONFormatter()
+    else:
+        formatter = logging.Formatter(LOG_FORMAT_DEV)
+    
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+    
+    # Add handlers
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+    
+    # Create application logger
+    logger = logging.getLogger(app_name)
+    logger.info(f"Logging configured: level={log_level}, json_format={enable_json}, env={env}")
+    
+    return logger

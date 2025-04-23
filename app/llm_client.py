@@ -161,7 +161,7 @@ def _load_from_cache(cache_key: str) -> Optional[str]:
         except:
             pass
 
-    return None
+        return None
 
 def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, config: Optional[Dict[str, Any]] = None) -> str:
     """

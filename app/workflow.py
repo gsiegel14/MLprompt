@@ -300,47 +300,6 @@ class PromptOptimizationWorkflow:
 
     def _handle_workflow_error(self, error, phase, iteration, experiment_id, context=None):
         """
-        Handle workflow errors during execution
-        
-        Args:
-            error (Exception): The error that occurred
-            phase (str): The phase where the error occurred
-            iteration (int): The current iteration
-            experiment_id (str): The experiment ID
-            context (dict, optional): Additional context
-        """
-        logger.error(f"Error in {phase} phase (iteration {iteration}): {error}")
-        
-        # Log detailed error information
-        logger.error(f"Error details: {traceback.format_exc()}")
-        
-        # Update experiment with error status
-        self.experiment_tracker.update_experiment_status(
-            experiment_id=experiment_id,
-            status="failed",
-            metadata={
-                "error": str(error),
-                "phase": phase,
-                "iteration": iteration,
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-        
-        # Save error information to experiment directory
-        error_file = os.path.join(
-            self.experiment_tracker.get_experiment_dir(experiment_id),
-            f"error_{phase}_{iteration}.log"
-        )
-        
-        with open(error_file, 'w') as f:
-            f.write(f"Error in {phase} phase (iteration {iteration}): {error}\n")
-            f.write(f"Timestamp: {datetime.now().isoformat()}\n")
-            f.write(f"Traceback:\n{traceback.format_exc()}")
-            
-            if context:
-                f.write("\nContext:\n")
-                f.write(json.dumps(context, indent=2))
-        """
         Handle errors during workflow execution with robust recovery.
         
         Args:
@@ -354,6 +313,7 @@ class PromptOptimizationWorkflow:
             dict: Status information for workflow recovery
         """
         import traceback
+        from datetime import datetime
         
         logger.error(f"Error in workflow phase {phase} during iteration {iteration}: {error}")
         logger.error(traceback.format_exc())
@@ -370,6 +330,21 @@ class PromptOptimizationWorkflow:
             f.write(f"Traceback:\n{traceback.format_exc()}\n")
             if context:
                 f.write(f"Context:\n{json.dumps(context, indent=2)}\n")
+        
+        # Update experiment with error status
+        try:
+            self.experiment_tracker.update_experiment_status(
+                experiment_id=experiment_id,
+                status="failed",
+                metadata={
+                    "error": str(error),
+                    "phase": phase,
+                    "iteration": iteration,
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+        except Exception as tracking_error:
+            logger.error(f"Could not update experiment status: {tracking_error}")
         
         # Attempt recovery based on phase
         if phase == "primary_llm":
@@ -394,7 +369,6 @@ class PromptOptimizationWorkflow:
                 "recoverable": False,
                 "recovery_log": recovery_log_path
             }
-            self.experiment_tracker.save_examples(experiment_id, examples_for_optimizer)
             
             # Save validation results
             validation_examples = []

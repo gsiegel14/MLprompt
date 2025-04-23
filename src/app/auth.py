@@ -137,3 +137,134 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid API Key"
     )
+"""
+Authentication and security for the API
+"""
+import os
+import time
+import logging
+from typing import Dict, Optional, List
+from fastapi import Depends, HTTPException, Security, Request
+from fastapi.security.api_key import APIKeyHeader
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_429_TOO_MANY_REQUESTS
+
+logger = logging.getLogger(__name__)
+
+# API key configuration
+API_KEY_NAME = "X-API-Key"
+API_KEY = os.environ.get("API_KEY", "")
+
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+# Rate limiting configuration
+RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "1") == "1"
+# Default rate limits (can be overridden with environment variables)
+DEFAULT_RATE_LIMIT = int(os.environ.get("DEFAULT_RATE_LIMIT", "100"))  # requests per window
+DEFAULT_RATE_WINDOW = int(os.environ.get("DEFAULT_RATE_LIMIT_WINDOW", "3600"))  # window in seconds (1 hour)
+
+# In-memory rate limit store (would be replaced with Redis in production)
+rate_limit_store: Dict[str, Dict[str, int]] = {}
+
+def get_api_key(request: Request, api_key: str = Security(api_key_header)) -> str:
+    """
+    Validate API key and enforce rate limiting
+    
+    Args:
+        request: The incoming request
+        api_key: The API key from the header
+        
+    Returns:
+        The validated API key
+        
+    Raises:
+        HTTPException: If the API key is invalid or rate limit is exceeded
+    """
+    if not API_KEY:
+        logger.warning("API_KEY environment variable not set - running in unsecured mode")
+        if not api_key:
+            # If no API key is configured, we'll still validate that the header is present
+            # This ensures clients are configured correctly for when API keys are enabled
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, 
+                detail="API key is required"
+            )
+        return api_key
+    
+    if api_key != API_KEY:
+        logger.warning(f"Invalid API key attempt: {api_key[:5]}...")
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, 
+            detail="Invalid API key"
+        )
+    
+    # Rate limiting check
+    if RATE_LIMIT_ENABLED:
+        client_ip = request.client.host if request.client else "unknown"
+        endpoint = request.url.path
+        
+        if not check_rate_limit(api_key, client_ip, endpoint):
+            logger.warning(f"Rate limit exceeded for key {api_key[:5]}... from {client_ip}")
+            raise HTTPException(
+                status_code=HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded. Try again later."
+            )
+    
+    return api_key
+
+def check_rate_limit(api_key: str, client_ip: str, endpoint: str) -> bool:
+    """
+    Check if the current request exceeds rate limits
+    
+    Args:
+        api_key: The API key being used
+        client_ip: The client IP address
+        endpoint: The API endpoint being accessed
+        
+    Returns:
+        bool: True if within rate limits, False if exceeded
+    """
+    # Get current timestamp
+    now = int(time.time())
+    
+    # Create a unique identifier for this client
+    client_id = f"{api_key}:{client_ip}"
+    
+    # Initialize or clean up rate limit data for this client
+    if client_id not in rate_limit_store:
+        rate_limit_store[client_id] = {}
+        
+    # Clean up expired entries
+    clean_expired_entries(client_id, now)
+    
+    # Get the client's request history
+    client_data = rate_limit_store[client_id]
+    
+    # Increment request count for this timestamp
+    if now not in client_data:
+        client_data[now] = 0
+    client_data[now] += 1
+    
+    # Calculate total requests in current window
+    window_start = now - DEFAULT_RATE_WINDOW
+    total_requests = sum(count for timestamp, count in client_data.items() 
+                          if timestamp > window_start)
+    
+    # Check if rate limit is exceeded
+    return total_requests <= DEFAULT_RATE_LIMIT
+
+def clean_expired_entries(client_id: str, current_time: int) -> None:
+    """
+    Remove expired entries from the rate limit store
+    
+    Args:
+        client_id: The client identifier
+        current_time: The current timestamp
+    """
+    if client_id in rate_limit_store:
+        # Remove entries older than the rate limit window
+        window_start = current_time - DEFAULT_RATE_WINDOW
+        rate_limit_store[client_id] = {
+            timestamp: count 
+            for timestamp, count in rate_limit_store[client_id].items()
+            if timestamp > window_start
+        }
