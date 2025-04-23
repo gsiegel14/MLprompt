@@ -1,12 +1,12 @@
-
 """
-Pydantic models for API request and response validation
+Pydantic models for API requests and responses
 """
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 class PromptData(BaseModel):
-    """Request model for prompt creation/update"""
+    """Request model for creating or updating prompts"""
     system_prompt: str
     output_prompt: str
     name: Optional[str] = None
@@ -19,22 +19,22 @@ class PromptResponse(BaseModel):
     system_prompt: str
     output_prompt: str
     version: int
-    name: Optional[str] = None
-    description: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    name: str
+    description: str
+    tags: List[str]
     created_at: str
     updated_at: str
 
 class OptimizationRequest(BaseModel):
-    """Request model for starting an optimization workflow"""
+    """Request model for starting a prompt optimization workflow"""
     prompt_id: str
     dataset_id: str
-    target_metric: str = "exact_match_score"
-    target_threshold: float = 0.9
-    max_iterations: int = 10
-    patience: int = 3
     primary_model: Optional[str] = None
     optimizer_model: Optional[str] = None
+    target_metric: str = "exact_match_score"
+    target_threshold: float = 0.9
+    patience: int = 3
+    max_iterations: int = 10
 
 class OptimizationResponse(BaseModel):
     """Response model for optimization status"""
@@ -47,6 +47,26 @@ class OptimizationResponse(BaseModel):
     current_iteration: int = 0
     max_iterations: int
     best_score: Optional[float] = None
+    target_metric: str
+    target_threshold: float
+    patience: int
+    primary_model: str
+    optimizer_model: str
+
+class InferenceRequest(BaseModel):
+    """Request model for running inference"""
+    prompt_id: str
+    user_input: str
+    model_name: Optional[str] = None
+    temperature: float = 0.7
+
+class InferenceResponse(BaseModel):
+    """Response model for inference results"""
+    prompt_id: str
+    user_input: str
+    generated_text: str
+    model_name: str
+    timestamp: str
 
 class EvaluationRequest(BaseModel):
     """Request model for prompt evaluation"""

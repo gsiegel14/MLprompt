@@ -1,68 +1,86 @@
 
 """
-Core data model for managing prompt versions
+PromptState class for managing prompt versions
 """
 from pydantic import BaseModel
 import json
 import os
-import logging
 from typing import Optional, Dict, Any
 
-logger = logging.getLogger(__name__)
-
 class PromptState(BaseModel):
-    """
-    Manages the state of system and output prompts with version tracking
-    """
+    """Class to manage prompt versions and their state"""
+    
     system_prompt: str
     output_prompt: str
     version: int = 1
-    metadata: Dict[str, Any] = {}
     
     def dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation"""
         return {
             "system_prompt": self.system_prompt,
             "output_prompt": self.output_prompt,
-            "version": self.version,
-            "metadata": self.metadata
+            "version": self.version
         }
     
     @classmethod
-    def load(cls, path: str) -> 'PromptState':
-        """Load prompt state from file"""
-        try:
-            if os.path.exists(path):
+    def load(cls, path: str):
+        """
+        Load prompt state from a file or GCS
+        
+        Args:
+            path: Local file path or GCS path (gs://)
+        
+        Returns:
+            PromptState object
+        """
+        if path.startswith("gs://"):
+            try:
+                import gcsfs
+                fs = gcsfs.GCSFileSystem()
+                with fs.open(path, 'r') as f:
+                    data = json.load(f)
+                return cls(**data)
+            except Exception as e:
+                raise ValueError(f"Failed to load from GCS: {str(e)}")
+        else:
+            try:
                 with open(path, 'r') as f:
                     data = json.load(f)
-                logger.info(f"Loaded prompt state from {path}")
                 return cls(**data)
-            else:
-                logger.warning(f"Prompt state file not found: {path}")
-                raise FileNotFoundError(f"File not found: {path}")
-        except Exception as e:
-            logger.error(f"Error loading prompt state: {e}")
-            raise
+            except Exception as e:
+                raise ValueError(f"Failed to load from local file: {str(e)}")
+    
+    def save(self, path: str):
+        """
+        Save prompt state to a file or GCS
         
-    def save(self, path: str) -> str:
-        """Save prompt state to file"""
-        try:
-            # Ensure directory exists
+        Args:
+            path: Local file path or GCS path (gs://)
+        """
+        data = self.dict()
+        
+        if path.startswith("gs://"):
+            try:
+                import gcsfs
+                fs = gcsfs.GCSFileSystem()
+                with fs.open(path, 'w') as f:
+                    json.dump(data, f, indent=2)
+            except Exception as e:
+                raise ValueError(f"Failed to save to GCS: {str(e)}")
+        else:
+            # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(path), exist_ok=True)
             
-            with open(path, 'w') as f:
-                json.dump(self.dict(), f, indent=2)
-            logger.info(f"Saved prompt state to {path}")
-            return path
-        except Exception as e:
-            logger.error(f"Error saving prompt state: {e}")
-            raise
+            try:
+                with open(path, 'w') as f:
+                    json.dump(data, f, indent=2)
+            except Exception as e:
+                raise ValueError(f"Failed to save to local file: {str(e)}")
     
-    def create_next_version(self, system_prompt: Optional[str] = None, output_prompt: Optional[str] = None) -> 'PromptState':
-        """Create a new version with updated prompts"""
+    def increment_version(self):
+        """Create a new version by incrementing the version number"""
         return PromptState(
-            system_prompt=system_prompt if system_prompt is not None else self.system_prompt,
-            output_prompt=output_prompt if output_prompt is not None else self.output_prompt,
-            version=self.version + 1,
-            metadata=self.metadata.copy()
+            system_prompt=self.system_prompt,
+            output_prompt=self.output_prompt,
+            version=self.version + 1
         )
