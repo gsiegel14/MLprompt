@@ -422,37 +422,63 @@ Then calculate an overall score between 0.0 and 1.0.
                 
                 <!-- Improvement Metrics -->
                 <div class="row mt-4">
-                    <div class="col-lg-12">
-                        <div class="card">
+                    <div class="col-lg-6">
+                        <div class="card mb-4">
                             <div class="card-header">
-                                <i class="fa-solid fa-chart-line me-2"></i> Prompt Improvement Metrics
+                                <i class="fa-solid fa-chart-line me-2"></i> Prompt Quality Metrics
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <div class="text-center border rounded p-3 mb-3">
                                             <div class="fs-1 fw-bold text-primary mb-1" id="improvement-percentage">--</div>
                                             <div class="text-muted">Performance Improvement</div>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <div class="text-center border rounded p-3 mb-3">
                                             <div class="fs-1 fw-bold text-success mb-1" id="clarity-score">--</div>
                                             <div class="text-muted">Clarity Score</div>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <div class="text-center border rounded p-3 mb-3">
                                             <div class="fs-1 fw-bold text-info mb-1" id="conciseness-score">--</div>
                                             <div class="text-muted">Conciseness Score</div>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6">
                                         <div class="text-center border rounded p-3 mb-3">
                                             <div class="fs-1 fw-bold text-warning mb-1" id="effectiveness-score">--</div>
                                             <div class="text-muted">Effectiveness Score</div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fa-solid fa-chart-bar me-2"></i> Training vs. Validation Accuracy
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="text-center border rounded p-3">
+                                            <div class="fs-1 fw-bold text-primary mb-1" id="training-accuracy">--</div>
+                                            <div class="text-muted">Training Accuracy</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="text-center border rounded p-3">
+                                            <div class="fs-1 fw-bold text-success mb-1" id="validation-accuracy">--</div>
+                                            <div class="text-muted">Validation Accuracy</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chart-container" style="position: relative; height:200px; width:100%">
+                                    <canvas id="metrics-chart"></canvas>
                                 </div>
                             </div>
                         </div>

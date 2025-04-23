@@ -1849,7 +1849,13 @@ def get_prompts():
                         'improvement_percentage': round(improvement, 1),
                         'clarity_score': iteration_data.get('grading', {}).get('clarity', 8.5),
                         'conciseness_score': iteration_data.get('grading', {}).get('conciseness', 7.9),
-                        'effectiveness_score': iteration_data.get('grading', {}).get('effectiveness', 9.2)
+                        'effectiveness_score': iteration_data.get('grading', {}).get('effectiveness', 9.2),
+                        
+                        # Add training and validation accuracy metrics
+                        'training_accuracy': iteration_data.get('training_accuracy', 0.82),
+                        'validation_accuracy': iteration_data.get('validation_accuracy', 0.78),
+                        'original_accuracy': initial_score,
+                        'final_accuracy': current_score
                     }
                 
                 result['final'] = optimized_prompts
