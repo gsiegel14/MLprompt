@@ -1,12 +1,13 @@
 """
-Prompt Optimization Workflow: Four-Stage API Call Sequence
+Prompt Optimization Workflow: Five-Stage API Call Sequence
 
-This module implements the enhanced workflow for refining prompts using a four-stage
+This module implements the enhanced workflow for refining prompts using a five-stage
 process involving:
-1. Google Vertex AI - Primary LLM inference
-2. Google Vertex AI - Evaluation API call 
-3. Google Vertex AI - Optimizer LLM for prompt refinement
-4. Hugging Face - External validation metrics
+1. Google Vertex API #1: Primary LLM inference
+2. Hugging Face API: First external validation
+3. Google Vertex API #2: Optimizer LLM for prompt refinement
+4. Google Vertex API #3: Optimizer LLM reruns on original dataset
+5. Hugging Face API: Second external validation on refined outputs
 
 Each training run follows this sequence, with results tracked for comparison.
 """
@@ -61,7 +62,7 @@ class PromptOptimizationWorkflow:
         os.makedirs(os.path.join('prompts', 'evaluator'), exist_ok=True)
         os.makedirs(os.path.join('prompts', 'final'), exist_ok=True)
         
-    def run_four_api_workflow(self,
+    def run_five_api_workflow(self,
                              system_prompt: str,
                              output_prompt: str,
                              batch_size: int = 10,
@@ -87,7 +88,7 @@ class PromptOptimizationWorkflow:
         Returns:
             dict: Results of the workflow with all metrics
         """
-        logger.info("=== STARTING 4-API WORKFLOW ===")
+        logger.info("=== STARTING 5-API WORKFLOW ===")
         logger.info(f"System prompt length: {len(system_prompt)} chars")
         logger.info(f"Output prompt length: {len(output_prompt)} chars")
         
@@ -345,7 +346,7 @@ class PromptOptimizationWorkflow:
             return results
             
         except Exception as e:
-            logger.error(f"Error in 4-API workflow: {str(e)}")
+            logger.error(f"Error in 5-API workflow: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             return {"error": str(e)}
