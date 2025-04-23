@@ -1,12 +1,14 @@
 """
 FastAPI app entry point
 """
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from src.api.routers import api_router
 from src.app.config import settings
+from src.app.factory import create_flask_app
 
 # Configure logger
 logger = logging.getLogger(__name__)
