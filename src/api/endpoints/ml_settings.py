@@ -383,3 +383,230 @@ async def get_experiment_visualization_data(api_key: str = Depends(get_api_key))
             }
         ]
     }
+"""
+API endpoints for ML settings management
+"""
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+
+from src.app.database.db import get_db
+from src.api.models import (
+    ModelConfigCreate, ModelConfigResponse,
+    MetricConfigCreate, MetricConfigResponse,
+    MetaLearningConfigCreate, MetaLearningConfigResponse
+)
+from src.app.repositories.ml_settings_repository import (
+    ModelConfigRepository, MetricConfigRepository, MetaLearningConfigRepository
+)
+
+router = APIRouter(prefix="/ml-settings", tags=["ML Settings"])
+
+# Model configuration endpoints
+@router.post("/models", response_model=ModelConfigResponse)
+async def create_model_config(
+    model_data: ModelConfigCreate, 
+    db: Session = Depends(get_db)
+):
+    """Create a new model configuration"""
+    repo = ModelConfigRepository(db)
+    model_config = repo.create(
+        name=model_data.name,
+        primary_model=model_data.primary_model,
+        optimizer_model=model_data.optimizer_model,
+        temperature=model_data.temperature,
+        max_tokens=model_data.max_tokens,
+        top_p=model_data.top_p,
+        top_k=model_data.top_k,
+        is_default=model_data.is_default
+    )
+    return ModelConfigResponse.model_validate(model_config)
+
+@router.get("/models", response_model=List[ModelConfigResponse])
+async def list_model_configs(
+    skip: int = 0, 
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """List all model configurations"""
+    repo = ModelConfigRepository(db)
+    configs = repo.list_all(limit=limit, skip=skip)
+    return [ModelConfigResponse.model_validate(config) for config in configs]
+
+@router.get("/models/{config_id}", response_model=ModelConfigResponse)
+async def get_model_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get a model configuration by ID"""
+    repo = ModelConfigRepository(db)
+    config = repo.get_by_id(config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Model configuration not found")
+    return ModelConfigResponse.model_validate(config)
+
+@router.get("/models/default", response_model=ModelConfigResponse)
+async def get_default_model_config(
+    db: Session = Depends(get_db)
+):
+    """Get the default model configuration"""
+    repo = ModelConfigRepository(db)
+    config = repo.get_default()
+    if not config:
+        raise HTTPException(status_code=404, detail="No default model configuration found")
+    return ModelConfigResponse.model_validate(config)
+
+@router.put("/models/{config_id}", response_model=ModelConfigResponse)
+async def update_model_config(
+    config_id: str,
+    model_data: ModelConfigCreate,
+    db: Session = Depends(get_db)
+):
+    """Update a model configuration"""
+    repo = ModelConfigRepository(db)
+    config = repo.update(config_id, **model_data.model_dump())
+    if not config:
+        raise HTTPException(status_code=404, detail="Model configuration not found")
+    return ModelConfigResponse.model_validate(config)
+
+@router.delete("/models/{config_id}")
+async def delete_model_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a model configuration"""
+    repo = ModelConfigRepository(db)
+    if not repo.delete(config_id):
+        raise HTTPException(status_code=404, detail="Model configuration not found")
+    return {"message": "Model configuration deleted successfully"}
+
+# Metric configuration endpoints
+@router.post("/metrics", response_model=MetricConfigResponse)
+async def create_metric_config(
+    metric_data: MetricConfigCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new metric configuration"""
+    repo = MetricConfigRepository(db)
+    metric_config = repo.create(
+        name=metric_data.name,
+        metrics=metric_data.metrics,
+        metric_weights=metric_data.metric_weights,
+        target_threshold=metric_data.target_threshold
+    )
+    return MetricConfigResponse.model_validate(metric_config)
+
+@router.get("/metrics", response_model=List[MetricConfigResponse])
+async def list_metric_configs(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """List all metric configurations"""
+    repo = MetricConfigRepository(db)
+    configs = repo.list_all(limit=limit, skip=skip)
+    return [MetricConfigResponse.model_validate(config) for config in configs]
+
+@router.get("/metrics/{config_id}", response_model=MetricConfigResponse)
+async def get_metric_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get a metric configuration by ID"""
+    repo = MetricConfigRepository(db)
+    config = repo.get_by_id(config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Metric configuration not found")
+    return MetricConfigResponse.model_validate(config)
+
+@router.put("/metrics/{config_id}", response_model=MetricConfigResponse)
+async def update_metric_config(
+    config_id: str,
+    metric_data: MetricConfigCreate,
+    db: Session = Depends(get_db)
+):
+    """Update a metric configuration"""
+    repo = MetricConfigRepository(db)
+    config = repo.update(config_id, **metric_data.model_dump())
+    if not config:
+        raise HTTPException(status_code=404, detail="Metric configuration not found")
+    return MetricConfigResponse.model_validate(config)
+
+@router.delete("/metrics/{config_id}")
+async def delete_metric_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a metric configuration"""
+    repo = MetricConfigRepository(db)
+    if not repo.delete(config_id):
+        raise HTTPException(status_code=404, detail="Metric configuration not found")
+    return {"message": "Metric configuration deleted successfully"}
+
+# Meta-learning configuration endpoints
+@router.post("/meta-learning", response_model=MetaLearningConfigResponse)
+async def create_meta_learning_config(
+    meta_data: MetaLearningConfigCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new meta-learning configuration"""
+    repo = MetaLearningConfigRepository(db)
+    meta_config = repo.create(
+        name=meta_data.name,
+        model_type=meta_data.model_type,
+        hyperparameters=meta_data.hyperparameters,
+        feature_selection=meta_data.feature_selection,
+        is_active=meta_data.is_active
+    )
+    return MetaLearningConfigResponse.model_validate(meta_config)
+
+@router.get("/meta-learning", response_model=List[MetaLearningConfigResponse])
+async def list_meta_learning_configs(
+    skip: int = 0,
+    limit: int = 100,
+    active_only: bool = False,
+    db: Session = Depends(get_db)
+):
+    """List all meta-learning configurations"""
+    repo = MetaLearningConfigRepository(db)
+    if active_only:
+        configs = repo.get_active()
+    else:
+        configs = repo.list_all(limit=limit, skip=skip)
+    return [MetaLearningConfigResponse.model_validate(config) for config in configs]
+
+@router.get("/meta-learning/{config_id}", response_model=MetaLearningConfigResponse)
+async def get_meta_learning_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get a meta-learning configuration by ID"""
+    repo = MetaLearningConfigRepository(db)
+    config = repo.get_by_id(config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Meta-learning configuration not found")
+    return MetaLearningConfigResponse.model_validate(config)
+
+@router.put("/meta-learning/{config_id}", response_model=MetaLearningConfigResponse)
+async def update_meta_learning_config(
+    config_id: str,
+    meta_data: MetaLearningConfigCreate,
+    db: Session = Depends(get_db)
+):
+    """Update a meta-learning configuration"""
+    repo = MetaLearningConfigRepository(db)
+    config = repo.update(config_id, **meta_data.model_dump())
+    if not config:
+        raise HTTPException(status_code=404, detail="Meta-learning configuration not found")
+    return MetaLearningConfigResponse.model_validate(config)
+
+@router.delete("/meta-learning/{config_id}")
+async def delete_meta_learning_config(
+    config_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a meta-learning configuration"""
+    repo = MetaLearningConfigRepository(db)
+    if not repo.delete(config_id):
+        raise HTTPException(status_code=404, detail="Meta-learning configuration not found")
+    return {"message": "Meta-learning configuration deleted successfully"}
