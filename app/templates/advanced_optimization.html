@@ -1,0 +1,439 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Optimization Tools</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">Prompt Optimization Platform</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="/">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/training">Training</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/five_api_workflow_page">5-Step Workflow</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="/advanced_optimization">Advanced Optimization</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/history">History</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div class="alerts-container"></div>
+    
+    <div class="row">
+      <!-- Hyperparameter Tuning Section -->
+      <div class="col-12 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Hyperparameter Tuning</h3>
+            <button class="btn btn-sm btn-info" id="hyperparamInfoBtn" data-bs-toggle="modal" data-bs-target="#hyperparamInfoModal">
+              <i class="bi bi-info-circle"></i> Learn More
+            </button>
+          </div>
+          <div class="card-body">
+            <p class="lead">Systematically explore different hyperparameter configurations to find the optimal settings.</p>
+            
+            <!-- Hyperparameter Form -->
+            <form id="hyperparameterForm">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="systemPrompt" class="form-label">System Prompt</label>
+                  <textarea class="form-control" id="systemPrompt" rows="5" placeholder="Enter your system prompt here..."></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label for="outputPrompt" class="form-label">Output Prompt</label>
+                  <textarea class="form-control" id="outputPrompt" rows="5" placeholder="Enter your output prompt here..."></textarea>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-12">
+                  <h5>Search Space</h5>
+                  <p class="text-muted small">Define the hyperparameter values to explore.</p>
+                </div>
+                
+                <!-- Temperature -->
+                <div class="col-md-3 mb-3">
+                  <label for="temperatureValues" class="form-label">Temperature Values</label>
+                  <input type="text" class="form-control" id="temperatureValues" value="0.0, 0.3, 0.7" placeholder="Comma-separated values">
+                </div>
+                
+                <!-- Optimizer Strategy -->
+                <div class="col-md-3 mb-3">
+                  <label for="strategyValues" class="form-label">Optimizer Strategies</label>
+                  <input type="text" class="form-control" id="strategyValues" value="reasoning_first, full_rewrite, targeted_edit" placeholder="Comma-separated values">
+                </div>
+                
+                <!-- Batch Size -->
+                <div class="col-md-3 mb-3">
+                  <label for="batchSizeValues" class="form-label">Batch Sizes</label>
+                  <input type="text" class="form-control" id="batchSizeValues" value="3, 5, 10" placeholder="Comma-separated values">
+                </div>
+                
+                <!-- Max Iterations -->
+                <div class="col-md-3 mb-3">
+                  <label for="iterationValues" class="form-label">Max Iterations</label>
+                  <input type="text" class="form-control" id="iterationValues" value="1, 2, 3" placeholder="Comma-separated values">
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label for="metricKey" class="form-label">Metric to Optimize</label>
+                  <select class="form-select" id="metricKey">
+                    <option value="best_score" selected>Best Score</option>
+                    <option value="avg_score">Average Score</option>
+                    <option value="perfect_match_percent">Perfect Match Percent</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary" id="runHyperparamBtn">
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="hyperparamSpinner"></span>
+                  Run Hyperparameter Tuning
+                </button>
+              </div>
+            </form>
+            
+            <!-- Results -->
+            <div class="mt-4" id="hyperparamResultsContainer" style="display: none;">
+              <h4>Tuning Results</h4>
+              <div class="alert alert-success" id="hyperparamSuccessAlert"></div>
+              
+              <div class="card">
+                <div class="card-header">Best Configuration</div>
+                <div class="card-body">
+                  <pre id="bestConfigResults" class="rounded bg-light p-3"></pre>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-sm btn-outline-primary" id="showAllConfigsBtn">Show All Configurations</button>
+                <div id="allConfigsContainer" class="mt-2" style="display: none;">
+                  <div class="card">
+                    <div class="card-header">All Configuration Results</div>
+                    <div class="card-body">
+                      <pre id="allConfigsResults" class="rounded bg-light p-3"></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Cross-Validation Section -->
+      <div class="col-12 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Cross-Validation</h3>
+            <button class="btn btn-sm btn-info" id="crossvalInfoBtn" data-bs-toggle="modal" data-bs-target="#crossvalInfoModal">
+              <i class="bi bi-info-circle"></i> Learn More
+            </button>
+          </div>
+          <div class="card-body">
+            <p class="lead">Evaluate prompt performance across different data splits for more reliable results.</p>
+            
+            <!-- Cross-Validation Form -->
+            <form id="crossValidationForm">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="cvSystemPrompt" class="form-label">System Prompt</label>
+                  <textarea class="form-control" id="cvSystemPrompt" rows="5" placeholder="Enter your system prompt here..."></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label for="cvOutputPrompt" class="form-label">Output Prompt</label>
+                  <textarea class="form-control" id="cvOutputPrompt" rows="5" placeholder="Enter your output prompt here..."></textarea>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label for="foldCount" class="form-label">Number of Folds</label>
+                  <select class="form-select" id="foldCount">
+                    <option value="3">3 Folds</option>
+                    <option value="5" selected>5 Folds</option>
+                    <option value="10">10 Folds</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary" id="runCrossValBtn">
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="crossvalSpinner"></span>
+                  Run Cross-Validation
+                </button>
+              </div>
+            </form>
+            
+            <!-- Results -->
+            <div class="mt-4" id="crossvalResultsContainer" style="display: none;">
+              <h4>Cross-Validation Results</h4>
+              <div class="alert alert-success" id="crossvalSuccessAlert"></div>
+              
+              <div class="card mb-3">
+                <div class="card-header">Summary Metrics</div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <div class="card bg-light">
+                        <div class="card-body text-center">
+                          <h5 class="card-title">Average Score</h5>
+                          <h2 id="cvAvgScore">0.00</h2>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="card bg-light">
+                        <div class="card-body text-center">
+                          <h5 class="card-title">Min Score</h5>
+                          <h2 id="cvMinScore">0.00</h2>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="card bg-light">
+                        <div class="card-body text-center">
+                          <h5 class="card-title">Max Score</h5>
+                          <h2 id="cvMaxScore">0.00</h2>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card">
+                <div class="card-header">Fold Details</div>
+                <div class="card-body">
+                  <div id="cvFoldDetails"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- System Comparison Section -->
+      <div class="col-12 mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h3>Compare Prompt Systems</h3>
+          </div>
+          <div class="card-body">
+            <p class="lead">Compare multiple prompt systems to find the best performing one.</p>
+            
+            <!-- System Comparison Form -->
+            <form id="systemComparisonForm">
+              <div id="systemsContainer">
+                <!-- System 1 -->
+                <div class="system-card card mb-3" data-system-id="1">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>System 1</h5>
+                    <button type="button" class="btn btn-sm btn-danger remove-system-btn" style="display: none;">Remove</button>
+                  </div>
+                  <div class="card-body">
+                    <div class="row mb-3">
+                      <div class="col-md-12">
+                        <label class="form-label">System Name</label>
+                        <input type="text" class="form-control system-name" value="System 1">
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <label class="form-label">System Prompt</label>
+                        <textarea class="form-control system-prompt" rows="4" placeholder="Enter system prompt..."></textarea>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Output Prompt</label>
+                        <textarea class="form-control output-prompt" rows="4" placeholder="Enter output prompt..."></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- System 2 -->
+                <div class="system-card card mb-3" data-system-id="2">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>System 2</h5>
+                    <button type="button" class="btn btn-sm btn-danger remove-system-btn">Remove</button>
+                  </div>
+                  <div class="card-body">
+                    <div class="row mb-3">
+                      <div class="col-md-12">
+                        <label class="form-label">System Name</label>
+                        <input type="text" class="form-control system-name" value="System 2">
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <label class="form-label">System Prompt</label>
+                        <textarea class="form-control system-prompt" rows="4" placeholder="Enter system prompt..."></textarea>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Output Prompt</label>
+                        <textarea class="form-control output-prompt" rows="4" placeholder="Enter output prompt..."></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <button type="button" class="btn btn-outline-primary" id="addSystemBtn">
+                  <i class="bi bi-plus-circle"></i> Add Another System
+                </button>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label for="comparisonFoldCount" class="form-label">Number of Folds</label>
+                  <select class="form-select" id="comparisonFoldCount">
+                    <option value="3">3 Folds</option>
+                    <option value="5" selected>5 Folds</option>
+                    <option value="10">10 Folds</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary" id="runComparisonBtn">
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="comparisonSpinner"></span>
+                  Compare Systems
+                </button>
+              </div>
+            </form>
+            
+            <!-- Results -->
+            <div class="mt-4" id="comparisonResultsContainer" style="display: none;">
+              <h4>Comparison Results</h4>
+              <div class="alert alert-success" id="comparisonSuccessAlert"></div>
+              
+              <div class="card mb-3">
+                <div class="card-header">Best System</div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h5 id="bestSystemName">System 1</h5>
+                      <div class="card bg-light">
+                        <div class="card-body text-center">
+                          <h5 class="card-title">Average Score</h5>
+                          <h2 id="bestSystemScore">0.00</h2>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <h5>About this system</h5>
+                      <p id="bestSystemDescription"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card">
+                <div class="card-header">All Systems Comparison</div>
+                <div class="card-body">
+                  <div id="systemsComparisonChart" style="height: 300px;"></div>
+                  <div id="systemsComparisonTable" class="mt-3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Hyperparameter Tuning Info Modal -->
+  <div class="modal fade" id="hyperparamInfoModal" tabindex="-1" aria-labelledby="hyperparamInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="hyperparamInfoModalLabel">About Hyperparameter Tuning</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Hyperparameter tuning helps find the optimal configuration for your prompt optimization process. This tool will:</p>
+          <ul>
+            <li>Generate all possible combinations of hyperparameters from your search space</li>
+            <li>Run the optimization workflow with each configuration</li>
+            <li>Compare results to find the best performing configuration</li>
+            <li>Save all results for future reference</li>
+          </ul>
+          
+          <h5>Hyperparameters</h5>
+          <ul>
+            <li><strong>Temperature</strong> - Controls randomness in the optimization model's outputs</li>
+            <li><strong>Optimizer Strategy</strong> - Method used to improve prompts (reasoning-first, full-rewrite, etc.)</li>
+            <li><strong>Batch Size</strong> - Number of examples used in each optimization iteration</li>
+            <li><strong>Max Iterations</strong> - Maximum number of optimization cycles to run</li>
+          </ul>
+          
+          <div class="alert alert-info">
+            <strong>Note:</strong> Running a full grid search can take considerable time, especially with many hyperparameter combinations. For example, 3x3x3x3 = 81 different configurations!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Cross-Validation Info Modal -->
+  <div class="modal fade" id="crossvalInfoModal" tabindex="-1" aria-labelledby="crossvalInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="crossvalInfoModalLabel">About Cross-Validation</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Cross-validation is a technique to assess how well your prompt system will generalize to independent datasets. The process:</p>
+          <ol>
+            <li>Splits your dataset into K equal folds</li>
+            <li>For each fold, trains on K-1 folds and validates on the remaining fold</li>
+            <li>Repeats this process K times, each time using a different fold for validation</li>
+            <li>Averages results to get a more reliable performance estimate</li>
+          </ol>
+          
+          <h5>Benefits of Cross-Validation:</h5>
+          <ul>
+            <li>More reliable performance estimates than single train/test splits</li>
+            <li>Helps detect if your system is overfitting to specific examples</li>
+            <li>Provides insight into performance variability across different data subsets</li>
+            <li>Useful for comparing different prompt systems on the same dataset</li>
+          </ul>
+          
+          <div class="alert alert-info">
+            <strong>Note:</strong> The more folds you use, the more comprehensive (but slower) the validation will be.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.js"></script>
+  <script src="{{ url_for('static', filename='advanced_optimization.js') }}"></script>
+</body>
+</html>

@@ -149,9 +149,6 @@ def run_evaluation():
 def cost_dashboard():
     """Render the cost tracking dashboard."""
     return render_template('cost_dashboard.html')
-def cost_dashboard():
-    """Render the cost monitoring dashboard."""
-    return render_template('cost_dashboard.html')
 
                     'user_input': user_input,
                     'ground_truth_output': ground_truth,
@@ -2001,6 +1998,13 @@ def experiment_tracking():
     Show experiment tracking visualization
     """
     return render_template('experiment_tracking.html')
+    
+@app.route('/advanced_optimization')
+def advanced_optimization():
+    """
+    Show advanced optimization tools
+    """
+    return render_template('advanced_optimization.html')
 
 @app.route('/api/visualization/experiment_metrics')
 def experiment_metrics_data():

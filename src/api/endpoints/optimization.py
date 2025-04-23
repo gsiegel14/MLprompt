@@ -110,3 +110,151 @@ async def optimize_prompts_async(
     except Exception as e:
         logger.error(f"Error in optimize_prompts_async: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+import logging
+from typing import Dict, List, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends
+
+from src.app.clients.vertex_client import VertexClient
+from src.app.utils.hyperparameter_tuner import HyperparameterTuner
+from app.cross_validator import CrossValidator
+from app.data_module import DataModule
+from app.workflow import PromptOptimizationWorkflow
+from app.experiment_tracker import ExperimentTracker
+from app.optimizer import get_optimization_strategies
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+# Initialize components
+data_module = DataModule()
+experiment_tracker = ExperimentTracker()
+workflow = PromptOptimizationWorkflow(data_module, experiment_tracker)
+hyperparameter_tuner = HyperparameterTuner()
+cross_validator = CrossValidator(data_module, workflow)
+
+@router.post("/hyperparameter-tune")
+async def run_hyperparameter_tuning(
+    system_prompt: str,
+    output_prompt: str,
+    search_space: Optional[Dict[str, List]] = None,
+    metric_key: str = 'best_score'
+):
+    """
+    Run hyperparameter tuning to find optimal configuration.
+    
+    Args:
+        system_prompt: System prompt to use
+        output_prompt: Output prompt to use
+        search_space: Optional custom search space
+        metric_key: Metric to optimize
+        
+    Returns:
+        Dict with tuning results
+    """
+    try:
+        logger.info("Starting hyperparameter tuning")
+        
+        results = hyperparameter_tuner.run_grid_search(
+            workflow=workflow,
+            system_prompt=system_prompt,
+            output_prompt=output_prompt,
+            search_space=search_space,
+            metric_key=metric_key
+        )
+        
+        return {
+            "status": "success",
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Error in hyperparameter tuning: {e}")
+        raise HTTPException(status_code=500, detail=f"Error in hyperparameter tuning: {str(e)}")
+
+@router.post("/cross-validate")
+async def run_cross_validation(
+    system_prompt: str,
+    output_prompt: str,
+    fold_count: int = 5
+):
+    """
+    Run cross-validation for a prompt system.
+    
+    Args:
+        system_prompt: System prompt to validate
+        output_prompt: Output prompt to validate
+        fold_count: Number of folds for cross-validation
+        
+    Returns:
+        Dict with validation results
+    """
+    try:
+        logger.info(f"Starting {fold_count}-fold cross-validation")
+        
+        # Update fold count
+        cross_validator.folds = fold_count
+        
+        # Get all available examples
+        train_examples = data_module.get_train_examples() or []
+        validation_examples = data_module.get_validation_examples() or []
+        all_examples = train_examples + validation_examples
+        
+        if not all_examples:
+            return {
+                "status": "error",
+                "message": "No examples available for cross-validation"
+            }
+        
+        results = cross_validator.evaluate_system(
+            system_prompt=system_prompt,
+            output_prompt=output_prompt,
+            examples=all_examples
+        )
+        
+        return {
+            "status": "success",
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Error in cross-validation: {e}")
+        raise HTTPException(status_code=500, detail=f"Error in cross-validation: {str(e)}")
+
+@router.post("/compare-systems")
+async def compare_prompt_systems(
+    systems: List[Dict[str, str]],
+    fold_count: int = 5
+):
+    """
+    Compare multiple prompt systems using cross-validation.
+    
+    Args:
+        systems: List of dicts with 'system_prompt', 'output_prompt', and 'name'
+        fold_count: Number of folds for cross-validation
+        
+    Returns:
+        Dict with comparison results
+    """
+    try:
+        logger.info(f"Starting comparison of {len(systems)} prompt systems")
+        
+        # Update fold count
+        cross_validator.folds = fold_count
+        
+        results = cross_validator.compare_systems(systems)
+        
+        return {
+            "status": "success",
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Error in system comparison: {e}")
+        raise HTTPException(status_code=500, detail=f"Error in system comparison: {str(e)}")
+
+@router.get("/optimization-strategies")
+async def get_available_strategies():
+    """Get available optimization strategies."""
+    try:
+        strategies = get_optimization_strategies()
+        return {"strategies": strategies}
+    except Exception as e:
+        logger.error(f"Error getting optimization strategies: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting optimization strategies: {str(e)}")

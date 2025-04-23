@@ -297,6 +297,63 @@ class PromptOptimizationWorkflow:
             self.experiment_tracker.save_prompt(experiment_id, 'original_output', output_prompt)
             self.experiment_tracker.save_prompt(experiment_id, 'optimized_system', optimized_system_prompt)
             self.experiment_tracker.save_prompt(experiment_id, 'optimized_output', optimized_output_prompt)
+
+    def _handle_workflow_error(self, error, phase, iteration, experiment_id, context=None):
+        """
+        Handle errors during workflow execution with robust recovery.
+        
+        Args:
+            error: The exception that occurred
+            phase: Which phase of the workflow encountered the error
+            iteration: Current iteration number
+            experiment_id: Current experiment ID
+            context: Additional context information
+            
+        Returns:
+            dict: Status information for workflow recovery
+        """
+        import traceback
+        
+        logger.error(f"Error in workflow phase {phase} during iteration {iteration}: {error}")
+        logger.error(traceback.format_exc())
+        
+        # Create recovery log
+        recovery_log_path = f"logs/recovery_{experiment_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        with open(recovery_log_path, 'w') as f:
+            f.write(f"=== WORKFLOW ERROR RECOVERY LOG ===\n")
+            f.write(f"Error occurred in phase: {phase}\n")
+            f.write(f"Iteration: {iteration}\n")
+            f.write(f"Error: {str(error)}\n")
+            f.write(f"Traceback:\n{traceback.format_exc()}\n")
+            if context:
+                f.write(f"Context:\n{json.dumps(context, indent=2)}\n")
+        
+        # Attempt recovery based on phase
+        if phase == "primary_llm":
+            # In case of primary LLM failure, we can try to continue with partial results
+            logger.info("Attempting to recover from Primary LLM failure...")
+            return {
+                "recoverable": True,
+                "recovery_action": "continue_with_partial",
+                "recovery_log": recovery_log_path
+            }
+        elif phase == "optimizer":
+            # For optimizer failures, keep the current prompts
+            logger.info("Attempting to recover from Optimizer failure...")
+            return {
+                "recoverable": True,
+                "recovery_action": "keep_current_prompts",
+                "recovery_log": recovery_log_path
+            }
+        else:
+            # Default to non-recoverable
+            return {
+                "recoverable": False,
+                "recovery_log": recovery_log_path
+            }
+
             
             # Save examples
             self.experiment_tracker.save_examples(experiment_id, examples_for_optimizer)
