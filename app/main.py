@@ -471,9 +471,10 @@ def four_api_workflow():
     """
     Run the enhanced 4-API call workflow:
     1. Google Vertex API #1: Primary LLM inference
-    2. Google Vertex API #2: Internal evaluation
-    3. Google Vertex API #3: Optimizer LLM for prompt refinement
-    4. Hugging Face API: External validation metrics
+    2. Hugging Face API: First external validation
+    3. Google Vertex API #2: Optimizer LLM for prompt refinement
+    4. Google Vertex API #3: Optimizer LLM reruns on original dataset
+    5. Hugging Face API: Second external validation on refined outputs
     """
     try:
         # Create a log file for this run
