@@ -1,0 +1,19 @@
+ {
+   "type": "discrete-classification-model-grader",
+   "prompt": {
+     "type": "tstr",
+     "template": "\"**Determine whether or not the Response correctly includes the Final Diagnosis among the most likely diagnoses.**\n\n**Instructions:**\n\n1. **Extract the differential diagnosis from the Response:**\n\n   - Identify the list of possible diagnoses considered in the Response.\n   - Look for diagnoses that are highlighted or listed as the most likely.\n\n2. **Extract the Final Diagnosis:**\n\n   - The Final Diagnosis is provided as **{{item.Confirmed Diagnosis}}**.\n\n3. **Compare the extracted diagnoses:**\n\n   - **Consider synonyms and variations in terminology:**\n     - Recognize that the same medical condition can be described with different terms, synonyms, abbreviations, or levels of specificity.\n     - Use your medical knowledge to identify when different terms refer to the same condition.\n   - **Determine if the Final Diagnosis matches any of the most likely diagnoses:**\n     - If any of the most likely diagnoses in the Response refer to the same condition as the Final Diagnosis, even if worded differently, consider it a match.\n     - Accept slight differences in wording, naming, or specificity as long as they refer to the same diagnosis.\n\n4. **Return the evaluation:**\n\n   - If the Final Diagnosis is among the most likely diagnoses in the Response, or semantically matches them, return **'Correct'**.\n   - If it is not, return **'Incorrect'**.\n\n**Response:** {{item.Stream Response}}\n\n**Final Diagnosis:** {{item.Confirmed Diagnosis}}\n\n**Return only one of these values (only the values):**\n\nCorrect\n\nIncorrect\""
+   },
+   "invalid_grade": 0,
+   "labels": [
+     {
+       "text": "Correct",
+       "grade": 1
+     },
+     {
+       "text": "Incorrect",
+       "grade": 0
+     }
+   ],
+   "passing_responses": null
+ }
