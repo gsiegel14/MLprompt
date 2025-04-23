@@ -1,3 +1,363 @@
+
+/**
+ * Five-API Workflow Module
+ * Handles the 5-step prompt optimization process:
+ * 1. Primary LLM Inference
+ * 2. Hugging Face Evaluation
+ * 3. Optimizer LLM 
+ * 4. Refined LLM Inference
+ * 5. Second Evaluation
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const startOptimizationBtn = document.getElementById('start-optimization');
+    const optimizationProgress = document.getElementById('optimization-progress');
+    const resultsContainer = document.getElementById('results-container');
+    const metricsChart = document.getElementById('metrics-chart');
+    
+    // Progress indicators
+    const step1Indicator = document.getElementById('step1-indicator');
+    const step2Indicator = document.getElementById('step2-indicator');
+    const step3Indicator = document.getElementById('step3-indicator');
+    const step4Indicator = document.getElementById('step4-indicator');
+    const step5Indicator = document.getElementById('step5-indicator');
+    
+    // Optimization state
+    let optimizationState = {
+        inProgress: false,
+        currentStep: 0,
+        runId: null,
+        results: null
+    };
+    
+    // Chart instance
+    let metricsChartInstance = null;
+    
+    // Initialize tooltips
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(tooltip => {
+        new bootstrap.Tooltip(tooltip);
+    });
+    
+    // Event listeners
+    if (startOptimizationBtn) {
+        startOptimizationBtn.addEventListener('click', startOptimization);
+    }
+    
+    /**
+     * Start the optimization process
+     */
+    function startOptimization() {
+        if (optimizationState.inProgress) {
+            return;
+        }
+        
+        // Get prompts
+        const systemPrompt = document.getElementById('system-prompt').value.trim();
+        const outputPrompt = document.getElementById('output-prompt').value.trim();
+        
+        if (!systemPrompt || !outputPrompt) {
+            showAlert('Please provide both system and output prompts.', 'danger');
+            return;
+        }
+        
+        // Get available examples
+        const examplesData = getExamples();
+        if (!examplesData || examplesData.length === 0) {
+            showAlert('Please add at least one example for optimization.', 'danger');
+            return;
+        }
+        
+        // Get settings
+        const primaryModel = document.getElementById('primary-model').value;
+        const optimizerModel = document.getElementById('optimizer-model').value;
+        const maxIterations = parseInt(document.getElementById('max-iterations').value, 10) || 3;
+        
+        // Prepare request
+        const request = {
+            prompt_data: {
+                system_prompt: systemPrompt,
+                output_prompt: outputPrompt,
+                version: 1
+            },
+            examples: examplesData,
+            primary_model_name: primaryModel,
+            optimizer_model_name: optimizerModel,
+            max_iterations: maxIterations
+        };
+        
+        // Update UI
+        optimizationState.inProgress = true;
+        optimizationState.currentStep = 1;
+        updateProgressUI();
+        
+        // Disable start button
+        startOptimizationBtn.disabled = true;
+        
+        // Show progress container
+        optimizationProgress.classList.remove('d-none');
+        
+        // Start async optimization
+        fetch('/api/v1/optimization/optimize-async', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to start optimization');
+            }
+            return response.json();
+        })
+        .then(data => {
+            optimizationState.runId = data.run_id;
+            // Poll for status
+            pollOptimizationStatus(data.timestamp);
+        })
+        .catch(error => {
+            console.error('Error starting optimization:', error);
+            showAlert('Failed to start optimization: ' + error.message, 'danger');
+            optimizationState.inProgress = false;
+            startOptimizationBtn.disabled = false;
+        });
+    }
+    
+    /**
+     * Poll for optimization status
+     */
+    function pollOptimizationStatus(timestamp) {
+        // Check if the results file exists
+        fetch(`/experiments/${timestamp}/result.json`)
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else if (response.status === 404) {
+                // Still running, update progress
+                simulateProgress();
+                // Poll again after delay
+                setTimeout(() => pollOptimizationStatus(timestamp), 2000);
+                return null;
+            } else {
+                throw new Error('Failed to check optimization status');
+            }
+        })
+        .then(data => {
+            if (data) {
+                // Optimization completed
+                optimizationState.inProgress = false;
+                optimizationState.currentStep = 5;
+                optimizationState.results = data;
+                
+                // Update UI
+                updateProgressUI();
+                displayResults(data);
+                
+                // Re-enable start button
+                startOptimizationBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking optimization status:', error);
+            showAlert('Failed to check optimization status: ' + error.message, 'danger');
+            optimizationState.inProgress = false;
+            startOptimizationBtn.disabled = false;
+        });
+    }
+    
+    /**
+     * Simulate progress steps for UI feedback
+     */
+    function simulateProgress() {
+        // Only advance to next step after a reasonable delay
+        const currentTime = new Date().getTime();
+        const stepStartTime = optimizationState.stepStartTime || currentTime;
+        const elapsed = currentTime - stepStartTime;
+        
+        if (elapsed > 5000 && optimizationState.currentStep < 5) {
+            optimizationState.currentStep++;
+            optimizationState.stepStartTime = currentTime;
+            updateProgressUI();
+        }
+    }
+    
+    /**
+     * Update progress indicators
+     */
+    function updateProgressUI() {
+        // Reset all steps
+        [step1Indicator, step2Indicator, step3Indicator, step4Indicator, step5Indicator].forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+        
+        // Update steps based on current progress
+        for (let i = 1; i <= 5; i++) {
+            const stepElement = document.getElementById(`step${i}-indicator`);
+            
+            if (i < optimizationState.currentStep) {
+                stepElement.classList.add('completed');
+            } else if (i === optimizationState.currentStep) {
+                stepElement.classList.add('active');
+            }
+        }
+    }
+    
+    /**
+     * Display optimization results
+     */
+    function displayResults(results) {
+        // Show results container
+        resultsContainer.classList.remove('d-none');
+        
+        // Display best prompts
+        document.getElementById('best-system-prompt').value = results.best_prompt_state.system_prompt;
+        document.getElementById('best-output-prompt').value = results.best_prompt_state.output_prompt;
+        
+        // Display metrics
+        const metricsContainer = document.getElementById('metrics-summary');
+        if (metricsContainer) {
+            // Create metrics summary
+            let metricsHTML = '<h5>Best Performance Metrics:</h5><ul class="list-group">';
+            
+            for (const [key, value] of Object.entries(results.best_metrics)) {
+                if (key !== 'total_examples' && typeof value === 'number') {
+                    metricsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${key.replace(/_/g, ' ')}
+                        <span class="badge bg-primary rounded-pill">${(value * 100).toFixed(1)}%</span>
+                    </li>`;
+                }
+            }
+            
+            metricsHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                Total Examples
+                <span class="badge bg-secondary rounded-pill">${results.best_metrics.total_examples}</span>
+            </li>`;
+            
+            metricsHTML += '</ul>';
+            metricsContainer.innerHTML = metricsHTML;
+        }
+        
+        // Display chart of metrics over iterations
+        if (metricsChart) {
+            createMetricsChart(results);
+        }
+        
+        // Show a success alert
+        showAlert('Prompt optimization completed successfully!', 'success');
+    }
+    
+    /**
+     * Create chart showing metrics progression
+     */
+    function createMetricsChart(results) {
+        // Destroy existing chart if it exists
+        if (metricsChartInstance) {
+            metricsChartInstance.destroy();
+        }
+        
+        // Create labels and datasets
+        const labels = results.history.map(h => `Iteration ${h.iteration}`);
+        const datasets = [];
+        
+        // Get the first available metric name
+        const metricNames = Object.keys(results.history[0].baseline_metrics)
+            .filter(key => key !== 'total_examples' && typeof results.history[0].baseline_metrics[key] === 'number');
+        
+        if (metricNames.length > 0) {
+            // Create datasets for each metric
+            metricNames.forEach((metricName, index) => {
+                // Baseline metrics (original prompts)
+                datasets.push({
+                    label: `${metricName.replace(/_/g, ' ')} - Baseline`,
+                    data: results.history.map(h => h.baseline_metrics[metricName] * 100),
+                    borderColor: `hsl(${index * 60}, 70%, 50%)`,
+                    backgroundColor: `hsl(${index * 60}, 70%, 90%)`,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                });
+                
+                // Optimized metrics (improved prompts)
+                datasets.push({
+                    label: `${metricName.replace(/_/g, ' ')} - Optimized`,
+                    data: results.history.map(h => h.optimized_metrics[metricName] * 100),
+                    borderColor: `hsl(${index * 60}, 70%, 40%)`,
+                    backgroundColor: `hsl(${index * 60}, 70%, 80%)`,
+                    borderWidth: 2
+                });
+            });
+            
+            // Create the chart
+            const ctx = metricsChart.getContext('2d');
+            metricsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Metrics Progression Across Iterations'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Helper function to get examples from the page
+     */
+    function getExamples() {
+        // This implementation depends on how examples are stored in your UI
+        // Return an array of example objects {user_input, ground_truth_output}
+        
+        // For demonstration, we'll assume examples are stored in a global variable
+        return window.trainingExamples || [];
+    }
+    
+    /**
+     * Show an alert message
+     */
+    function showAlert(message, type) {
+        const alertsContainer = document.getElementById('alerts-container');
+        if (!alertsContainer) return;
+        
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        alertsContainer.appendChild(alert);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        }, 5000);
+    }
+});
+
 /**
  * Five-API Workflow JavaScript
  * 

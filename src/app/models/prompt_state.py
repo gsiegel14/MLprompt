@@ -13,6 +13,10 @@ class PromptState(BaseModel):
     system_prompt: str
     output_prompt: str
     version: int = 1
+    id: Optional[str] = None
+    parent_id: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
     
     def dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation"""

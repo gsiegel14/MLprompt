@@ -1,100 +1,58 @@
 """
-Pydantic models for API requests and responses
+Pydantic models for the API endpoints
 """
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+
+class Example(BaseModel):
+    """A single example for training or evaluation"""
+    user_input: str
+    ground_truth_output: Optional[str] = None
+    model_output: Optional[str] = None
+    optimized_output: Optional[str] = None
 
 class PromptData(BaseModel):
-    """Request model for creating or updating prompts"""
+    """Prompt information for submission"""
     system_prompt: str
     output_prompt: str
-    name: Optional[str] = None
-    description: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
-
-class PromptResponse(BaseModel):
-    """Response model for prompt data"""
-    id: str
-    system_prompt: str
-    output_prompt: str
-    version: int
-    name: str
-    description: str
-    tags: List[str]
-    created_at: str
-    updated_at: str
+    version: int = 1
 
 class OptimizationRequest(BaseModel):
-    """Request model for starting a prompt optimization workflow"""
-    prompt_id: str
-    dataset_id: str
-    primary_model: Optional[str] = None
-    optimizer_model: Optional[str] = None
-    target_metric: str = "exact_match_score"
-    target_threshold: float = 0.9
-    patience: int = 3
-    max_iterations: int = 10
+    """Request to run prompt optimization"""
+    prompt_data: PromptData
+    examples: List[Example]
+    primary_model_name: Optional[str] = Field(default="gemini-1.5-flash-001")
+    optimizer_model_name: Optional[str] = Field(default="gemini-1.5-pro-001")
+    metrics: Optional[List[str]] = Field(default=["exact_match", "semantic_similarity"])
+    max_iterations: Optional[int] = Field(default=3)
+    target_threshold: Optional[float] = Field(default=0.9)
 
-class OptimizationResponse(BaseModel):
-    """Response model for optimization status"""
-    flow_id: str
-    status: str
-    prompt_id: str
-    dataset_id: str
-    started_at: str
-    completed_at: Optional[str] = None
-    current_iteration: int = 0
-    max_iterations: int
-    best_score: Optional[float] = None
-    target_metric: str
-    target_threshold: float
-    patience: int
-    primary_model: str
-    optimizer_model: str
+class OptimizationResult(BaseModel):
+    """Results from a prompt optimization run"""
+    best_prompt_state: Dict[str, Any]
+    best_metrics: Dict[str, Any]
+    history: List[Dict[str, Any]]
+    iterations_completed: int
 
 class InferenceRequest(BaseModel):
-    """Request model for running inference"""
-    prompt_id: str
-    user_input: str
-    model_name: Optional[str] = None
-    temperature: float = 0.7
+    """Request to run inference with a prompt on examples"""
+    prompt_data: PromptData
+    examples: List[Example]
+    model_name: Optional[str] = Field(default="gemini-1.5-flash-001")
 
-class InferenceResponse(BaseModel):
-    """Response model for inference results"""
-    prompt_id: str
-    user_input: str
-    generated_text: str
-    model_name: str
-    timestamp: str
+class InferenceResult(BaseModel):
+    """Results from an inference run"""
+    examples: List[Example]
+    metrics: Optional[Dict[str, Any]] = None
 
-class EvaluationRequest(BaseModel):
-    """Request model for prompt evaluation"""
-    prompt_id: str
-    dataset_id: str
-    metrics: List[str] = Field(default_factory=lambda: ["exact_match", "semantic_similarity"])
-
-class EvaluationResponse(BaseModel):
-    """Response model for evaluation results"""
-    prompt_id: str
-    dataset_id: str
-    metrics: Dict[str, float]
-    examples_count: int
-    timestamp: str
-
-class DatasetUploadRequest(BaseModel):
-    """Request model for dataset upload"""
-    name: str
-    description: Optional[str] = None
-    train_split: float = 0.8
-
-class DatasetResponse(BaseModel):
-    """Response model for dataset info"""
+class ExperimentData(BaseModel):
+    """Information about a prompt optimization experiment"""
     id: str
-    name: str
-    description: Optional[str] = None
-    examples_count: int
-    train_count: int
-    validation_count: int
     created_at: str
-    updated_at: str
+    iterations: int
+    best_metrics: Dict[str, Any]
+    best_prompt_state: Dict[str, Any]
+
+class ExperimentList(BaseModel):
+    """List of experiments"""
+    experiments: List[ExperimentData]

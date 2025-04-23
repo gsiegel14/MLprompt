@@ -1,109 +1,112 @@
 
 """
-API endpoints for prompt optimization workflows
+API endpoints for prompt optimization
 """
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import List, Dict, Any, Optional
-import uuid
-import time
-from datetime import datetime
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+import logging
+from typing import List, Dict, Any
 
-from src.api.models import OptimizationRequest, OptimizationResponse
+from src.api.models import OptimizationRequest, OptimizationResult
 from src.app.config import settings
+from src.flows.prompt_optimization_flow import prompt_optimization_flow
 
-# For a complete implementation, we would import the flow
-# from src.flows.prompt_optimization_flow import prompt_optimization_flow
+router = APIRouter()
+logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/optimization", tags=["Optimization"])
-
-# In-memory storage for demo purposes
-flow_store = {}
-
-async def run_optimization_flow(flow_id: str, request: OptimizationRequest):
-    """Background task to run the optimization flow"""
-    # Update flow status
-    flow_store[flow_id]["status"] = "running"
+@router.post("/optimize", response_model=OptimizationResult)
+async def optimize_prompts(request: OptimizationRequest):
+    """
+    Run the 5-step prompt optimization flow
     
+    1. Primary LLM Inference
+    2. Hugging Face Evaluation 
+    3. Optimizer LLM
+    4. Refined LLM Inference
+    5. Second Evaluation
+    """
     try:
-        # In a real implementation, we would call the Prefect flow
-        # result = await prompt_optimization_flow(...)
+        # Convert examples to list of dicts
+        examples = [example.dict() for example in request.examples]
         
-        # Simulate flow execution
-        await asyncio.sleep(5)
+        # Run the optimization flow
+        result = prompt_optimization_flow(
+            system_prompt=request.prompt_data.system_prompt,
+            output_prompt=request.prompt_data.output_prompt,
+            examples=examples,
+            vertex_project_id=settings.VERTEX_PROJECT_ID,
+            vertex_location=settings.VERTEX_LOCATION,
+            primary_model_name=request.primary_model_name,
+            optimizer_model_name=request.optimizer_model_name,
+            metrics=request.metrics,
+            target_threshold=request.target_threshold,
+            max_iterations=request.max_iterations
+        )
         
-        # Update with success
-        flow_store[flow_id].update({
-            "status": "completed",
-            "completed_at": datetime.now().isoformat(),
-            "current_iteration": flow_store[flow_id]["max_iterations"],
-            "best_score": 0.85
-        })
+        return result
     except Exception as e:
-        # Update with error
-        flow_store[flow_id].update({
-            "status": "failed",
-            "error": str(e),
-            "completed_at": datetime.now().isoformat()
-        })
+        logger.error(f"Error in optimize_prompts: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/", response_model=OptimizationResponse)
-async def start_optimization(
+@router.post("/optimize-async", status_code=202)
+async def optimize_prompts_async(
     request: OptimizationRequest,
     background_tasks: BackgroundTasks
 ):
-    """Start a new prompt optimization workflow"""
-    flow_id = str(uuid.uuid4())
-    timestamp = datetime.now().isoformat()
-    
-    flow = {
-        "flow_id": flow_id,
-        "status": "queued",
-        "prompt_id": request.prompt_id,
-        "dataset_id": request.dataset_id,
-        "started_at": timestamp,
-        "completed_at": None,
-        "current_iteration": 0,
-        "max_iterations": request.max_iterations,
-        "best_score": None,
-        "target_metric": request.target_metric,
-        "target_threshold": request.target_threshold,
-        "patience": request.patience,
-        "primary_model": request.primary_model or settings.PRIMARY_MODEL_NAME,
-        "optimizer_model": request.optimizer_model or settings.OPTIMIZER_MODEL_NAME
-    }
-    
-    flow_store[flow_id] = flow
-    
-    # Start the flow in the background
-    background_tasks.add_task(run_optimization_flow, flow_id, request)
-    
-    return flow
-
-@router.get("/{flow_id}", response_model=OptimizationResponse)
-async def get_optimization_status(flow_id: str):
-    """Get the status of an optimization workflow"""
-    if flow_id not in flow_store:
-        raise HTTPException(status_code=404, detail=f"Optimization flow {flow_id} not found")
-    
-    return flow_store[flow_id]
-
-@router.delete("/{flow_id}")
-async def cancel_optimization(flow_id: str):
-    """Cancel an ongoing optimization workflow"""
-    if flow_id not in flow_store:
-        raise HTTPException(status_code=404, detail=f"Optimization flow {flow_id} not found")
-    
-    if flow_store[flow_id]["status"] in ["completed", "failed"]:
-        raise HTTPException(status_code=400, detail=f"Flow {flow_id} is already {flow_store[flow_id]['status']}")
-    
-    # In a real implementation, we would cancel the Prefect flow
-    
-    flow_store[flow_id]["status"] = "cancelled"
-    flow_store[flow_id]["completed_at"] = datetime.now().isoformat()
-    
-    return {"status": "success", "message": f"Optimization flow {flow_id} cancelled"}
-
-@router.get("/", response_model=List[OptimizationResponse])
-async def list_optimizations():
-    """List all optimization workflows"""
-    return list(flow_store.values())
+    """
+    Run the 5-step prompt optimization flow asynchronously
+    """
+    try:
+        # Generate a unique ID for this optimization run
+        import uuid
+        from datetime import datetime
+        
+        run_id = str(uuid.uuid4())
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Function to run in background
+        def run_optimization():
+            try:
+                # Convert examples to list of dicts
+                examples = [example.dict() for example in request.examples]
+                
+                # Run the optimization flow
+                result = prompt_optimization_flow(
+                    system_prompt=request.prompt_data.system_prompt,
+                    output_prompt=request.prompt_data.output_prompt,
+                    examples=examples,
+                    vertex_project_id=settings.VERTEX_PROJECT_ID,
+                    vertex_location=settings.VERTEX_LOCATION,
+                    primary_model_name=request.primary_model_name,
+                    optimizer_model_name=request.optimizer_model_name,
+                    metrics=request.metrics,
+                    target_threshold=request.target_threshold,
+                    max_iterations=request.max_iterations
+                )
+                
+                # Save results to a file
+                import json
+                import os
+                
+                # Create experiments directory if it doesn't exist
+                os.makedirs(f"experiments/{timestamp}", exist_ok=True)
+                
+                # Save results
+                with open(f"experiments/{timestamp}/result.json", "w") as f:
+                    json.dump(result, f, indent=2)
+                
+                logger.info(f"Optimization run {run_id} completed successfully")
+            except Exception as e:
+                logger.error(f"Error in background optimization task: {str(e)}")
+        
+        # Add task to background tasks
+        background_tasks.add_task(run_optimization)
+        
+        return {
+            "run_id": run_id,
+            "timestamp": timestamp,
+            "status": "optimization_started",
+            "message": "Optimization started in the background"
+        }
+    except Exception as e:
+        logger.error(f"Error in optimize_prompts_async: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

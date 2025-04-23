@@ -1,673 +1,443 @@
-
 """
-Prefect flow for prompt optimization workflow
+Prompt Optimization Flow using Prefect 2.0
 """
-from typing import Dict, List, Any, Optional, Tuple
-import os
-import json
 import logging
-import pandas as pd
-import time
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-# Import prefect if available (for production)
-try:
-    from prefect import flow, task, get_run_logger
-    from prefect.artifacts import create_artifact
-    has_prefect = True
-except ImportError:
-    # Fallback for development without Prefect
-    has_prefect = False
-    
-    # Create mock decorators
-    def flow(func=None, **kwargs):
-        def decorator(f):
-            return f
-        return decorator if func is None else decorator(func)
-    
-    def task(func=None, **kwargs):
-        def decorator(f):
-            return f
-        return decorator if func is None else decorator(func)
-    
-    def get_run_logger():
-        return logging.getLogger("prefect_mock")
+from prefect import flow, task
+from prefect.task_runners import SequentialTaskRunner
+
+from src.app.models.prompt_state import PromptState
+from src.app.clients.vertex_client import VertexAIClient
+from src.app.clients.hf_evaluator import EvaluatorService
 
 logger = logging.getLogger(__name__)
 
-@task(name="load-state", retries=2)
-def load_state(system_prompt_path: str, output_prompt_path: str, 
-              dataset_path: str, state_path: Optional[str] = None) -> Dict[str, Any]:
+@task(name="load_prompt_state")
+def load_prompt_state(system_prompt: str, output_prompt: str, version: int = 1) -> PromptState:
     """
-    Load or initialize PromptState & training data
-    
-    Args:
-        system_prompt_path: Path to system prompt file
-        output_prompt_path: Path to output prompt file
-        dataset_path: Path to dataset file
-        state_path: Optional path to state file
-        
-    Returns:
-        Dictionary with state and dataset information
-    """
-    run_logger = get_run_logger()
-    run_logger.info(f"Loading state from {system_prompt_path}, {output_prompt_path}, {dataset_path}")
-    
-    # Load prompts
-    with open(system_prompt_path, 'r') as f:
-        system_prompt = f.read()
-    
-    with open(output_prompt_path, 'r') as f:
-        output_prompt = f.read()
-    
-    # Load dataset
-    dataset = pd.read_csv(dataset_path) if dataset_path.endswith('.csv') else pd.read_json(dataset_path)
-    
-    # Convert to records
-    records = dataset.to_dict(orient='records')
-    
-    # Load or initialize state
-    if state_path and os.path.exists(state_path):
-        try:
-            with open(state_path, 'r') as f:
-                state = json.load(f)
-        except Exception as e:
-            run_logger.error(f"Error loading state file: {str(e)}")
-            state = {
-                "system_prompt": system_prompt,
-                "output_prompt": output_prompt,
-                "version": 1
-            }
-    else:
-        state = {
-            "system_prompt": system_prompt,
-            "output_prompt": output_prompt,
-            "version": 1
-        }
-    
-    dataset_dict = {
-        "data": records,
-        "path": dataset_path
-    }
-    
-    return {
-        "state": state,
-        "dataset": dataset_dict
-    }
+    Load or create a prompt state
 
-@task(name="vertex-primary-inference", retries=3)
-def vertex_primary_inference(state_dict: Dict[str, Any], 
-                            dataset_dict: Dict[str, Any], 
-                            vertex_project_id: str, 
-                            vertex_location: str, 
-                            model_name: str) -> Dict[str, Any]:
-    """
-    Run primary inference with LLM (Step 1)
-    
     Args:
-        state_dict: Dictionary with prompt state
-        dataset_dict: Dictionary with dataset information
-        vertex_project_id: GCP project ID
-        vertex_location: GCP location
-        model_name: Model name
-        
+        system_prompt: System prompt text or path to file
+        output_prompt: Output prompt text or path to file
+        version: Version number
+
     Returns:
-        Dictionary with inference results
+        PromptState object
     """
-    run_logger = get_run_logger()
-    run_logger.info(f"Running primary inference with model {model_name}")
-    
+    # Check if inputs are file paths
+    if system_prompt.endswith('.txt') and output_prompt.endswith('.txt'):
+        try:
+            with open(system_prompt, 'r') as f:
+                system_prompt_text = f.read()
+            with open(output_prompt, 'r') as f:
+                output_prompt_text = f.read()
+
+            return PromptState(
+                system_prompt=system_prompt_text,
+                output_prompt=output_prompt_text,
+                version=version,
+                created_at=datetime.now().isoformat()
+            )
+        except Exception as e:
+            logger.error(f"Error loading prompt files: {str(e)}")
+            raise
+
+    # Otherwise treat as direct text
+    return PromptState(
+        system_prompt=system_prompt,
+        output_prompt=output_prompt,
+        version=version,
+        created_at=datetime.now().isoformat()
+    )
+
+@task(name="primary_llm_inference", retries=2)
+def primary_llm_inference(
+    prompt_state: Dict[str, Any],
+    examples: List[Dict[str, str]],
+    vertex_project_id: str,
+    vertex_location: str,
+    model_name: str
+) -> List[Dict[str, Any]]:
+    """
+    Step 1: Generate baseline responses with current prompts
+
+    Args:
+        prompt_state: Dictionary representation of PromptState
+        examples: List of examples to run inference on
+        vertex_project_id: Google Cloud project ID
+        vertex_location: Google Cloud region
+        model_name: Name of primary LLM model to use
+
+    Returns:
+        List of examples with predictions
+    """
     try:
-        # Import and initialize the Vertex client
-        from src.app.clients.vertex_client import VertexAIClient
-        
-        client = VertexAIClient(
-            project_id=vertex_project_id,
-            location=vertex_location
-        )
-        
+        # Initialize Vertex client
+        client = VertexAIClient(vertex_project_id, vertex_location)
+
+        # Recreate PromptState from dict
+        state = PromptState(**prompt_state)
+
         # Run batch prediction
-        results = client.batch_predict(
-            examples=dataset_dict["data"],
-            prompt_state=state_dict,
+        prediction_results = client.batch_predict(
+            examples=examples,
+            prompt_state={
+                "system_prompt": state.system_prompt,
+                "output_prompt": state.output_prompt
+            },
             model_name=model_name
         )
-        
-        run_logger.info(f"Primary inference complete: {len(results['predictions'])} predictions generated")
-        
-        # Create artifact if using real Prefect
-        if has_prefect:
-            create_artifact(
-                name="primary-inference-results",
-                description=f"Primary inference results with {model_name}",
-                data=results
-            )
-        
-        return results
+
+        # Add predictions to examples
+        for i, example in enumerate(examples):
+            if i < len(prediction_results["predictions"]):
+                example["model_output"] = prediction_results["predictions"][i]
+
+        return examples
     except Exception as e:
-        run_logger.error(f"Error in primary inference: {str(e)}")
+        logger.error(f"Error in primary inference: {str(e)}")
         raise
 
-@task(name="evaluate-predictions", retries=2)
-def evaluate_predictions(predictions: List[str], 
-                       references: List[str], 
-                       metrics: Optional[List[str]] = None) -> Dict[str, float]:
+@task(name="evaluate_baseline", retries=1)
+def evaluate_baseline(
+    examples: List[Dict[str, Any]],
+    metrics: Optional[List[str]] = None
+) -> Dict[str, float]:
     """
-    Evaluate predictions using Hugging Face metrics (Step 2)
-    
+    Step 2: Compute baseline metrics using Hugging Face Evaluate
+
     Args:
-        predictions: List of model predictions
-        references: List of reference outputs
+        examples: List of examples with model predictions
         metrics: List of metrics to compute
-        
+
     Returns:
-        Dictionary with metric scores
+        Dictionary of metric scores
     """
-    run_logger = get_run_logger()
-    run_logger.info(f"Evaluating {len(predictions)} predictions")
-    
     try:
-        # Import and initialize the evaluator
-        from src.app.clients.hf_evaluator import EvaluatorService
-        
+        # Extract predictions and references
+        predictions = [ex.get("model_output", "") for ex in examples]
+        references = [ex.get("ground_truth_output", "") for ex in examples]
+
+        # Initialize evaluator
         evaluator = EvaluatorService()
-        
-        # Run evaluation
+
+        # Compute metrics
         results = evaluator.evaluate(
             predictions=predictions,
             references=references,
             metrics=metrics
         )
-        
-        run_logger.info(f"Evaluation complete: {results}")
-        
-        # Create artifact if using real Prefect
-        if has_prefect:
-            create_artifact(
-                name="evaluation-results",
-                description="Hugging Face evaluation metrics",
-                data=results
-            )
-        
+
+        # Add number of examples
+        results["total_examples"] = len(examples)
+
         return results
     except Exception as e:
-        run_logger.error(f"Error in evaluation: {str(e)}")
+        logger.error(f"Error in baseline evaluation: {str(e)}")
         raise
 
-@task(name="optimize-prompts", retries=2)
-def optimize_prompts(state_dict: Dict[str, Any], 
-                   evaluation_results: Dict[str, float], 
-                   primary_results: Dict[str, Any],
-                   vertex_project_id: str, 
-                   vertex_location: str, 
-                   optimizer_model_name: str) -> Dict[str, Any]:
+@task(name="optimizer_llm", retries=2)
+def optimizer_llm(
+    prompt_state: Dict[str, Any],
+    baseline_metrics: Dict[str, float],
+    example_sample: List[Dict[str, Any]],
+    vertex_project_id: str,
+    vertex_location: str,
+    optimizer_model_name: str
+) -> Dict[str, Any]:
     """
-    Generate refined prompts using Optimizer LLM (Step 3)
-    
+    Step 3: Generate refined prompts based on performance data
+
     Args:
-        state_dict: Dictionary with prompt state
-        evaluation_results: Dictionary with evaluation metrics
-        primary_results: Dictionary with primary inference results
-        vertex_project_id: GCP project ID
-        vertex_location: GCP location
-        optimizer_model_name: Model name for optimizer
-        
+        prompt_state: Dictionary representation of PromptState
+        baseline_metrics: Metrics from baseline evaluation
+        example_sample: Sample of examples with predictions for analysis
+        vertex_project_id: Google Cloud project ID
+        vertex_location: Google Cloud region
+        optimizer_model_name: Name of optimizer LLM model
+
     Returns:
-        Dictionary with optimized prompts and reasoning
+        Updated PromptState with refined prompts
     """
-    run_logger = get_run_logger()
-    run_logger.info(f"Optimizing prompts with model {optimizer_model_name}")
-    
     try:
-        # Import and initialize the Vertex client
-        from src.app.clients.vertex_client import VertexAIClient
-        
-        client = VertexAIClient(
-            project_id=vertex_project_id,
-            location=vertex_location
-        )
-        
-        # Prepare optimization prompt
-        system_prompt = state_dict["system_prompt"]
-        output_prompt = state_dict["output_prompt"]
-        
-        # Format metrics for the optimizer
-        metrics_text = "\n".join([f"- {k}: {v}" for k, v in evaluation_results.items()])
-        
-        # Include sample of predictions and ground truth
-        samples = []
-        sample_size = min(3, len(primary_results.get("predictions", [])))
-        
-        for i in range(sample_size):
-            try:
-                prediction = primary_results["predictions"][i]
-                reference = primary_results.get("references", [])[i] if "references" in primary_results else "N/A"
-                user_input = primary_results.get("inputs", [])[i] if "inputs" in primary_results else "N/A"
-                
-                sample = f"Example #{i+1}:\nInput: {user_input}\nPrediction: {prediction}\nExpected: {reference}"
-                samples.append(sample)
-            except (IndexError, KeyError):
-                run_logger.warning(f"Could not get sample {i}")
-        
-        samples_text = "\n\n".join(samples)
-        
+        # Initialize Vertex client
+        client = VertexAIClient(vertex_project_id, vertex_location)
+
+        # Create optimizer prompt
         optimizer_prompt = f"""
-You are an expert prompt engineer. Your task is to improve the performance of the following prompts based on evaluation results.
+As an AI prompt optimization expert, analyze the current prompts and performance metrics to create improved prompts.
 
-## Current Prompts
-### System Prompt:
-{system_prompt}
+CURRENT SYSTEM PROMPT:
+{prompt_state["system_prompt"]}
 
-### Output Prompt:
-{output_prompt}
+CURRENT OUTPUT PROMPT:
+{prompt_state["output_prompt"]}
 
-## Performance Metrics
-{metrics_text}
+PERFORMANCE METRICS:
+{baseline_metrics}
 
-## Sample Outputs
-{samples_text}
+EXAMPLE INPUTS AND OUTPUTS:
+{example_sample[:5]}  # Include only a few examples to avoid overwhelming the model
 
-## Your Task
-Analyze the prompts, evaluation metrics, and sample outputs. Then provide:
-1. A detailed analysis of issues with the current prompts
-2. An improved version of the system prompt
-3. An improved version of the output prompt
+Based on the above, please generate improved versions of both prompts. Focus on:
+1. Fixing any issues visible in the example outputs
+2. Enhancing clarity and specificity
+3. Improving factual accuracy and reasoning
 
-Format your response exactly as follows:
-ANALYSIS: [Your analysis of the issues]
-
-IMPROVED_SYSTEM_PROMPT:
-[Your improved system prompt]
-
-IMPROVED_OUTPUT_PROMPT:
-[Your improved output prompt]
+Respond with a JSON object containing:
+{{"system_prompt": "improved system prompt here", "output_prompt": "improved output prompt here", "reasoning": "explanation of your changes here"}}
 """
-        
-        # Generate optimization
+
+        # Generate improved prompts
         response = client.generate_response(
             model_name=optimizer_model_name,
             user_content=optimizer_prompt,
-            temperature=0.3
+            temperature=0.7
         )
-        
-        # Parse the response
-        analysis = ""
-        improved_system_prompt = ""
-        improved_output_prompt = ""
-        
-        current_section = None
-        
-        for line in response.split("\n"):
-            if line.startswith("ANALYSIS:"):
-                current_section = "analysis"
-                analysis = line.replace("ANALYSIS:", "").strip()
-            elif line.startswith("IMPROVED_SYSTEM_PROMPT:"):
-                current_section = "system"
-                continue
-            elif line.startswith("IMPROVED_OUTPUT_PROMPT:"):
-                current_section = "output"
-                continue
-            elif current_section == "analysis":
-                analysis += "\n" + line
-            elif current_section == "system":
-                improved_system_prompt += line + "\n"
-            elif current_section == "output":
-                improved_output_prompt += line + "\n"
-        
-        # Trim whitespace
-        improved_system_prompt = improved_system_prompt.strip()
-        improved_output_prompt = improved_output_prompt.strip()
-        
-        # Create new state with optimized prompts
-        optimized_state = {
-            "system_prompt": improved_system_prompt,
-            "output_prompt": improved_output_prompt,
-            "version": state_dict["version"] + 1
-        }
-        
-        run_logger.info(f"Prompt optimization complete")
-        
-        # Create artifact if using real Prefect
-        if has_prefect:
-            create_artifact(
-                name="optimization-results",
-                description=f"Prompt optimization results",
-                data={
-                    "analysis": analysis,
-                    "original_state": state_dict,
-                    "optimized_state": optimized_state
-                }
+
+        # Parse response (assuming it's valid JSON)
+        try:
+            import json
+            optimized = json.loads(response)
+
+            # Create new PromptState
+            new_state = PromptState(
+                system_prompt=optimized.get("system_prompt", prompt_state["system_prompt"]),
+                output_prompt=optimized.get("output_prompt", prompt_state["output_prompt"]),
+                version=prompt_state["version"] + 1,
+                parent_id=prompt_state.get("id"),
+                created_at=datetime.now().isoformat()
             )
-        
-        return {
-            "optimized_state": optimized_state,
-            "reasoning": analysis
-        }
+
+            # Add reasoning to metadata
+            new_state.metadata["optimization_reasoning"] = optimized.get("reasoning", "No reasoning provided")
+
+            return new_state.dict()
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse optimizer response as JSON: {response[:100]}...")
+            # Fall back to returning the original state with a version bump
+            state = PromptState(**prompt_state)
+            state.version += 1
+            return state.dict()
+
     except Exception as e:
-        run_logger.error(f"Error in prompt optimization: {str(e)}")
+        logger.error(f"Error in optimizer LLM: {str(e)}")
         raise
 
-@task(name="refined-inference", retries=3)
-def refined_inference(optimized_state: Dict[str, Any], 
-                    dataset_dict: Dict[str, Any], 
-                    vertex_project_id: str, 
-                    vertex_location: str, 
-                    model_name: str) -> Dict[str, Any]:
+@task(name="refined_llm_inference", retries=2)
+def refined_llm_inference(
+    optimized_prompt_state: Dict[str, Any],
+    examples: List[Dict[str, Any]],
+    vertex_project_id: str,
+    vertex_location: str,
+    model_name: str
+) -> List[Dict[str, Any]]:
     """
-    Run inference with optimized prompts (Step 4)
-    
+    Step 4: Run inference with optimized prompts
+
     Args:
-        optimized_state: Dictionary with optimized prompt state
-        dataset_dict: Dictionary with dataset information
-        vertex_project_id: GCP project ID
-        vertex_location: GCP location
-        model_name: Model name
-        
+        optimized_prompt_state: Dictionary representation of optimized PromptState
+        examples: List of examples to run inference on
+        vertex_project_id: Google Cloud project ID
+        vertex_location: Google Cloud region
+        model_name: Name of primary LLM model to use
+
     Returns:
-        Dictionary with refined inference results
+        List of examples with optimized predictions
     """
-    run_logger = get_run_logger()
-    run_logger.info(f"Running refined inference with model {model_name}")
-    
     try:
-        # Import and initialize the Vertex client
-        from src.app.clients.vertex_client import VertexAIClient
-        
-        client = VertexAIClient(
-            project_id=vertex_project_id,
-            location=vertex_location
-        )
-        
+        # Initialize Vertex client
+        client = VertexAIClient(vertex_project_id, vertex_location)
+
         # Run batch prediction with optimized prompts
-        results = client.batch_predict(
-            examples=dataset_dict["data"],
-            prompt_state=optimized_state,
+        prediction_results = client.batch_predict(
+            examples=examples,
+            prompt_state={
+                "system_prompt": optimized_prompt_state["system_prompt"],
+                "output_prompt": optimized_prompt_state["output_prompt"]
+            },
             model_name=model_name
         )
-        
-        run_logger.info(f"Refined inference complete: {len(results['predictions'])} predictions generated")
-        
-        # Create artifact if using real Prefect
-        if has_prefect:
-            create_artifact(
-                name="refined-inference-results",
-                description=f"Refined inference results with {model_name}",
-                data=results
-            )
-        
-        return results
+
+        # Add optimized predictions to examples
+        for i, example in enumerate(examples):
+            if i < len(prediction_results["predictions"]):
+                example["optimized_output"] = prediction_results["predictions"][i]
+
+        return examples
     except Exception as e:
-        run_logger.error(f"Error in refined inference: {str(e)}")
+        logger.error(f"Error in refined inference: {str(e)}")
         raise
 
-@task(name="compare-evaluations", retries=1)
-def compare_evaluations(baseline_metrics: Dict[str, float], 
-                      optimized_metrics: Dict[str, float], 
-                      target_metric: str, 
-                      target_threshold: float) -> Dict[str, Any]:
+@task(name="evaluate_refined")
+def evaluate_refined(
+    examples: List[Dict[str, Any]],
+    metrics: Optional[List[str]] = None
+) -> Dict[str, float]:
     """
-    Compare baseline and optimized metrics (Step 5)
-    
-    Args:
-        baseline_metrics: Dictionary with baseline metrics
-        optimized_metrics: Dictionary with optimized metrics
-        target_metric: Key for the target metric
-        target_threshold: Target threshold for the metric
-        
-    Returns:
-        Dictionary with comparison results
-    """
-    run_logger = get_run_logger()
-    run_logger.info(f"Comparing metrics (target: {target_metric} >= {target_threshold})")
-    
-    # Get target metric values
-    baseline_score = baseline_metrics.get(target_metric, 0)
-    optimized_score = optimized_metrics.get(target_metric, 0)
-    
-    # Calculate improvement
-    improvement = optimized_score - baseline_score
-    percent_improvement = (improvement / baseline_score * 100) if baseline_score > 0 else 0
-    
-    # Check if target threshold reached
-    target_achieved = optimized_score >= target_threshold
-    has_improved = improvement > 0
-    
-    # Build comparison results
-    comparison = {
-        "baseline": baseline_metrics,
-        "optimized": optimized_metrics,
-        "improvement": {
-            metric: optimized_metrics.get(metric, 0) - baseline_metrics.get(metric, 0)
-            for metric in set(baseline_metrics.keys()) | set(optimized_metrics.keys())
-        },
-        "target_metric": target_metric,
-        "target_metric_baseline": baseline_score,
-        "target_metric_optimized": optimized_score,
-        "target_metric_improvement": improvement,
-        "target_metric_percent_improvement": percent_improvement,
-        "target_threshold": target_threshold,
-        "target_achieved": target_achieved,
-        "has_improved": has_improved
-    }
-    
-    run_logger.info(f"Comparison complete: {baseline_score} -> {optimized_score} ({percent_improvement:.2f}% improvement)")
-    
-    # Create artifact if using real Prefect
-    if has_prefect:
-        create_artifact(
-            name="comparison-results",
-            description=f"Comparison of baseline and optimized metrics",
-            data=comparison
-        )
-    
-    return comparison
+    Step 5: Compare metrics and decide whether to continue
 
-@flow(name="prompt-optimization-flow")
+    Args:
+        examples: List of examples with optimized predictions
+        metrics: List of metrics to compute
+
+    Returns:
+        Dictionary of metric scores for optimized outputs
+    """
+    try:
+        # Extract optimized predictions and references
+        predictions = [ex.get("optimized_output", "") for ex in examples]
+        references = [ex.get("ground_truth_output", "") for ex in examples]
+
+        # Initialize evaluator
+        evaluator = EvaluatorService()
+
+        # Compute metrics for optimized outputs
+        results = evaluator.evaluate(
+            predictions=predictions,
+            references=references,
+            metrics=metrics
+        )
+
+        # Add number of examples
+        results["total_examples"] = len(examples)
+
+        return results
+    except Exception as e:
+        logger.error(f"Error in refined evaluation: {str(e)}")
+        raise
+
+@flow(name="prompt_optimization_flow")
 def prompt_optimization_flow(
+    system_prompt: str,
+    output_prompt: str,
+    examples: List[Dict[str, str]],
     vertex_project_id: str,
     vertex_location: str,
     primary_model_name: str,
     optimizer_model_name: str,
-    dataset_path: str,
-    system_prompt_path: str,
-    output_prompt_path: str,
-    target_metric: str = "exact_match_score",
-    target_threshold: float = 0.90,
-    patience: int = 3,
-    max_iterations: int = 10,
+    metrics: Optional[List[str]] = None,
+    target_threshold: float = 0.9,
+    max_iterations: int = 3
 ) -> Dict[str, Any]:
     """
-    Main optimization flow that iteratively improves prompts using Vertex AI & HF Evaluate
-    
+    Main flow for optimizing prompts through 5-step process
+
     Args:
-        vertex_project_id: GCP project ID
-        vertex_location: GCP location
-        primary_model_name: Model name for primary inference
-        optimizer_model_name: Model name for optimizer
-        dataset_path: Path to dataset file
-        system_prompt_path: Path to system prompt file
-        output_prompt_path: Path to output prompt file
-        target_metric: Key for the target metric
-        target_threshold: Target threshold for the metric
-        patience: Number of iterations without improvement before stopping
-        max_iterations: Maximum number of iterations
-        
+        system_prompt: Initial system prompt text or file path
+        output_prompt: Initial output prompt text or file path
+        examples: List of examples for training
+        vertex_project_id: Google Cloud project ID
+        vertex_location: Google Cloud region
+        primary_model_name: Model for inference steps
+        optimizer_model_name: Model for optimization step
+        metrics: List of metrics to compute
+        target_threshold: Target performance threshold
+        max_iterations: Maximum number of optimization iterations
+
     Returns:
-        Dictionary with final results
+        Dictionary with results including best prompt state and metrics
     """
-    run_logger = get_run_logger()
-    run_logger.info(f"Starting prompt optimization flow (target: {target_metric} >= {target_threshold})")
-    
-    # Step 0: Load initial state and dataset
-    initial_data = load_state(
-        system_prompt_path=system_prompt_path,
-        output_prompt_path=output_prompt_path,
-        dataset_path=dataset_path
-    )
-    
-    state_dict = initial_data["state"]
-    dataset_dict = initial_data["dataset"]
-    
-    # Store artifacts and metrics for each iteration
-    iterations = []
-    best_score = 0
-    best_state = state_dict
-    patience_counter = 0
-    
-    # Main optimization loop
-    for iteration in range(1, max_iterations + 1):
-        run_logger.info(f"Starting iteration {iteration}/{max_iterations}")
-        
+    # Default metrics if not provided
+    if not metrics:
+        metrics = ["exact_match_score", "token_match_score"]
+
+    # Initialize best state and metrics
+    current_prompt_state = load_prompt_state(system_prompt, output_prompt)
+    best_prompt_state = current_prompt_state.dict()
+    best_metrics = None
+
+    # Track history
+    history = []
+
+    # Iterate for optimization
+    for iteration in range(max_iterations):
+        logger.info(f"Starting iteration {iteration+1}/{max_iterations}")
+
         # Step 1: Primary LLM Inference
-        primary_results = vertex_primary_inference(
-            state_dict=state_dict,
-            dataset_dict=dataset_dict,
+        examples_with_predictions = primary_llm_inference(
+            prompt_state=current_prompt_state.dict(),
+            examples=examples.copy(),  # Copy to avoid modifying original
             vertex_project_id=vertex_project_id,
             vertex_location=vertex_location,
             model_name=primary_model_name
         )
-        
-        # Step 2: Hugging Face Evaluation
-        references = [example.get("ground_truth_output", "") for example in dataset_dict["data"]]
-        primary_results["references"] = references
-        primary_results["inputs"] = [example.get("user_input", "") for example in dataset_dict["data"]]
-        
-        baseline_metrics = evaluate_predictions(
-            predictions=primary_results["predictions"],
-            references=references
+
+        # Step 2: Baseline Evaluation
+        baseline_metrics = evaluate_baseline(
+            examples=examples_with_predictions,
+            metrics=metrics
         )
-        
-        # Record baseline results
-        baseline_results = {
-            "iteration": iteration,
-            "state": state_dict,
-            "predictions": primary_results["predictions"],
-            "metrics": baseline_metrics
-        }
-        
-        # Check if we've already reached target threshold
-        if baseline_metrics.get(target_metric, 0) >= target_threshold:
-            run_logger.info(f"Target threshold reached: {baseline_metrics.get(target_metric, 0)} >= {target_threshold}")
-            
-            iterations.append({
-                "iteration": iteration,
-                "baseline": baseline_results,
-                "optimized": None,
-                "comparison": {
-                    "target_metric": target_metric,
-                    "target_threshold": target_threshold,
-                    "target_achieved": True,
-                    "has_improved": False,
-                    "target_metric_baseline": baseline_metrics.get(target_metric, 0),
-                    "target_metric_optimized": None
-                },
-                "reasoning": "Target threshold already reached with baseline prompts"
-            })
-            
-            # Update best score and state
-            best_score = baseline_metrics.get(target_metric, 0)
-            best_state = state_dict
-            
-            break
-        
+
+        # Store metrics on first iteration
+        if iteration == 0:
+            best_metrics = baseline_metrics.copy()
+
         # Step 3: Optimizer LLM
-        optimization_results = optimize_prompts(
-            state_dict=state_dict,
-            evaluation_results=baseline_metrics,
-            primary_results=primary_results,
+        optimized_prompt_state = optimizer_llm(
+            prompt_state=current_prompt_state.dict(),
+            baseline_metrics=baseline_metrics,
+            example_sample=examples_with_predictions[:5],  # Sample for analysis
             vertex_project_id=vertex_project_id,
             vertex_location=vertex_location,
             optimizer_model_name=optimizer_model_name
         )
-        
-        optimized_state = optimization_results["optimized_state"]
-        
+
         # Step 4: Refined LLM Inference
-        refined_results = refined_inference(
-            optimized_state=optimized_state,
-            dataset_dict=dataset_dict,
+        examples_with_optimized = refined_llm_inference(
+            optimized_prompt_state=optimized_prompt_state,
+            examples=examples_with_predictions,
             vertex_project_id=vertex_project_id,
             vertex_location=vertex_location,
             model_name=primary_model_name
         )
-        
-        refined_results["references"] = references
-        refined_results["inputs"] = primary_results["inputs"]
-        
+
         # Step 5: Second Evaluation
-        optimized_metrics = evaluate_predictions(
-            predictions=refined_results["predictions"],
-            references=references
+        optimized_metrics = evaluate_refined(
+            examples=examples_with_optimized,
+            metrics=metrics
         )
-        
-        # Compare results
-        comparison = compare_evaluations(
-            baseline_metrics=baseline_metrics,
-            optimized_metrics=optimized_metrics,
-            target_metric=target_metric,
-            target_threshold=target_threshold
-        )
-        
-        # Record iteration results
-        iteration_result = {
-            "iteration": iteration,
-            "baseline": baseline_results,
-            "optimized": {
-                "state": optimized_state,
-                "predictions": refined_results["predictions"],
-                "metrics": optimized_metrics
-            },
-            "comparison": comparison,
-            "reasoning": optimization_results["reasoning"]
+
+        # Record this iteration
+        iteration_record = {
+            "iteration": iteration + 1,
+            "baseline_metrics": baseline_metrics,
+            "optimized_metrics": optimized_metrics,
+            "baseline_prompt_state": current_prompt_state.dict(),
+            "optimized_prompt_state": optimized_prompt_state,
+            "examples": examples_with_optimized
         }
-        
-        iterations.append(iteration_result)
-        
-        # Update state for next iteration if improved
-        current_score = optimized_metrics.get(target_metric, 0)
-        
-        if current_score > best_score:
-            run_logger.info(f"New best score: {current_score} (previous: {best_score})")
-            best_score = current_score
-            best_state = optimized_state
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            run_logger.info(f"No improvement, patience: {patience_counter}/{patience}")
-        
-        # Check stopping conditions
-        if current_score >= target_threshold:
-            run_logger.info(f"Target threshold reached: {current_score} >= {target_threshold}")
+        history.append(iteration_record)
+
+        # Determine if optimized prompts are better
+        # Using the first metric as the primary comparison metric
+        primary_metric = metrics[0]
+        baseline_score = baseline_metrics.get(primary_metric, 0)
+        optimized_score = optimized_metrics.get(primary_metric, 0)
+
+        logger.info(f"Iteration {iteration+1} - Baseline {primary_metric}: {baseline_score:.4f}, Optimized: {optimized_score:.4f}")
+
+        # Update best if optimized is better
+        if optimized_score > best_metrics.get(primary_metric, 0):
+            best_prompt_state = optimized_prompt_state
+            best_metrics = optimized_metrics.copy()
+            logger.info(f"New best prompt found with {primary_metric}: {optimized_score:.4f}")
+
+        # Early stopping if we reach target threshold
+        if optimized_score >= target_threshold:
+            logger.info(f"Target threshold {target_threshold} reached. Stopping early.")
             break
-            
-        if patience_counter >= patience:
-            run_logger.info(f"Early stopping triggered after {patience} iterations without improvement")
-            break
-        
-        # Update state for next iteration
-        state_dict = optimized_state
-    
-    # Prepare final results
-    final_results = {
-        "iterations": iterations,
-        "best_state": best_state,
-        "best_score": best_score,
-        "target_achieved": best_score >= target_threshold,
-        "iterations_count": len(iterations),
-        "final_system_prompt": best_state["system_prompt"],
-        "final_output_prompt": best_state["output_prompt"],
-        "original_system_prompt": initial_data["state"]["system_prompt"],
-        "original_output_prompt": initial_data["state"]["output_prompt"]
+
+        # Update current state for next iteration
+        current_prompt_state = PromptState(**optimized_prompt_state)
+
+    # Return final results
+    return {
+        "best_prompt_state": best_prompt_state,
+        "best_metrics": best_metrics,
+        "history": history,
+        "iterations_completed": len(history)
     }
-    
-    run_logger.info(f"Completed prompt optimization flow with best score: {best_score}")
-    
-    # Create final artifact if using real Prefect
-    if has_prefect:
-        create_artifact(
-            name="final-results",
-            description=f"Final results of prompt optimization flow",
-            data=final_results
-        )
-    
-    return final_results
