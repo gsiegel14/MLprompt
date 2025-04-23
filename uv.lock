@@ -1209,6 +1209,7 @@ dependencies = [
     { name = "psutil" },
     { name = "psycopg2-binary" },
     { name = "pyyaml" },
+    { name = "requests" },
     { name = "selenium" },
     { name = "trafilatura" },
 ]
@@ -1225,6 +1226,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "requests", specifier = ">=2.32.3" },
     { name = "selenium", specifier = ">=4.31.0" },
     { name = "trafilatura", specifier = ">=2.0.0" },
 ]

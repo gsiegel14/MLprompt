@@ -360,3 +360,134 @@
     <script src="{{ url_for('static', filename='five_api_workflow.js') }}"></script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5-Step ML Workflow | Prompt Optimization Platform</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">Prompt Optimization Platform</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="/">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/prompts">Prompts</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="/five_api_workflow">5-Step Workflow</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/history">History</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div class="alerts-container"></div>
+    
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h2>ML-Driven Prompt Optimization Workflow</h2>
+          </div>
+          <div class="card-body">
+            <p class="lead">This workflow uses a 5-step ML process to iteratively improve your prompts:</p>
+            
+            <div class="workflow-diagram mb-4">
+              <div class="workflow-step" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-name">Primary LLM Inference</div>
+                <div class="step-description">Generate baseline responses with current prompts</div>
+              </div>
+              <div class="workflow-step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-name">Evaluation</div>
+                <div class="step-description">Compute baseline metrics</div>
+              </div>
+              <div class="workflow-step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-name">Optimizer LLM</div>
+                <div class="step-description">Generate refined prompts based on performance</div>
+              </div>
+              <div class="workflow-step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-name">Refined Inference</div>
+                <div class="step-description">Run inference with optimized prompts</div>
+              </div>
+              <div class="workflow-step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-name">Second Evaluation</div>
+                <div class="step-description">Compare metrics and decide whether to loop</div>
+              </div>
+            </div>
+            
+            <div class="progress mb-3">
+              <div id="workflow-progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <div class="status-container mb-3">
+              <p class="status-text"><strong>Status:</strong> <span id="status-message">Ready to start workflow</span></p>
+            </div>
+            
+            <div class="inputs-container mb-4">
+              <div class="row">
+                <div class="col-md-5">
+                  <div class="form-group">
+                    <label for="prompt-selector">Select Prompt:</label>
+                    <select id="prompt-selector" class="form-control">
+                      <option value="">Select a prompt</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-5">
+                  <div class="form-group">
+                    <label for="dataset-selector">Select Dataset:</label>
+                    <select id="dataset-selector" class="form-control">
+                      <option value="">Select a dataset</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="button-group mt-4">
+                    <button id="start-workflow" class="btn btn-primary">Start</button>
+                    <button id="stop-workflow" class="btn btn-danger" disabled>Stop</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div id="metrics-container" class="metrics-container hidden">
+              <h3>Performance Metrics</h3>
+              <div class="chart-container" style="height: 300px;">
+                <canvas id="metrics-chart"></canvas>
+              </div>
+            </div>
+            
+            <div id="prompt-comparison" class="prompt-comparison hidden">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='five_api_workflow.js') }}"></script>
+</body>
+</html>
