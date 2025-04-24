@@ -19,6 +19,10 @@ import psutil
 from typing import Dict, List, Any, Optional, Tuple
 import json
 import time
+import sys
+
+# Add the project root to sys.path
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + '/..'))
 
 from app.data_module import DataModule
 from app.evaluator import calculate_score, evaluate_batch
@@ -26,6 +30,7 @@ from app.llm_client import get_llm_response
 from app.optimizer import optimize_prompts, load_optimizer_prompt
 from app.experiment_tracker import ExperimentTracker
 from app.huggingface_client import evaluate_metrics, compute_bleu_score, compute_exact_match, compute_rouge
+from memory_monitor import get_memory_usage, log_memory_usage
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +178,10 @@ class PromptOptimizationWorkflow:
 
             logger.info(f"Internal evaluation metrics: {internal_metrics}")
 
+            # Run garbage collection and log memory usage
+            gc.collect()
+            log_memory_usage("After Phase 2")
+            
             # Phase 3: Google Vertex API #2 - Optimizer LLM for Refinement
             logger.info("PHASE 3: Google Vertex API #2 - Optimizer LLM for Prompt Refinement")
 
@@ -207,6 +216,10 @@ class PromptOptimizationWorkflow:
             logger.info(f"Optimization complete - new system prompt length: {len(optimized_system_prompt)} chars")
             logger.info(f"Optimization complete - new output prompt length: {len(optimized_output_prompt)} chars")
 
+            # Run garbage collection and log memory usage
+            gc.collect()
+            log_memory_usage("After Phase 3")
+            
             # Phase 4: Google Vertex API #3 - Rerun with Optimized Prompts
             logger.info("PHASE 4: Google Vertex API #3 - Rerun with Optimized Prompts")
 

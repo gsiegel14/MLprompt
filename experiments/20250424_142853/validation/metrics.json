@@ -1,0 +1,22 @@
+{
+  "original_metrics": {
+    "training": {
+      "exact_match": 0.0,
+      "bleu": 0.6666666666666666
+    },
+    "validation": {
+      "exact_match": 0.0,
+      "bleu": 0.625
+    }
+  },
+  "optimized_metrics": {
+    "training": {
+      "exact_match": 0.0,
+      "bleu": 0.6666666666666666
+    },
+    "validation": {
+      "exact_match": 0.0,
+      "bleu": 0.625
+    }
+  }
+}
