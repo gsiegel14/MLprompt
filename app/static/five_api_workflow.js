@@ -1,5 +1,5 @@
 /**
- * ATLAS 5-API Workflow Module
+ * ATLAS Autonomous Prompt Workflow Module
  * Handles the 5-step prompt optimization process using Vertex AI and Hugging Face
  */
 
@@ -8,7 +8,8 @@ const workflowState = {
     inProgress: false,
     currentStep: 0,
     examples: [],
-    metricsChart: null
+    metricsChart: null,
+    validationSplit: 0.8 // Default training/validation split ratio
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -46,6 +47,9 @@ function initializeUI() {
     
     // Initialize copy buttons
     initializeCopyButtons();
+    
+    // Initialize data stats
+    updateDataStats();
 }
 
 /**
@@ -74,6 +78,22 @@ function setupEventListeners() {
     const useOptimizedPromptsBtn = document.getElementById('use-optimized-prompts');
     if (useOptimizedPromptsBtn) {
         useOptimizedPromptsBtn.addEventListener('click', useOptimizedPrompts);
+    }
+    
+    // NEJM Dataset buttons
+    const loadNejmTrainBtn = document.getElementById('load-nejm-train-btn');
+    if (loadNejmTrainBtn) {
+        loadNejmTrainBtn.addEventListener('click', () => loadNejmDataset('train'));
+    }
+    
+    const loadNejmValidationBtn = document.getElementById('load-nejm-validation-btn');
+    if (loadNejmValidationBtn) {
+        loadNejmValidationBtn.addEventListener('click', () => loadNejmDataset('validation'));
+    }
+    
+    const resetNejmCacheBtn = document.getElementById('reset-nejm-cache-btn');
+    if (resetNejmCacheBtn) {
+        resetNejmCacheBtn.addEventListener('click', resetNejmCache);
     }
 }
 
@@ -604,6 +624,138 @@ function showAlert(message, type) {
         alert.classList.remove('show');
         setTimeout(() => alert.remove(), 150);
     }, 5000);
+}
+
+/**
+ * Load NEJM dataset (train or validation)
+ * @param {string} datasetType - 'train' or 'validation'
+ */
+function loadNejmDataset(datasetType) {
+    showAlert(`Loading NEJM ${datasetType} dataset...`, 'info');
+    
+    fetch(`/load_dataset_api?type=nejm_${datasetType}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                showAlert(data.error, 'danger');
+            } else if (data.examples && data.examples.length > 0) {
+                // Store the examples in our state
+                workflowState.examples = data.examples;
+                
+                // Update UI
+                updateExamplesUI();
+                updateDataStats();
+                
+                // Also load specialized medical prompts if not already set
+                if (!document.getElementById('system-prompt').value.trim()) {
+                    fetch('/load_dataset_api?type=nejm_prompts')
+                        .then(response => response.json())
+                        .then(promptData => {
+                            if (promptData.system_prompt) {
+                                document.getElementById('system-prompt').value = promptData.system_prompt;
+                                document.getElementById('output-prompt').value = promptData.output_prompt || '';
+                                showAlert('Loaded NEJM specialized prompts', 'success');
+                            }
+                        })
+                        .catch(error => console.error('Error loading NEJM prompts:', error));
+                }
+                
+                showAlert(`Loaded ${data.examples.length} NEJM ${datasetType} examples`, 'success');
+            } else {
+                showAlert(`No NEJM ${datasetType} examples found`, 'warning');
+            }
+        })
+        .catch(error => {
+            console.error(`Error loading NEJM ${datasetType} dataset:`, error);
+            showAlert(`Error loading NEJM ${datasetType} dataset`, 'danger');
+        });
+}
+
+/**
+ * Reset NEJM data cache and regenerate datasets
+ */
+function resetNejmCache() {
+    showAlert('Resetting NEJM data cache...', 'info');
+    
+    fetch('/reset_nejm_cache_api', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'danger');
+        } else {
+            // Run the fix_nejm_data.py script to regenerate the datasets
+            showAlert('Regenerating NEJM datasets...', 'info');
+            return fetch('/regenerate_nejm_data_api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    })
+    .then(response => {
+        if (response && !response.ok) {
+            throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        if (response) return response.json();
+    })
+    .then(data => {
+        if (data && data.error) {
+            showAlert(data.error, 'danger');
+        } else if (data) {
+            showAlert(data.message + '. Try loading the NEJM datasets again.', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Error resetting NEJM cache:', error);
+        showAlert('Error resetting NEJM cache', 'danger');
+    });
+}
+
+/**
+ * Update data statistics display based on current examples
+ */
+function updateDataStats() {
+    const totalCount = workflowState.examples.length;
+    const trainCount = Math.floor(totalCount * workflowState.validationSplit);
+    const valCount = totalCount - trainCount;
+    
+    const statsHTML = `
+        <div class="row text-center">
+            <div class="col">
+                <div class="fs-5">${totalCount}</div>
+                <div class="small text-muted">Examples</div>
+            </div>
+            <div class="col">
+                <div class="fs-5">${trainCount}</div>
+                <div class="small text-muted">Train</div>
+            </div>
+            <div class="col">
+                <div class="fs-5">${valCount}</div>
+                <div class="small text-muted">Validation</div>
+            </div>
+        </div>
+    `;
+    
+    const dataStatsEl = document.getElementById('data-stats');
+    if (dataStatsEl) {
+        dataStatsEl.innerHTML = statsHTML;
+    }
 }
 
 /**

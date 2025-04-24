@@ -1,0 +1,16 @@
+Analyze this case carefully. I'll want your final diagnosis and differential with confidence levels for each diagnosis and key supporting evidence.
+
+Follow these steps exactly:
+
+1. List all the important findings from history, physical exam, and lab results
+2. Create a differential diagnosis of at least 3 possible conditions, ranked by likelihood
+3. For each condition in your differential, provide:
+   - Brief description of the condition
+   - Key supporting evidence from the case
+   - Key findings that don't fit this diagnosis
+   - Confidence level as a percentage
+
+4. Provide your final diagnosis with supporting evidence
+5. Recommend appropriate next steps for confirmation and management
+
+Remember to think step-by-step and consider all available information before reaching your conclusion.

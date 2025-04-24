@@ -542,6 +542,223 @@ def optimize():
         logger.error(f"Error in optimization: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/load_dataset_api', methods=['GET'])
+def load_dataset_api():
+    """
+    Load a dataset for training or validation.
+    
+    Supported dataset types:
+    - nejm_train: NEJM case studies for training
+    - nejm_validation: NEJM case studies for validation
+    - nejm_prompts: Specialized prompts for medical cases
+    """
+    try:
+        import traceback
+        from datetime import datetime
+        
+        # Create log file
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f"logs/load_dataset_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        logger.info(f"===== LOADING DATASET {log_timestamp} =====")
+        
+        dataset_type = request.args.get('type', '')
+        if not dataset_type:
+            error_msg = "No dataset type specified"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+        
+        logger.info(f"Loading dataset of type: {dataset_type}")
+        
+        if dataset_type == 'nejm_train':
+            # Load NEJM training examples
+            try:
+                train_examples = data_module.get_train_examples(refresh_cache=True)
+                logger.info(f"Loaded {len(train_examples)} NEJM training examples")
+                return jsonify({
+                    'examples': train_examples,
+                    'count': len(train_examples)
+                })
+            except Exception as e:
+                error_msg = f"Error loading NEJM training examples: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                return jsonify({'error': error_msg}), 500
+        
+        elif dataset_type == 'nejm_validation':
+            # Load NEJM validation examples
+            try:
+                validation_examples = data_module.get_validation_examples(refresh_cache=True)
+                logger.info(f"Loaded {len(validation_examples)} NEJM validation examples")
+                return jsonify({
+                    'examples': validation_examples,
+                    'count': len(validation_examples)
+                })
+            except Exception as e:
+                error_msg = f"Error loading NEJM validation examples: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                return jsonify({'error': error_msg}), 500
+        
+        elif dataset_type == 'nejm_prompts':
+            # Load specialized medical prompts
+            try:
+                with open('prompts/nejm_system_prompt.txt', 'r') as f:
+                    system_prompt = f.read().strip()
+                
+                with open('prompts/nejm_output_prompt.txt', 'r') as f:
+                    output_prompt = f.read().strip()
+                
+                logger.info("Loaded NEJM specialized prompts")
+                return jsonify({
+                    'system_prompt': system_prompt,
+                    'output_prompt': output_prompt
+                })
+            except Exception as e:
+                error_msg = f"Error loading NEJM prompts: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                return jsonify({'error': error_msg}), 500
+        
+        else:
+            error_msg = f"Unknown dataset type: {dataset_type}"
+            logger.error(error_msg)
+            with open(log_file_path, 'w') as f:
+                f.write(f"ERROR: {error_msg}\n")
+            return jsonify({'error': error_msg}), 400
+        
+    except Exception as e:
+        error_msg = f"Error in load_dataset endpoint: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/reset_nejm_cache_api', methods=['POST'])
+def reset_nejm_cache_api():
+    """
+    Reset the NEJM data cache
+    """
+    try:
+        import traceback
+        from datetime import datetime
+        
+        # Create log file
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f"logs/reset_nejm_cache_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        logger.info(f"===== RESETTING NEJM CACHE {log_timestamp} =====")
+        
+        try:
+            # Clear cache files
+            cache_files = [
+                os.path.join('data', 'train', 'current_train.json'),
+                os.path.join('data', 'validation', 'current_validation.json'),
+                os.path.join('data', 'train', 'nejm_train_cache.json'),
+                os.path.join('data', 'validation', 'nejm_validation_cache.json'),
+            ]
+            
+            for file_path in cache_files:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Removed cache file: {file_path}")
+            
+            # Reset data module cache
+            data_module.reset_cache()
+            
+            logger.info("NEJM cache reset successfully")
+            return jsonify({'message': 'NEJM cache reset successfully'})
+            
+        except Exception as e:
+            error_msg = f"Error resetting NEJM cache: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_msg}), 500
+        
+    except Exception as e:
+        error_msg = f"Error in reset_nejm_cache endpoint: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/regenerate_nejm_data_api', methods=['POST'])
+def regenerate_nejm_data_api():
+    """
+    Regenerate NEJM datasets by running fix_nejm_data.py
+    """
+    try:
+        import traceback
+        from datetime import datetime
+        import subprocess
+        
+        # Create log file
+        log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f"logs/regenerate_nejm_data_{log_timestamp}.log"
+        os.makedirs("logs", exist_ok=True)
+        
+        logger.info(f"===== REGENERATING NEJM DATA {log_timestamp} =====")
+        
+        try:
+            # Run the fix_nejm_data.py script
+            result = subprocess.run(
+                ["python", "fix_nejm_data.py"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            logger.info("NEJM data regenerated successfully")
+            logger.info(f"Script output: {result.stdout}")
+            
+            if result.stderr:
+                logger.warning(f"Script warnings: {result.stderr}")
+                
+            with open(log_file_path, 'w') as f:
+                f.write("NEJM data regeneration log:\n")
+                f.write(f"STDOUT:\n{result.stdout}\n")
+                f.write(f"STDERR:\n{result.stderr}\n")
+                
+            # Reset the data module cache
+            data_module.reset_cache()
+            
+            return jsonify({'message': 'NEJM data regenerated successfully'})
+            
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Error running fix_nejm_data.py: {str(e)}"
+            logger.error(error_msg)
+            logger.error(f"Script output: {e.stdout}")
+            logger.error(f"Script error: {e.stderr}")
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n")
+                f.write(f"STDOUT:\n{e.stdout}\n")
+                f.write(f"STDERR:\n{e.stderr}\n")
+            return jsonify({'error': error_msg}), 500
+            
+        except Exception as e:
+            error_msg = f"Error regenerating NEJM data: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            with open(log_file_path, 'a') as f:
+                f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+            return jsonify({'error': error_msg}), 500
+        
+    except Exception as e:
+        error_msg = f"Error in regenerate_nejm_data endpoint: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        return jsonify({'error': error_msg}), 500
+
 @app.route('/five_api_workflow', methods=['POST'])
 def five_api_workflow():
     """
