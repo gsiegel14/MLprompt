@@ -222,14 +222,29 @@ function processWorkflowResults(data) {
  * Update the metrics display with data from the API
  */
 function updateMetricsDisplay(metrics) {
-    if (!metrics) {
-        console.error("Error fetching metrics summary:", metrics);
-        return;
-    }
-    
-    // Update metrics table
-    const metricsTableBody = document.getElementById('metrics-table-body');
-    if (metricsTableBody) {
+    try {
+        // Detailed null/undefined check with more specific error messages
+        if (!metrics) {
+            console.error("Error fetching metrics summary: metrics object is null or undefined");
+            logToDebugConsole('error', 'Metrics data is missing - potential API response issue', { received: metrics });
+            return;
+        }
+        
+        // Check if metrics has the right structure
+        if (typeof metrics !== 'object') {
+            console.error("Error fetching metrics summary: metrics is not an object", typeof metrics);
+            logToDebugConsole('error', 'Metrics data has wrong type', { expectedType: 'object', actualType: typeof metrics });
+            return;
+        }
+        
+        // Update metrics table
+        const metricsTableBody = document.getElementById('metrics-table-body');
+        if (!metricsTableBody) {
+            console.error("Error updating metrics: 'metrics-table-body' element not found in DOM");
+            logToDebugConsole('error', 'DOM element for metrics table not found', { elementId: 'metrics-table-body' });
+            return;
+        }
+        
         metricsTableBody.innerHTML = '';
         
         // Add rows for each metric
@@ -241,93 +256,222 @@ function updateMetricsDisplay(metrics) {
             'rouge': 'ROUGE Score'
         };
         
+        let foundAnyMetrics = false;
+        
         for (const [key, label] of Object.entries(metricNames)) {
             if (metrics[key]) {
+                foundAnyMetrics = true;
                 const row = document.createElement('tr');
+                
+                // Safe access to nested properties with detailed null checks
+                const originalTraining = metrics[key]?.original?.training;
+                const originalValidation = metrics[key]?.original?.validation;
+                const optimizedTraining = metrics[key]?.optimized?.training;
+                const optimizedValidation = metrics[key]?.optimized?.validation;
                 
                 row.innerHTML = `
                     <td>${label}</td>
-                    <td>${formatPercent(metrics[key].original?.training || 0)}</td>
-                    <td>${formatPercent(metrics[key].original?.validation || 0)}</td>
-                    <td>${formatPercent(metrics[key].optimized?.training || 0)}</td>
-                    <td>${formatPercent(metrics[key].optimized?.validation || 0)}</td>
+                    <td>${formatPercent(originalTraining || 0)}</td>
+                    <td>${formatPercent(originalValidation || 0)}</td>
+                    <td>${formatPercent(optimizedTraining || 0)}</td>
+                    <td>${formatPercent(optimizedValidation || 0)}</td>
                 `;
                 
                 metricsTableBody.appendChild(row);
             }
         }
+        
+        if (!foundAnyMetrics) {
+            console.warn("Metrics object does not contain any expected metrics");
+            logToDebugConsole('warn', 'No expected metrics found in data', { 
+                availableKeys: Object.keys(metrics),
+                expectedKeys: Object.keys(metricNames)
+            });
+            
+            // Add a placeholder row
+            const placeholderRow = document.createElement('tr');
+            placeholderRow.innerHTML = `
+                <td colspan="5" class="text-center text-muted">No metrics data available</td>
+            `;
+            metricsTableBody.appendChild(placeholderRow);
+        }
+        
+        // Create or update chart
+        createMetricsChart(metrics);
+    } catch (error) {
+        console.error("Error in updateMetricsDisplay:", error);
+        logToDebugConsole('error', 'Exception in updateMetricsDisplay', { 
+            errorMessage: error.message,
+            errorStack: error.stack,
+            metricsData: metrics ? 'Present' : 'Missing'
+        });
     }
-    
-    // Create or update chart
-    createMetricsChart(metrics);
 }
 
 /**
  * Create a chart to visualize metrics
  */
 function createMetricsChart(metrics) {
-    const chartCanvas = document.getElementById('metrics-chart');
-    if (!chartCanvas) return;
-    
-    // Destroy existing chart if it exists
-    if (workflowState.metricsChart) {
-        workflowState.metricsChart.destroy();
-    }
-    
-    // Prepare data for the chart
-    const labels = [];
-    const originalTraining = [];
-    const originalValidation = [];
-    const optimizedTraining = [];
-    const optimizedValidation = [];
-    
-    // Format data for charting
-    for (const [key, value] of Object.entries(metrics)) {
-        if (key !== 'total_examples' && typeof value.original?.training === 'number') {
-            const label = key.replace(/_/g, ' ');
-            labels.push(label);
-            originalTraining.push((value.original?.training || 0) * 100);
-            originalValidation.push((value.original?.validation || 0) * 100);
-            optimizedTraining.push((value.optimized?.training || 0) * 100);
-            optimizedValidation.push((value.optimized?.validation || 0) * 100);
+    try {
+        const chartCanvas = document.getElementById('metrics-chart');
+        if (!chartCanvas) {
+            console.error("Error creating chart: 'metrics-chart' element not found in DOM");
+            logToDebugConsole('error', 'DOM element for metrics chart not found', { elementId: 'metrics-chart' });
+            return;
         }
+        
+        // Destroy existing chart if it exists
+        if (workflowState.metricsChart) {
+            try {
+                workflowState.metricsChart.destroy();
+            } catch (err) {
+                console.warn("Error destroying existing chart:", err);
+                logToDebugConsole('warn', 'Failed to destroy existing chart', { error: err.message });
+                // Continue anyway to create new chart
+            }
+        }
+        
+        // Prepare data for the chart
+        const labels = [];
+        const originalTraining = [];
+        const originalValidation = [];
+        const optimizedTraining = [];
+        const optimizedValidation = [];
+        
+        // Ensure metrics is an object before attempting to iterate
+        if (!metrics || typeof metrics !== 'object') {
+            console.error("Invalid metrics data for chart:", metrics);
+            logToDebugConsole('error', 'Invalid metrics data structure for chart', { 
+                metricsType: typeof metrics 
+            });
+            
+            // Create an empty chart to avoid errors
+            createEmptyChart(chartCanvas);
+            return;
+        }
+        
+        // Format data for charting with safety checks
+        let hasValidData = false;
+        for (const [key, value] of Object.entries(metrics)) {
+            if (key !== 'total_examples' && value && typeof value === 'object') {
+                // Safe access to nested properties
+                const originalTrainingValue = value.original?.training;
+                
+                if (typeof originalTrainingValue === 'number') {
+                    hasValidData = true;
+                    const label = key.replace(/_/g, ' ');
+                    labels.push(label);
+                    originalTraining.push((value.original?.training || 0) * 100);
+                    originalValidation.push((value.original?.validation || 0) * 100);
+                    optimizedTraining.push((value.optimized?.training || 0) * 100);
+                    optimizedValidation.push((value.optimized?.validation || 0) * 100);
+                }
+            }
+        }
+        
+        // Create chart or placeholder if no valid data
+        if (!hasValidData) {
+            console.warn("No valid metrics data for chart");
+            logToDebugConsole('warn', 'No valid metrics data found for chart', { 
+                metricsKeys: Object.keys(metrics) 
+            });
+            
+            createEmptyChart(chartCanvas);
+            return;
+        }
+        
+        // Create chart with valid data
+        workflowState.metricsChart = new Chart(chartCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Original (Training)',
+                        data: originalTraining,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Original (Validation)',
+                        data: originalValidation,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Optimized (Training)',
+                        data: optimizedTraining,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Optimized (Validation)',
+                        data: optimizedValidation,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Score (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Metrics Comparison'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw.toFixed(1)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        logToDebugConsole('info', 'Chart created successfully', { 
+            metrics: labels.length,
+            datasets: 4
+        });
+    } catch (error) {
+        console.error("Error in createMetricsChart:", error);
+        logToDebugConsole('error', 'Exception in createMetricsChart', { 
+            errorMessage: error.message,
+            errorStack: error.stack
+        });
     }
-    
-    // Create chart
+}
+
+/**
+ * Create an empty chart with placeholder message
+ */
+function createEmptyChart(chartCanvas) {
     workflowState.metricsChart = new Chart(chartCanvas, {
         type: 'bar',
         data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Original (Training)',
-                    data: originalTraining,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Original (Validation)',
-                    data: originalValidation,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Optimized (Training)',
-                    data: optimizedTraining,
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Optimized (Validation)',
-                    data: optimizedValidation,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }
-            ]
+            labels: ['No Data'],
+            datasets: [{
+                label: 'No metrics data available',
+                data: [0],
+                backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                borderColor: 'rgba(200, 200, 200, 1)',
+                borderWidth: 1
+            }]
         },
         options: {
             responsive: true,
@@ -344,18 +488,13 @@ function createMetricsChart(metrics) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Metrics Comparison'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: ${context.raw.toFixed(1)}%`;
-                        }
-                    }
+                    text: 'Metrics Comparison (No Data Available)'
                 }
             }
         }
     });
+    
+    logToDebugConsole('warn', 'Created empty placeholder chart', { reason: 'No valid metrics data' });
 }
 
 /**
@@ -1415,16 +1554,42 @@ function escapeHtml(unsafe) {
 function captureExistingErrors() {
     // Check for any errors in the window object or global scope
     setTimeout(() => {
+        // Check for specific known error in updateMetricsDisplay function
+        try {
+            const metricsDisplayFunction = document.getElementById('metrics-table-body');
+            if (!metricsDisplayFunction) {
+                console.error('Known issue: "Error fetching metrics summary" may occur because metrics-table-body element is not found');
+            }
+        } catch (err) {
+            console.error('Error checking metrics display:', err);
+        }
+        
+        // Capture errors from earlier console logs if available
         if (window.webviewConsoleErrors && Array.isArray(window.webviewConsoleErrors)) {
             window.webviewConsoleErrors.forEach(error => {
-                console.error('Captured error:', error);
+                console.error('Captured previous error:', error);
             });
         }
         
-        // Log the known issue about metrics summary errors
-        console.error('Checking for "Error fetching metrics summary" issues');
+        // Look for specific error message patterns in page content
+        const pageContent = document.body.innerHTML;
+        if (pageContent.includes('Error fetching metrics summary')) {
+            console.error('Found "Error fetching metrics summary" message in page content');
+        }
+        
+        // Log any error in updateMetricsDisplay implementation
+        try {
+            const updateMetricsDisplaySource = updateMetricsDisplay.toString();
+            console.info('Analyzing updateMetricsDisplay function for potential issues');
+            // Check for common issues in the function
+            if (updateMetricsDisplaySource.includes('if (!metrics)')) {
+                console.warn('updateMetricsDisplay has null check but may still cause errors with nested properties');
+            }
+        } catch (err) {
+            console.error('Error analyzing metrics function:', err);
+        }
         
         // Generate a test log to verify the debug console is working
-        console.log('Debug console is ready');
+        console.log('Debug console is ready and capturing errors');
     }, 500);
 }
