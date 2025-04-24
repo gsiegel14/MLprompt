@@ -1,0 +1,68 @@
+~/workspace$ python test_five_api_workflow.py
+2025-04-24 15:14:25,664 - INFO - 
+################################################################################
+2025-04-24 15:14:25,664 - INFO - ## 5-API WORKFLOW COMPREHENSIVE TEST SCRIPT
+2025-04-24 15:14:25,664 - INFO - ## Testing all components of the 5-API workflow backend
+2025-04-24 15:14:25,664 - INFO - ## Test Input: I have a 34-year-old with a history of PE. What is the differential diagnosis?
+2025-04-24 15:14:25,664 - INFO - ## Ground Truth: Mention of PE
+2025-04-24 15:14:25,664 - INFO - ################################################################################
+
+2025-04-24 15:14:25,665 - INFO - 
+================================================================================
+2025-04-24 15:14:25,665 - INFO - CHECKING API ENDPOINTS AVAILABILITY
+2025-04-24 15:14:25,665 - INFO - ================================================================================
+2025-04-24 15:14:25,665 - INFO - Checking endpoint: Home Page (GET http://localhost:5000/)
+2025-04-24 15:14:25,665 - INFO - API request: GET http://localhost:5000/ (Attempt 1/1)
+2025-04-24 15:14:25,675 - INFO - ✓ Endpoint Home Page is available
+2025-04-24 15:14:25,675 - INFO - Checking endpoint: API Status (GET http://localhost:5000/api/status)
+2025-04-24 15:14:25,675 - INFO - API request: GET http://localhost:5000/api/status (Attempt 1/1)
+2025-04-24 15:14:25,679 - INFO - ✓ Endpoint API Status is available
+2025-04-24 15:14:25,679 - INFO - Checking endpoint: Load Dataset (GET http://localhost:5000/load_dataset)
+2025-04-24 15:14:25,679 - INFO - API request: GET http://localhost:5000/load_dataset (Attempt 1/1)
+2025-04-24 15:14:25,691 - INFO - ✓ Endpoint Load Dataset is available
+2025-04-24 15:14:25,692 - INFO - Checking endpoint: Get Optimizer Prompt (GET http://localhost:5000/api/optimizer_prompt)
+2025-04-24 15:14:25,692 - INFO - API request: GET http://localhost:5000/api/optimizer_prompt (Attempt 1/1)
+2025-04-24 15:14:25,694 - INFO - ✓ Endpoint Get Optimizer Prompt is available
+2025-04-24 15:14:25,694 - INFO - Checking endpoint: Metrics Summary (GET http://localhost:5000/api/metrics_summary)
+2025-04-24 15:14:25,695 - INFO - API request: GET http://localhost:5000/api/metrics_summary (Attempt 1/1)
+2025-04-24 15:14:25,697 - INFO - ✓ Endpoint Metrics Summary is available
+2025-04-24 15:14:25,697 - INFO - Checking endpoint: 5-API Workflow Info (GET http://localhost:5000/api/five_api_workflow_info)
+2025-04-24 15:14:25,698 - INFO - API request: GET http://localhost:5000/api/five_api_workflow_info (Attempt 1/1)
+2025-04-24 15:14:25,701 - INFO - ✓ Endpoint 5-API Workflow Info is available
+2025-04-24 15:14:25,701 - INFO - 
+SUMMARY:
+2025-04-24 15:14:25,701 - INFO - Available endpoints: 6/6
+2025-04-24 15:14:25,701 - INFO - Missing endpoints: 0/6
+2025-04-24 15:14:25,701 - INFO - 
+API KEYS STATUS:
+2025-04-24 15:14:25,701 - INFO - ✓ GOOGLE_API_KEY is available
+2025-04-24 15:14:25,701 - INFO - ✓ HUGGING_FACE_TOKEN is available
+2025-04-24 15:14:25,701 - INFO - 
+================================================================================
+2025-04-24 15:14:25,701 - INFO - STEP: Loading base prompts
+2025-04-24 15:14:25,702 - INFO - ================================================================================
+2025-04-24 15:14:25,702 - INFO - API request: GET http://localhost:5000/load_dataset (Attempt 1/4)
+2025-04-24 15:14:25,708 - INFO - Loading base prompts from files
+2025-04-24 15:14:25,708 - INFO - Successfully loaded base prompts from files
+2025-04-24 15:14:25,708 - INFO - System prompt length: 22517 characters
+2025-04-24 15:14:25,708 - INFO - Output prompt length: 12801 characters
+2025-04-24 15:14:25,708 - INFO - 
+================================================================================
+2025-04-24 15:14:25,708 - INFO - STEP: Loading optimizer prompts
+2025-04-24 15:14:25,708 - INFO - ================================================================================
+2025-04-24 15:14:25,708 - INFO - API request: GET http://localhost:5000/api/optimizer_prompt (Attempt 1/4)
+2025-04-24 15:14:25,711 - INFO - Successfully loaded optimizer prompts from API
+2025-04-24 15:14:25,711 - INFO - Optimizer system prompt length: 1754 characters
+2025-04-24 15:14:25,711 - INFO - Optimizer output prompt length: 3719 characters
+2025-04-24 15:14:25,711 - INFO - 
+================================================================================
+2025-04-24 15:14:25,711 - INFO - STEP: Running Full 5-API Workflow Test
+2025-04-24 15:14:25,711 - INFO - ================================================================================
+2025-04-24 15:14:25,712 - INFO - Step 1: Initial LLM inference with Primary LLM (Google Vertex API)
+2025-04-24 15:14:25,712 - INFO - 
+================================================================================
+2025-04-24 15:14:25,712 - INFO - STEP: Testing Step 1 of 5-API Workflow
+2025-04-24 15:14:25,712 - INFO - ================================================================================
+2025-04-24 15:14:25,712 - INFO - API request: POST http://localhost:5000/five_api_workflow (Attempt 1/4)
+2025-04-24 15:14:25,862 - WARNING - API call failed with status code: 500, Error: No examples available for testing
+2025-04-24 15:14:25,862 - INFO - Retrying in 5 seconds...
