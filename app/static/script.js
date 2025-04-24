@@ -501,10 +501,11 @@ What's the square root of 64?,8`;
             newCanvas.className = metricsChart.className;
             newCanvas.height = metricsChart.height;
             parent.replaceChild(newCanvas, metricsChart);
-            metricsChart = newCanvas;
+            // Use a different variable name to avoid reassigning to constant
+            window.metricsChartElement = newCanvas;
         }
         
-        const ctx = metricsChart.getContext('2d');
+        const ctx = (window.metricsChartElement || metricsChart).getContext('2d');
         window.dashboardMetricsChart = new Chart(ctx, {
             type: 'bar',
             data: {
