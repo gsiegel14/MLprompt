@@ -221,7 +221,10 @@ function processWorkflowResults(data) {
  * Update the metrics display with data from the API
  */
 function updateMetricsDisplay(metrics) {
-    if (!metrics) return;
+    if (!metrics) {
+        console.error("Error fetching metrics summary:", metrics);
+        return;
+    }
     
     // Update metrics table
     const metricsTableBody = document.getElementById('metrics-table-body');
@@ -358,6 +361,13 @@ function createMetricsChart(metrics) {
  * Update step indicators based on current progress
  */
 function updateStepIndicators() {
+    // If there are no step indicators, don't continue
+    const anyStepIndicator = document.getElementById('step1-indicator');
+    if (!anyStepIndicator) {
+        console.log("Step indicators not found in DOM");
+        return;
+    }
+    
     // Reset all steps
     for (let i = 1; i <= 5; i++) {
         const stepElement = document.getElementById(`step${i}-indicator`);
@@ -399,8 +409,11 @@ function simulateWorkflowProgress() {
             
             // Update progress bar
             const progressPercent = workflowState.currentStep * 20;
-            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
-            document.getElementById('progress-bar').textContent = `${progressPercent}%`;
+            const progressBarEl = document.getElementById('progress-bar');
+            if (progressBarEl) {
+                progressBarEl.style.width = `${progressPercent}%`;
+                progressBarEl.textContent = `${progressPercent}%`;
+            }
             
             // Update status text
             const statusText = {
@@ -411,7 +424,10 @@ function simulateWorkflowProgress() {
                 5: 'Step 5: Final evaluation...'
             };
             
-            document.getElementById('progress-status').textContent = statusText[workflowState.currentStep];
+            const progressStatusEl = document.getElementById('progress-status');
+            if (progressStatusEl) {
+                progressStatusEl.textContent = statusText[workflowState.currentStep];
+            }
         } else {
             clearInterval(progressInterval);
         }
@@ -606,11 +622,42 @@ function initializeCopyButtons() {
 function resetWorkflowState() {
     workflowState.inProgress = false;
     workflowState.currentStep = 0;
+    workflowState.experimentId = null;
+    workflowState.currentIteration = 0;
+    
+    // Reset or maintain chart objects (don't destroy)
+    
+    // Reset experiment UI
+    const experimentStatusEl = document.getElementById('experiment-status');
+    if (experimentStatusEl) experimentStatusEl.textContent = 'New experiment will be created';
+    
+    const currentIterationEl = document.getElementById('current-iteration');
+    if (currentIterationEl) currentIterationEl.textContent = '0';
+    
+    // Reset progress indicators and messages
+    const averageScoreEl = document.getElementById('average-score');
+    if (averageScoreEl) averageScoreEl.textContent = '-';
+    
+    const perfectMatchesEl = document.getElementById('perfect-matches');
+    if (perfectMatchesEl) perfectMatchesEl.textContent = '-';
+    
+    const latestOptimizationEl = document.getElementById('latest-optimization-message');
+    if (latestOptimizationEl) latestOptimizationEl.textContent = 'No optimization has been performed yet';
+    
+    const validationMessageEl = document.getElementById('validation-message');
+    if (validationMessageEl) validationMessageEl.textContent = 'Run validation to see results on unseen data';
+    
+    const validationResultsEl = document.getElementById('validation-results');
+    if (validationResultsEl) validationResultsEl.classList.add('d-none');
     
     // Update UI
     updateStepIndicators();
-    document.getElementById('optimization-progress').classList.add('d-none');
-    document.getElementById('start-optimization').disabled = false;
+    
+    const optimizationProgressEl = document.getElementById('optimization-progress');
+    if (optimizationProgressEl) optimizationProgressEl.classList.add('d-none');
+    
+    const startOptimizationBtn = document.getElementById('start-optimization');
+    if (startOptimizationBtn) startOptimizationBtn.disabled = false;
 }
 
 /**
