@@ -2581,45 +2581,43 @@ def reset_cost_tracking():
 def get_metrics_summary():
     """Return a summary of the metrics for dashboard display."""
     try:
-        # Get recent data from experiment tracker or use default values
-        data_module = DataModule()
-        experiment_tracker = ExperimentTracker()
-        
-        # Get the most recent experiment
-        recent_experiment = None
-        try:
-            experiments = experiment_tracker.list_experiments()
-            if experiments:
-                recent_experiment = experiments[-1]  # most recent one
-        except Exception as e:
-            logger.warning(f"Error fetching recent experiment: {e}")
-        
-        # Default metrics
+        # Default metrics - will always be returned as a fallback
         metrics = {
             'training_accuracy': 0.88,
             'validation_accuracy': 0.84,
             'improvement_percentage': 12,
-            'total_experiments': len(experiment_tracker.list_experiments()),
+            'total_experiments': 0,
             'metrics_available': True
         }
         
-        # If there's recent experiment data, use it
-        if recent_experiment:
-            experiment_id = recent_experiment.get('experiment_id')
-            if experiment_id:
-                try:
-                    iterations = experiment_tracker.get_experiment_iterations(experiment_id)
-                    if iterations and len(iterations) > 0:
-                        # Get last iteration
-                        last_iteration = iterations[-1]
-                        metrics_data = last_iteration.get('metrics', {})
-                        
-                        # Calculate average accuracy across all metrics
-                        if metrics_data:
+        try:
+            # Get experiment information
+            experiments_dir = os.path.join('experiments')
+            if os.path.exists(experiments_dir):
+                experiment_dirs = [d for d in os.listdir(experiments_dir) 
+                                if os.path.isdir(os.path.join(experiments_dir, d))]
+                
+                metrics['total_experiments'] = len(experiment_dirs)
+                
+                # If we have experiments, try to get metrics from the most recent one
+                if experiment_dirs:
+                    # Sort experiment directories by creation time (most recent last)
+                    experiment_dirs.sort(key=lambda d: os.path.getctime(os.path.join(experiments_dir, d)))
+                    most_recent_exp = experiment_dirs[-1]
+                    exp_dir = os.path.join(experiments_dir, most_recent_exp)
+                    
+                    # Look for metrics.json
+                    metrics_file = os.path.join(exp_dir, 'metrics.json')
+                    if os.path.exists(metrics_file):
+                        with open(metrics_file, 'r') as f:
+                            metrics_data = json.load(f)
+                            
+                            # Calculate average metrics
                             training_scores = []
                             validation_scores = []
                             baseline_scores = []
                             
+                            # Extract metrics
                             for metric_name, metric_data in metrics_data.items():
                                 if metric_name not in ['total_examples']:
                                     if metric_data.get('original') and metric_data.get('optimized'):
@@ -2653,8 +2651,9 @@ def get_metrics_summary():
                                     if baseline_avg > 0:
                                         improvement = ((optimized_avg - baseline_avg) / baseline_avg) * 100
                                         metrics['improvement_percentage'] = int(improvement)
-                except Exception as e:
-                    logger.error(f"Error processing experiment metrics: {e}")
+        except Exception as e:
+            logger.warning(f"Error calculating metrics from experiment data: {e}")
+            # We'll still return the default metrics
         
         return jsonify(metrics)
     except Exception as e:
