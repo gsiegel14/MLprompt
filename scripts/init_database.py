@@ -126,53 +126,21 @@ def create_default_model_configurations():
 
 def check_prefect_database():
     """Check if Prefect database exists and create it if needed"""
-    prefect_db_url = os.getenv(
-        "PREFECT_API_DATABASE_CONNECTION_URL", 
-        "postgresql+asyncpg://prefect:prefectpass@localhost:5432/prefect"
-    )
-    
-    # Extract connection details from the URL
-    parts = prefect_db_url.split("/")
-    db_name = parts[-1].split("?")[0]  # Remove query parameters if any
-    connection_parts = parts[2].split("@")
-    credentials = connection_parts[0].split(":")
-    username = credentials[0]
-    password = credentials[1]
-    host_port = connection_parts[1].split(":")
-    host = host_port[0]
-    port = host_port[1] if len(host_port) > 1 else "5432"
-    
-    logger.info(f"Checking if Prefect database '{db_name}' exists")
-    
+    # For Replit environment, we'll configure Prefect to use SQLite instead of PostgreSQL
     try:
-        # Connect to postgres database
-        conn = psycopg2.connect(
-            dbname="postgres",
-            user=username,
-            password=password,
-            host=host,
-            port=port
-        )
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
+        # Create directory for Prefect SQLite database if it doesn't exist
+        prefect_db_dir = Path(__file__).parent.parent / "data" / "prefect"
+        prefect_db_dir.mkdir(exist_ok=True, parents=True)
+        prefect_db_path = prefect_db_dir / "prefect.db"
         
-        # Check if database exists
-        cursor.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
-        exists = cursor.fetchone()
+        # Set the Prefect database URL to use SQLite
+        prefect_db_url = f"sqlite:///{prefect_db_path}"
+        os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
         
-        if not exists:
-            logger.info(f"Creating Prefect database '{db_name}'")
-            cursor.execute(f'CREATE DATABASE "{db_name}"')
-            logger.info(f"Prefect database '{db_name}' created successfully")
-        else:
-            logger.info(f"Prefect database '{db_name}' already exists")
-        
-        cursor.close()
-        conn.close()
-        
+        logger.info(f"Configured Prefect to use SQLite database at {prefect_db_path}")
         return True
     except Exception as e:
-        logger.error(f"Error checking/creating Prefect database: {str(e)}")
+        logger.error(f"Error configuring Prefect database: {str(e)}")
         return False
 
 def main():

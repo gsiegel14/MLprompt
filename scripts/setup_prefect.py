@@ -23,26 +23,31 @@ def check_prefect_installed():
         return False
 
 def create_prefect_profile():
-    """Create a new Prefect profile for PostgreSQL"""
-    logger.info("Creating Prefect profile for PostgreSQL")
+    """Create a new Prefect profile for SQLite"""
+    logger.info("Creating Prefect profile for SQLite")
     try:
-        # Create a new profile
-        subprocess.run(["prefect", "profile", "create", "postgresql-profile"], check=True)
+        # Create directory for Prefect SQLite database if it doesn't exist
+        prefect_db_dir = Path(__file__).parent.parent / "data" / "prefect"
+        prefect_db_dir.mkdir(exist_ok=True, parents=True)
+        prefect_db_path = prefect_db_dir / "prefect.db"
         
-        # Get database URL from environment
-        db_url = os.getenv("PREFECT_API_DATABASE_CONNECTION_URL", 
-                          "postgresql+asyncpg://prefect:prefectpass@localhost:5432/prefect")
+        # Set the Prefect database URL to use SQLite
+        prefect_db_url = f"sqlite:///{prefect_db_path}"
+        os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
+        
+        # Create a new profile
+        subprocess.run(["prefect", "profile", "create", "sqlite-profile"], check=True)
         
         # Configure the profile
         subprocess.run([
             "prefect", "config", "set", 
-            f"PREFECT_API_DATABASE_CONNECTION_URL={db_url}"
+            f"PREFECT_API_DATABASE_CONNECTION_URL={prefect_db_url}"
         ], check=True)
         
         # Set as active profile
-        subprocess.run(["prefect", "profile", "use", "postgresql-profile"], check=True)
+        subprocess.run(["prefect", "profile", "use", "sqlite-profile"], check=True)
         
-        logger.info("Prefect profile created and configured successfully")
+        logger.info(f"Prefect profile created and configured to use SQLite at {prefect_db_path}")
         return True
     except subprocess.CalledProcessError as e:
         logger.error(f"Error creating Prefect profile: {str(e)}")
