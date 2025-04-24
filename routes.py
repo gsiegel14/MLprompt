@@ -2,8 +2,10 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, s
 from app import app, db
 from models import User, Prompt, Optimization
 from utils import substitute_variables
-from prompts import optimizer_output_prompt
+from prompts import optimizer_output_prompt, optimizer_enhanced_prompt, optimized_system_message_template, optimized_output_prompt_template, evaluation_template
 import logging
+import requests
+import json
 
 @app.route('/')
 def index():
@@ -49,20 +51,66 @@ def optimize():
         base_prompts = Prompt.query.filter(Prompt.id.in_(selected_base_prompts)).all()
         base_prompts_text = "\n\n".join([prompt.content for prompt in base_prompts])
         
-        # For demonstration, creating a sample optimized version
-        # In a real application, this would call an API to optimize the prompt
-        # using the optimizer_output_prompt with substituted variables
+        # API CALL 1: Run user input with base prompts
+        # In a real implementation, this would call an actual API
+        logging.debug("API CALL 1: Running user input with base prompts")
+        # Simulate API call 1 output for demonstration
+        base_response = f"Base response for: {original_prompt.content[:50]}..."
         
+        # API CALL 2: Hugging Face evaluation of base prompt results
+        logging.debug("API CALL 2: Hugging Face evaluation of base prompt results")
+        # Simulate HF evaluation for demonstration
+        eval_data_base = """
+        Evaluation of base prompt:
+        - Accuracy: 7/10
+        - Completeness: 6/10
+        - Relevance: 8/10
+        
+        Issues identified:
+        - Missing specific constraints
+        - Could be more detailed in guidance
+        - Structure could be improved
+        """
+        
+        # Setup variables for the optimization
         variables = {
-            'BASE_PROMPTS': base_prompts_text
+            'BASE_PROMPTS': base_prompts_text,
+            'EVAL_DATA_BASE': eval_data_base
         }
         
-        # Here we'd call an external API with the substituted prompt
-        full_optimization_prompt = substitute_variables(optimizer_output_prompt, variables)
+        # API CALL 3: Optimize prompts based on evaluation data
+        logging.debug("API CALL 3: Optimize prompts based on evaluation data")
+        # Use the enhanced optimizer prompt that includes evaluation data
+        full_optimization_prompt = substitute_variables(optimizer_enhanced_prompt, variables)
         logging.debug(f"Optimization prompt with substituted variables: {full_optimization_prompt}")
         
-        # For demo, just append "OPTIMIZED" to the original
-        optimized_content = f"OPTIMIZED VERSION:\n\n{original_prompt.content}"
+        # In a real implementation, this would call an API to optimize the prompt
+        # For demo purposes, create a simulated optimized result with system message and output prompt
+        optimized_system_message = f"OPTIMIZED SYSTEM MESSAGE:\n\nYou are an expert AI assistant focused on {original_prompt.title}. Follow these guidelines carefully."
+        optimized_output_prompt = f"OPTIMIZED OUTPUT PROMPT:\n\n{original_prompt.content}\n\nProvide detailed, accurate information with proper citations."
+        
+        # Combined optimized prompts
+        optimized_content = f"===SYSTEM_MESSAGE===\n{optimized_system_message}\n\n===OUTPUT_PROMPT===\n{optimized_output_prompt}"
+        
+        # API CALL 4: Run user input with optimized prompts
+        logging.debug("API CALL 4: Run user input with optimized prompts")
+        # Simulate API call 4 output for demonstration
+        optimized_response = f"Optimized response for: {original_prompt.content[:50]}..."
+        
+        # API CALL 5: Hugging Face evaluation of optimized prompt results
+        logging.debug("API CALL 5: Hugging Face evaluation of optimized prompt results")
+        # Simulate HF evaluation for demonstration
+        eval_data_optimized = """
+        Evaluation of optimized prompt:
+        - Accuracy: 9/10
+        - Completeness: 8/10
+        - Relevance: 9/10
+        
+        Improvements:
+        - Better structured response
+        - More comprehensive coverage
+        - Clearer guidance for the model
+        """
         
         # Store the optimization
         new_optimization = Optimization(
@@ -76,8 +124,12 @@ def optimize():
         
         return render_template('optimize_result.html', 
                               original=original_prompt, 
-                              optimized=optimized_content, 
-                              base_prompts=base_prompts)
+                              optimized=optimized_content,
+                              optimized_system_message=optimized_system_message,
+                              optimized_output_prompt=optimized_output_prompt,
+                              base_prompts=base_prompts,
+                              eval_data_base=eval_data_base,
+                              eval_data_optimized=eval_data_optimized)
     
     # GET request
     prompts = Prompt.query.filter_by(is_base=False).all()

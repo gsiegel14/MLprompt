@@ -1,0 +1,167 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1 class="mb-4">Optimization Results</h1>
+
+<div class="alert alert-success mb-4">
+    <h4 class="alert-heading">Optimization Complete!</h4>
+    <p>Your prompt has been optimized based on the selected base prompts and evaluation data.</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Workflow Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">API Call 1</div>
+                    <div class="card-body">
+                        <h6>Base Prompt Testing</h6>
+                        <p class="small">User input run with base prompts to establish baseline performance</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">API Call 2</div>
+                    <div class="card-body">
+                        <h6>Base Prompt Evaluation</h6>
+                        <p class="small">Hugging Face evaluation of base prompt performance</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">API Call 3</div>
+                    <div class="card-body">
+                        <h6>Prompt Optimization</h6>
+                        <p class="small">Optimize prompts based on evaluation data</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">API Call 4</div>
+                    <div class="card-body">
+                        <h6>Optimized Prompt Testing</h6>
+                        <p class="small">User input run with optimized prompts</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">API Call 5</div>
+                    <div class="card-body">
+                        <h6>Optimized Prompt Evaluation</h6>
+                        <p class="small">Hugging Face evaluation of optimized prompt performance</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Evaluation Data (Base Prompts)</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded">{{ eval_data_base }}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Evaluation Data (Optimized Prompts)</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded">{{ eval_data_optimized }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Original Prompt</h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ original.title }}</h6>
+                <pre class="bg-dark text-light p-3 rounded">{{ original.content }}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Optimized Prompt</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="true">System Message</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output" type="button" role="tab" aria-controls="output" aria-selected="false">Output Prompt</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="combined-tab" data-bs-toggle="tab" data-bs-target="#combined" type="button" role="tab" aria-controls="combined" aria-selected="false">Combined</button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="myTabContent">
+                    <div class="tab-pane fade show active" id="system" role="tabpanel" aria-labelledby="system-tab">
+                        <pre class="bg-dark text-light p-3 rounded">{{ optimized_system_message }}</pre>
+                    </div>
+                    <div class="tab-pane fade" id="output" role="tabpanel" aria-labelledby="output-tab">
+                        <pre class="bg-dark text-light p-3 rounded">{{ optimized_output_prompt }}</pre>
+                    </div>
+                    <div class="tab-pane fade" id="combined" role="tabpanel" aria-labelledby="combined-tab">
+                        <pre class="bg-dark text-light p-3 rounded">{{ optimized }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-5">
+    <div class="card-header">
+        <h5 class="mb-0">Base Prompts Used</h5>
+    </div>
+    <div class="card-body">
+        {% if base_prompts %}
+            <div class="row">
+                {% for prompt in base_prompts %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-header card-header-base">
+                            <span class="badge base-prompt-badge float-end">Base Prompt</span>
+                            <h6 class="mb-0">{{ prompt.title }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <pre class="small bg-dark text-light p-2 rounded">{{ prompt.content|truncate(200) }}</pre>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No base prompts used in optimization.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-between">
+    <a href="{{ url_for('optimize') }}" class="btn btn-secondary">Back to Optimize</a>
+    <a href="{{ url_for('view_optimizations') }}" class="btn btn-primary">View All Optimizations</a>
+</div>
+{% endblock %}
