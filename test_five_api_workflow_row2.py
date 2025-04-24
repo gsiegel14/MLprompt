@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Test script for running the 5-API workflow with row 2 from NEJM CSV.
@@ -68,20 +67,20 @@ def load_test_example():
         logger.error(f"Test example not found at {example_path}")
         logger.info("Please run test_nejm_row.py first to create the example")
         return None, None
-    
+
     try:
         with open(example_path, 'r') as f:
             examples = json.load(f)
-        
+
         if examples and len(examples) > 0:
             example = examples[0]
             test_input = example.get('user_input', '')
             ground_truth = example.get('ground_truth_output', '')
-            
+
             logger.info(f"Loaded test example from row 2:")
             logger.info(f"Input: {test_input[:150]}...")
             logger.info(f"Ground truth: {ground_truth}")
-            
+
             return test_input, ground_truth
         else:
             logger.error("No examples found in test file")
@@ -100,7 +99,7 @@ def make_api_request(method, url, headers=None, json=None, params=None, timeout=
                 response = requests.get(url, headers=headers, params=params, timeout=timeout)
             else:
                 response = requests.post(url, headers=headers, json=json, timeout=timeout)
-            
+
             # Check if response can be parsed as JSON
             try:
                 result = response.json()
@@ -108,7 +107,7 @@ def make_api_request(method, url, headers=None, json=None, params=None, timeout=
             except ValueError:
                 result = response.text
                 is_json = False
-            
+
             # Process response
             if response.status_code == 200:
                 return True, result
@@ -118,20 +117,20 @@ def make_api_request(method, url, headers=None, json=None, params=None, timeout=
                     error_msg += f", Error: {result['error']}"
                 elif not is_json:
                     error_msg += f", Response: {result[:200]}..." if len(result) > 200 else f", Response: {result}"
-                
+
                 logger.warning(error_msg)
-                
+
                 # Don't retry client errors (4xx) except 429 (too many requests)
                 if 400 <= response.status_code < 500 and response.status_code != 429:
                     return False, error_msg
-        
+
         except Timeout:
             logger.warning(f"Request timeout after {timeout} seconds")
         except ConnectionError:
             logger.warning("Connection error, server may be unavailable")
         except RequestException as e:
             logger.warning(f"Request error: {str(e)}")
-        
+
         # Only retry if we haven't exceeded our retry limit
         if retry_count < retries:
             wait_time = RETRY_DELAY * (retry_count + 1)  # Exponential backoff
@@ -140,7 +139,7 @@ def make_api_request(method, url, headers=None, json=None, params=None, timeout=
             retry_count += 1
         else:
             return False, f"Failed after {retries + 1} attempts"
-    
+
     return False, "Maximum retries exceeded"
 
 def load_prompts(prompt_type):
@@ -176,7 +175,7 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     logger.info("\n" + "=" * 80)
     logger.info("RUNNING 5-API WORKFLOW WITH ROW 2 FROM NEJM DATASET")
     logger.info("=" * 80)
-    
+
     # Step 1: Initial LLM inference with Primary LLM
     logger.info("Step 1: Initial LLM inference with Primary LLM (Google Vertex API)")
     step1_data = {
@@ -187,23 +186,23 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
         "batch_size": BATCH_SIZE,
         "step": 1
     }
-    
+
     endpoint = f"{BASE_URL}/five_api_workflow"
     headers = {"Content-Type": "application/json"}
-    
+
     start_time = time.time()
     success, result = make_api_request('post', endpoint, headers=headers, json=step1_data)
     elapsed_time = time.time() - start_time
-    
+
     if success:
         logger.info(f"Step 1 completed successfully in {elapsed_time:.2f} seconds")
-        
+
         # Log summarized response data
         if isinstance(result, dict) and "response" in result:
             response_text = result["response"]
             summary = response_text[:200] + "..." if len(response_text) > 200 else response_text
             logger.info(f"Response summary: {summary}")
-        
+
         # Save the full response to a file
         if isinstance(result, dict) and "response" in result:
             os.makedirs("row2_results", exist_ok=True)
@@ -220,19 +219,19 @@ def main():
     logger.info("## NEJM ROW 2 TEST SCRIPT")
     logger.info("## Testing the 5-API workflow with row 2 from NEJM dataset")
     logger.info("#" * 80 + "\n")
-    
+
     # Check if the API server is running
     if not check_server_status():
         logger.error("API server is not available. Please start the server first.")
         logger.info("You can start the server by running the 'Start API Server' workflow")
         return False
-    
+
     # Load the test example
     test_input, ground_truth = load_test_example()
     if not test_input or not ground_truth:
         logger.error("Could not load test example. Please run test_nejm_row.py first.")
         return False
-    
+
     # Load the NEJM prompts
     system_prompt, output_prompt = load_prompts("nejm")
     if not system_prompt or not output_prompt:
@@ -241,10 +240,10 @@ def main():
         if not system_prompt or not output_prompt:
             logger.error("Could not load any prompts. Test cannot continue.")
             return False
-    
+
     # Run the workflow with the example
     test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
-    
+
     logger.info("\n" + "#" * 80)
     logger.info("## TEST COMPLETED")
     logger.info("#" * 80)
