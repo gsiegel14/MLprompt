@@ -1,0 +1,23 @@
+2025-04-24 02:54:15,144 - __main__ - INFO - Starting database initialization
+2025-04-24 02:54:15,145 - __main__ - INFO - Running on Replit with built-in PostgreSQL database
+2025-04-24 02:54:15,295 - __main__ - INFO - Successfully connected to Replit PostgreSQL database
+2025-04-24 02:54:15,295 - __main__ - INFO - ✅ Application database setup complete
+2025-04-24 02:54:15,546 - __main__ - INFO - Connected to Replit PostgreSQL for Prefect
+2025-04-24 02:54:15,546 - __main__ - INFO - Configured Prefect to use Replit PostgreSQL database
+2025-04-24 02:54:15,546 - __main__ - INFO - ✅ Prefect database setup complete
+2025-04-24 02:54:15,546 - __main__ - INFO - Running database migrations
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [sqlalchemy.engine.Engine] select pg_catalog.version()
+INFO  [sqlalchemy.engine.Engine] [raw sql] {}
+INFO  [sqlalchemy.engine.Engine] select current_schema()
+INFO  [sqlalchemy.engine.Engine] [raw sql] {}
+INFO  [sqlalchemy.engine.Engine] show standard_conforming_strings
+INFO  [sqlalchemy.engine.Engine] [raw sql] {}
+INFO  [sqlalchemy.engine.Engine] BEGIN (implicit)
+INFO  [sqlalchemy.engine.Engine] SELECT model_configurations.id AS model_configurations_id, model_configurations.name AS model_configurations_name, model_configurations.primary_model AS model_configurations_primary_model, model_configurations.optimizer_model AS model_configurations_optimizer_model, model_configurations.temperature AS model_configurations_temperature, model_configurations.max_tokens AS model_configurations_max_tokens, model_configurations.top_p AS model_configurations_top_p, model_configurations.top_k AS model_configurations_top_k, model_configurations.is_default AS model_configurations_is_default, model_configurations.created_at AS model_configurations_created_at, model_configurations.updated_at AS model_configurations_updated_at 
+FROM model_configurations 
+WHERE model_configurations.is_default = true 
+ LIMIT %(param_1)s
+INFO  [sqlalchemy.engine.Engine] [generated in 0.00020s] {'param_1': 1}
+INFO  [sqlalchemy.engine.Engine] ROLLBACK
