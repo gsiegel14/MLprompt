@@ -31,7 +31,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Base URL for API endpoints
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://0.0.0.0:5000"
+
+# Function to check if the server is running
+def check_server_status():
+    """Check if the API server is running and accessible"""
+    try:
+        response = requests.get(f"{BASE_URL}/health", timeout=5)
+        if response.status_code == 200:
+            logger.info("API server is running and responding to health checks")
+            return True
+        else:
+            logger.warning(f"API server returned status code: {response.status_code}")
+            return False
+    except requests.exceptions.ConnectionError:
+        logger.error("API server is not running or not accessible")
+        return False
+    except Exception as e:
+        logger.error(f"Error checking server status: {e}")
+        return False
 
 # Set the batch size to 1 to reduce memory usage
 BATCH_SIZE = 1
@@ -202,6 +220,12 @@ def main():
     logger.info("## NEJM ROW 2 TEST SCRIPT")
     logger.info("## Testing the 5-API workflow with row 2 from NEJM dataset")
     logger.info("#" * 80 + "\n")
+    
+    # Check if the API server is running
+    if not check_server_status():
+        logger.error("API server is not available. Please start the server first.")
+        logger.info("You can start the server by running the 'Start API Server' workflow")
+        return False
     
     # Load the test example
     test_input, ground_truth = load_test_example()

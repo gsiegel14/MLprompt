@@ -10,7 +10,7 @@ run = ["sh", "-c", "chmod +x startup.sh && ./startup.sh"]
 build = ["sh", "-c", "chmod +x deployment_cleanup.sh && ./deployment_cleanup.sh"]
 
 [workflows]
-runButton = "Project"
+runButton = "Start API Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -274,6 +274,15 @@ args = "python -m scripts.init_database"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m scripts.setup_prefect"
+
+[[workflows.workflow]]
+name = "Start API Server"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 
 [[ports]]
 localPort = 5000
