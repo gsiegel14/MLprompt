@@ -230,15 +230,36 @@
         }
         
         function createModelCostChart(models) {
-            const ctx = document.getElementById('costByModelChart').getContext('2d');
+            const chartCanvas = document.getElementById('costByModelChart');
+            if (!chartCanvas) {
+                console.error("Cost by model chart canvas not found");
+                return;
+            }
+            
+            let ctx = chartCanvas.getContext('2d');
             
             // Extract data from models object
             const labels = Object.keys(models);
             const costs = labels.map(model => models[model].estimated_cost || 0);
             
             // Destroy existing chart if it exists
-            if (window.modelCostChart) {
+            if (window.modelCostChart && typeof window.modelCostChart.destroy === 'function') {
                 window.modelCostChart.destroy();
+            } else if (window.modelCostChart) {
+                // If chart exists but destroy method is not available
+                console.warn("Could not destroy existing model cost chart - recreating instead");
+            }
+            
+            // Clear the canvas manually as a fallback
+            if (chartCanvas) {
+                const parent = chartCanvas.parentNode;
+                if (parent) {
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = 'costByModelChart';
+                    newCanvas.height = chartCanvas.height;
+                    parent.replaceChild(newCanvas, chartCanvas);
+                    ctx = newCanvas.getContext('2d');
+                }
             }
             
             window.modelCostChart = new Chart(ctx, {
@@ -269,7 +290,13 @@
         }
         
         function createTokenUsageChart(tokenData) {
-            const ctx = document.getElementById('tokenUsageChart').getContext('2d');
+            const chartCanvas = document.getElementById('tokenUsageChart');
+            if (!chartCanvas) {
+                console.error("Token usage chart canvas not found");
+                return;
+            }
+            
+            let ctx = chartCanvas.getContext('2d');
             
             // Destroy existing chart if it exists
             if (window.tokenUsageChart && typeof window.tokenUsageChart.destroy === 'function') {
@@ -280,7 +307,6 @@
             }
             
             // Clear the canvas manually as a fallback
-            const chartCanvas = document.getElementById('tokenUsageChart');
             if (chartCanvas) {
                 const parent = chartCanvas.parentNode;
                 if (parent) {
