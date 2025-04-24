@@ -250,8 +250,9 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     # Create results directory
     os.makedirs("row2_results", exist_ok=True)
 
-    # Step 1: Initial LLM inference with Primary LLM
+    # Step 1: Initial LLM inference with Primary LLM (Google Vertex API)
     logger.info("Step 1: Initial LLM inference with Primary LLM (Google Vertex API)")
+    logger.info("Using Base Prompts with User Input")
     step1_data = {
         "system_prompt": system_prompt,
         "output_prompt": output_prompt,
@@ -296,6 +297,7 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     
     # Step 2: External validation with Hugging Face
     logger.info("Step 2: External validation with Hugging Face API")
+    logger.info("Evaluating Step 1 output against ground truth")
     step2_data = {
         "system_prompt": system_prompt,
         "output_prompt": output_prompt,
@@ -337,6 +339,7 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     
     # Step 3: Optimizer LLM for prompt refinement
     logger.info("Step 3: Optimizer LLM for prompt refinement (Google Vertex API)")
+    logger.info("Using Optimizer prompts with evaluation data to optimize base prompts")
     
     # Load optimizer prompts if they aren't already loaded
     optimizer_system, optimizer_output = load_prompts("optimizer")
@@ -386,17 +389,16 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     
     time.sleep(WAIT_TIME)  # Wait before next API call
     
-    # Step 4: Optimizer LLM reruns on original dataset
-    logger.info("Step 4: Optimizer LLM reruns with optimized prompts (Google Vertex API)")
+    # Step 4: Run user input with optimized prompts
+    logger.info("Step 4: Running user input with optimized prompts (Google Vertex API)")
+    logger.info("Using optimized prompts from Step 3 with original user input")
     
     optimized_system = step3_result.get("optimized_system_prompt", system_prompt)
     optimized_output = step3_result.get("optimized_output_prompt", output_prompt)
     
     step4_data = {
-        "system_prompt": system_prompt,
-        "output_prompt": output_prompt,
-        "optimized_system_prompt": optimized_system,
-        "optimized_output_prompt": optimized_output,
+        "system_prompt": optimized_system,
+        "output_prompt": optimized_output,
         "user_input": test_input,
         "ground_truth": ground_truth,
         "batch_size": BATCH_SIZE,
@@ -433,6 +435,7 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     
     # Step 5: Second external validation on refined outputs
     logger.info("Step 5: Second external validation with Hugging Face API")
+    logger.info("Comparing original and optimized responses using Hugging Face evaluation")
     
     step5_data = {
         "system_prompt": system_prompt,
@@ -482,11 +485,11 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     
     # Create summary of all steps
     steps = [
-        ("Step 1 (Initial LLM)", step1_result.get("success", False)),
-        ("Step 2 (Evaluation)", step2_result.get("success", False)),
-        ("Step 3 (Optimizer)", step3_result.get("success", False)),
-        ("Step 4 (Optimized LLM)", step4_result.get("success", False)),
-        ("Step 5 (Comparison)", step5_result.get("success", False))
+        ("Step 1 (Initial LLM with Base Prompts)", step1_result.get("success", False)),
+        ("Step 2 (Hugging Face Evaluation)", step2_result.get("success", False)),
+        ("Step 3 (Optimizer LLM for Prompt Refinement)", step3_result.get("success", False)),
+        ("Step 4 (Optimized LLM Run)", step4_result.get("success", False)),
+        ("Step 5 (Hugging Face Comparison)", step5_result.get("success", False))
     ]
     
     steps_completed = sum(1 for _, success in steps if success)
@@ -528,7 +531,7 @@ def main():
             logger.error("Could not load test example. Please run test_nejm_row.py first.")
             return False
 
-        # Load the NEJM prompts
+        # Load the NEJM prompts (preferred)
         system_prompt, output_prompt = load_prompts("nejm")
         if not system_prompt or not output_prompt:
             logger.warning("Could not load NEJM prompts, trying base prompts")
@@ -536,6 +539,9 @@ def main():
             if not system_prompt or not output_prompt:
                 logger.error("Could not load any prompts. Test cannot continue.")
                 return False
+            logger.info("Successfully loaded base prompts for testing.")
+        else:
+            logger.info("Successfully loaded NEJM prompts for testing.")
 
         # Run the workflow with the example
         success = test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
