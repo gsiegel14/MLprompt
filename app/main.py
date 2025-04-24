@@ -238,6 +238,7 @@ def upload_csv():
         return jsonify({'error': 'File type not allowed. Please upload a CSV file.'}), 400
 
 @app.route('/load_dataset', methods=['GET', 'POST'])
+@login_required
 def load_dataset():
     """Load the current training and validation datasets."""
     try:
