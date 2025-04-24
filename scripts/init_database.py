@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """
 Initialize the database for the ML Prompt Optimization Platform.
@@ -120,13 +121,69 @@ def create_default_model_configurations():
     finally:
         session.close()
 
+def check_prefect_database():
+    """Check if Prefect database exists and create it if needed"""
+    prefect_db_url = os.getenv(
+        "PREFECT_API_DATABASE_CONNECTION_URL", 
+        "postgresql+asyncpg://prefect:prefectpass@localhost:5432/prefect"
+    )
+    
+    # Extract connection details from the URL
+    parts = prefect_db_url.split("/")
+    db_name = parts[-1].split("?")[0]  # Remove query parameters if any
+    connection_parts = parts[2].split("@")
+    credentials = connection_parts[0].split(":")
+    username = credentials[0]
+    password = credentials[1]
+    host_port = connection_parts[1].split(":")
+    host = host_port[0]
+    port = host_port[1] if len(host_port) > 1 else "5432"
+    
+    logger.info(f"Checking if Prefect database '{db_name}' exists")
+    
+    try:
+        # Connect to postgres database
+        conn = psycopg2.connect(
+            dbname="postgres",
+            user=username,
+            password=password,
+            host=host,
+            port=port
+        )
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cursor = conn.cursor()
+        
+        # Check if database exists
+        cursor.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
+        exists = cursor.fetchone()
+        
+        if not exists:
+            logger.info(f"Creating Prefect database '{db_name}'")
+            cursor.execute(f'CREATE DATABASE "{db_name}"')
+            logger.info(f"Prefect database '{db_name}' created successfully")
+        else:
+            logger.info(f"Prefect database '{db_name}' already exists")
+        
+        cursor.close()
+        conn.close()
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error checking/creating Prefect database: {str(e)}")
+        return False
+
 def main():
     """Main entry point for database initialization"""
     logger.info("Starting database initialization")
 
-    # Check database exists
+    # Check application database exists
     if not check_database_exists():
-        logger.error("Failed to check/create database")
+        logger.error("Failed to check/create application database")
+        sys.exit(1)
+
+    # Check Prefect database exists
+    if not check_prefect_database():
+        logger.error("Failed to check/create Prefect database")
         sys.exit(1)
 
     # Run migrations

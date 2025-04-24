@@ -387,12 +387,13 @@ def parse_optimizer_response(response: str, original_system_prompt: str, origina
 
     return system_prompt, output_prompt, reasoning
 
-@flow(name="prompt_optimization")
+@flow(name="Prompt Optimization Flow", description="Five-step prompt optimization workflow")
 def prompt_optimization_flow(
     system_prompt_path: str,
     output_prompt_path: str,
     dataset_path: str,
-    metric_names: List[str] = ["exact_match", "bleu"],
+    experiment_id: Optional[str] = None,
+    metric_names: List[str] = ["exact_match", "bleu", "rouge"],
     target_metric: str = "avg_score",
     target_threshold: float = 0.85,
     patience: int = 3,
@@ -400,45 +401,63 @@ def prompt_optimization_flow(
     batch_size: int = 5,
     sample_k: int = 3,
     optimizer_strategy: str = "reasoning_first",
-    experiment_id: Optional[str] = None
-):
-    """Main optimization flow that orchestrates the 5-step process"""
-    run_logger = get_run_logger()
-    run_logger.info(f"Starting prompt optimization flow for {dataset_path}")
+    model_config_id: Optional[str] = None,
+) -> Dict:
+    """
+    Main flow for prompt optimization using the 5-step process
 
-    # Load initial state
-    prompt_state = load_prompt_state(system_prompt_path, output_prompt_path)
-    examples = load_dataset(dataset_path, batch_size, sample_k)
+    Args:
+        system_prompt_path: Path to system prompt file
+        output_prompt_path: Path to output prompt file
+        dataset_path: Path to dataset file
+        experiment_id: Optional ID for experiment tracking in database
+        metric_names: List of metrics to evaluate
+        target_metric: Target metric to optimize
+        target_threshold: Threshold to reach for early stopping
+        patience: Number of iterations without improvement before stopping
+        max_iterations: Maximum number of iterations
+        batch_size: Number of examples to process in each batch
+        sample_k: Number of examples to sample for optimization
+        optimizer_strategy: Strategy for optimization
+        model_config_id: Optional ID for ML model configuration
 
-    # Get or create experiment
+    Returns:
+        Dict containing results and metrics
+    """
+    # Get database session if we need to store results
+    db_session = None
+    if experiment_id:
+        from sqlalchemy.orm import Session
+        from src.app.database.db import SessionLocal
+        db_session = SessionLocal()
+
     try:
-        db = SessionLocal()
-        experiment_repo = ExperimentRepository(db)
+        run_logger = get_run_logger()
+        run_logger.info(f"Starting prompt optimization flow for {dataset_path}")
 
+        # Load initial state
+        prompt_state = load_prompt_state(system_prompt_path, output_prompt_path)
+        examples = load_dataset(dataset_path, batch_size, sample_k)
+
+        # Get or create experiment  (Modified to use db_session)
+        experiment_repo = ExperimentRepository(db_session)
         if experiment_id:
-            # Get existing experiment
             experiment = experiment_repo.get_by_id(experiment_id)
             if not experiment:
                 run_logger.error(f"Experiment with ID {experiment_id} not found")
                 raise ValueError(f"Experiment with ID {experiment_id} not found")
-
             run_logger.info(f"Using existing experiment: {experiment.name} (ID: {experiment_id})")
-            # Update status to running
-            experiment_repo.update_status(experiment_id, "running")
+            experiment_repo.update_status(experiment_id, "running") #Using db_session
         else:
-            # Create new experiment
             dataset_name = os.path.basename(dataset_path)
-            dataset_repo = DatasetRepository(db)
+            dataset_repo = DatasetRepository(db_session)
             dataset = dataset_repo.get_by_name(dataset_name)
-
             if not dataset:
-                # Create dataset if it doesn't exist
                 dataset = dataset_repo.create(
                     name=dataset_name,
                     file_path=dataset_path,
                     row_count=len(examples)
                 )
-
             experiment = experiment_repo.create(
                 name=f"Optimization {datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 initial_prompt_id=prompt_state.id,
@@ -447,33 +466,24 @@ def prompt_optimization_flow(
                 max_epochs=max_iterations,
                 target_threshold=target_threshold
             )
-
             experiment_id = str(experiment.id)
             run_logger.info(f"Created new experiment: {experiment.name} (ID: {experiment_id})")
-    except Exception as e:
-        run_logger.error(f"Error setting up experiment: {str(e)}")
-        raise
-    finally:
-        db.close()
 
-    # Optimization loop
-    best_metric = 0
-    best_prompt = prompt_state
-    no_improvement_count = 0
+        # Optimization loop
+        best_metric = 0
+        best_prompt = prompt_state
+        no_improvement_count = 0
 
-    for iteration in range(max_iterations):
-        run_logger.info(f"Starting iteration {iteration + 1}/{max_iterations}")
+        for iteration in range(max_iterations):
+            run_logger.info(f"Starting iteration {iteration + 1}/{max_iterations}")
 
-        # Step 1: Primary LLM Inference
-        examples_with_results = primary_llm_inference(prompt_state, examples)
+            # Step 1: Primary LLM Inference
+            examples_with_results = primary_llm_inference(prompt_state, examples)
 
-        # Step 2: HuggingFace Evaluation
-        metrics = evaluate_metrics(examples_with_results, metric_names)
+            # Step 2: HuggingFace Evaluation
+            metrics = evaluate_metrics(examples_with_results, metric_names)
 
-        # Save metrics to database
-        try:
-            db = SessionLocal()
-            experiment_repo = ExperimentRepository(db)
+            # Save metrics to database (Modified to use db_session)
             metrics_record = experiment_repo.add_metrics_record(
                 experiment_id=experiment_id,
                 epoch=iteration + 1,
@@ -481,71 +491,56 @@ def prompt_optimization_flow(
                 prompt_id=prompt_state.id
             )
             run_logger.info(f"Saved metrics record for epoch {iteration + 1}")
-        except Exception as e:
-            run_logger.warning(f"Failed to save metrics to database: {str(e)}")
-        finally:
-            db.close()
 
-        # Check if target_metric exists in metrics
-        current_metric = metrics.get(target_metric, 0)
-        run_logger.info(f"Current {target_metric}: {current_metric}, Best: {best_metric}, Target: {target_threshold}")
+            # Check if target_metric exists in metrics
+            current_metric = metrics.get(target_metric, 0)
+            run_logger.info(f"Current {target_metric}: {current_metric}, Best: {best_metric}, Target: {target_threshold}")
 
-        # Update best metric and prompt if improved
-        if current_metric > best_metric:
-            best_metric = current_metric
-            best_prompt = prompt_state
-            no_improvement_count = 0
+            # Update best metric and prompt if improved
+            if current_metric > best_metric:
+                best_metric = current_metric
+                best_prompt = prompt_state
+                no_improvement_count = 0
+                experiment_repo.update_best_prompt(experiment_id, prompt_state.id) #Using db_session
+            else:
+                no_improvement_count += 1
 
-            # Update best prompt in database
-            try:
-                db = SessionLocal()
-                experiment_repo = ExperimentRepository(db)
-                experiment_repo.update_best_prompt(experiment_id, prompt_state.id)
-            except Exception as e:
-                run_logger.warning(f"Failed to update best prompt in database: {str(e)}")
-            finally:
-                db.close()
-        else:
-            no_improvement_count += 1
+            # Early stopping if target reached or no improvement for 'patience' iterations
+            if current_metric >= target_threshold:
+                run_logger.info(f"Target threshold {target_threshold} reached. Stopping optimization.")
+                break
+            if no_improvement_count >= patience:
+                run_logger.info(f"No improvement for {patience} iterations. Stopping optimization.")
+                break
 
-        # Early stopping if target reached or no improvement for 'patience' iterations
-        if current_metric >= target_threshold:
-            run_logger.info(f"Target threshold {target_threshold} reached. Stopping optimization.")
-            break
+            # Step 3: Optimize Prompt
+            prompt_state = optimize_prompt(prompt_state, examples_with_results, metrics, optimizer_strategy)
 
-        if no_improvement_count >= patience:
-            run_logger.info(f"No improvement for {patience} iterations. Stopping optimization.")
-            break
+            # Wait a bit to avoid rate limiting
+            time.sleep(2)
 
-        # Step 3: Optimize Prompt
-        prompt_state = optimize_prompt(prompt_state, examples_with_results, metrics, optimizer_strategy)
-
-        # Wait a bit to avoid rate limiting
-        time.sleep(2)
-
-    # Final status update
-    try:
-        db = SessionLocal()
-        experiment_repo = ExperimentRepository(db)
+        # Final status update (Modified to use db_session)
         experiment_repo.update_status(experiment_id, "completed")
+        experiment_repo.update_best_prompt(experiment_id, best_prompt.id) #Using db_session
 
-        # Ensure best prompt is set
-        experiment_repo.update_best_prompt(experiment_id, best_prompt.id)
+        run_logger.info(f"Prompt optimization completed. Best {target_metric}: {best_metric}")
+
+        return {
+            "experiment_id": experiment_id,
+            "best_prompt_id": best_prompt.id,
+            "best_metric": best_metric,
+            "target_metric": target_metric,
+            "iterations_completed": min(max_iterations, iteration + 1),
+            "target_reached": best_metric >= target_threshold
+        }
     except Exception as e:
-        run_logger.warning(f"Failed to update experiment status: {str(e)}")
+        run_logger.error(f"Error during prompt optimization: {str(e)}")
+        if db_session:
+            db_session.rollback()
+        raise
     finally:
-        db.close()
-
-    run_logger.info(f"Prompt optimization completed. Best {target_metric}: {best_metric}")
-
-    return {
-        "experiment_id": experiment_id,
-        "best_prompt_id": best_prompt.id,
-        "best_metric": best_metric,
-        "target_metric": target_metric,
-        "iterations_completed": min(max_iterations, iteration + 1),
-        "target_reached": best_metric >= target_threshold
-    }
+        if db_session:
+            db_session.close()
 
 # Prefect entry point for deployment
 def start_optimization_flow(experiment_id: str):
