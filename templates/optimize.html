@@ -52,9 +52,86 @@
 
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0">About the Optimization Process</h5>
+        <h5 class="mb-0">About the Optimization Workflow</h5>
     </div>
     <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">5-Step Optimization Workflow</h5>
+                    <p>The prompt optimization process follows a 5-step workflow with API calls that evaluate and improve prompts:</p>
+                    <ol>
+                        <li><strong>API Call 1:</strong> Base prompt testing with user input</li>
+                        <li><strong>API Call 2:</strong> Hugging Face evaluation of base prompt results</li>
+                        <li><strong>API Call 3:</strong> Prompt optimization using evaluation data</li>
+                        <li><strong>API Call 4:</strong> Optimized prompt testing with user input</li>
+                        <li><strong>API Call 5:</strong> Hugging Face evaluation of optimized prompt results</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mb-3">Key Variables in the Workflow</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Variable</th>
+                        <th>Description</th>
+                        <th>Usage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>$BASE_SYSTEM_MESSAGE</code></td>
+                        <td>System message from base prompts</td>
+                        <td>API Call 1</td>
+                    </tr>
+                    <tr>
+                        <td><code>$BASE_OUTPUT_PROMPT</code></td>
+                        <td>Output prompt from base prompts</td>
+                        <td>API Call 1</td>
+                    </tr>
+                    <tr>
+                        <td><code>$BASE_PROMPTS</code></td>
+                        <td>Collection of base prompts</td>
+                        <td>API Call 3</td>
+                    </tr>
+                    <tr>
+                        <td><code>$EVAL_PROMPT</code></td>
+                        <td>Prompt for Hugging Face evaluation</td>
+                        <td>API Call 2, 5</td>
+                    </tr>
+                    <tr>
+                        <td><code>$DATASET_ANSWERS_BASE</code></td>
+                        <td>Ground truth answers from dataset</td>
+                        <td>API Call 2, 5</td>
+                    </tr>
+                    <tr>
+                        <td><code>$EVAL_DATA_BASE</code></td>
+                        <td>Evaluation data from base prompt testing</td>
+                        <td>API Call 3</td>
+                    </tr>
+                    <tr>
+                        <td><code>$OPTIMIZED_SYSTEM_MESSAGE</code></td>
+                        <td>Optimized system message</td>
+                        <td>API Call 4</td>
+                    </tr>
+                    <tr>
+                        <td><code>$OPTIMIZED_OUTPUT_PROMPT</code></td>
+                        <td>Optimized output prompt</td>
+                        <td>API Call 4</td>
+                    </tr>
+                    <tr>
+                        <td><code>$EVAL_DATA_OPTIMIZED</code></td>
+                        <td>Evaluation data from optimized prompt testing</td>
+                        <td>Final results</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h5 class="mb-3">Optimizer Template</h5>
         <p>The prompt optimizer uses the following template for optimization:</p>
         <pre class="bg-dark p-3 rounded"><code>{{ optimizer_output_prompt }}</code></pre>
         
