@@ -15,7 +15,7 @@ class Prompt(Base):
     output_prompt = Column(Text, nullable=False)
     version = Column(Integer, default=1)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("prompts.id"), nullable=True)
-    metadata = Column(JSONB, default={})
+    prompt_metadata = Column(JSONB, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
