@@ -577,7 +577,7 @@ def load_dataset_api():
         if dataset_type == 'nejm_train':
             # Load NEJM training examples
             try:
-                train_examples = data_module.get_train_examples(refresh_cache=True)
+                train_examples = data_module.get_train_examples()
                 logger.info(f"Loaded {len(train_examples)} NEJM training examples")
                 return jsonify({
                     'examples': train_examples,
@@ -594,7 +594,7 @@ def load_dataset_api():
         elif dataset_type == 'nejm_validation':
             # Load NEJM validation examples
             try:
-                validation_examples = data_module.get_validation_examples(refresh_cache=True)
+                validation_examples = data_module.get_validation_examples()
                 logger.info(f"Loaded {len(validation_examples)} NEJM validation examples")
                 return jsonify({
                     'examples': validation_examples,

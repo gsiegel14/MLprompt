@@ -148,6 +148,12 @@ class DataModule:
     def get_validation_examples(self) -> List[Dict[str, str]]:
         """Get the current validation examples."""
         return self.validation_examples
+        
+    def reset_cache(self) -> None:
+        """Reset the data module cache, forcing reload of examples on next request."""
+        self.train_examples = self._load_examples_from_file(os.path.join(self.train_dir, 'current_train.json'))
+        self.validation_examples = self._load_examples_from_file(os.path.join(self.validation_dir, 'current_validation.json'))
+        logger.info(f"Data cache reset: {len(self.train_examples)} train examples, {len(self.validation_examples)} validation examples")
     
     def get_batch(self, batch_size: int = 0, validation: bool = False) -> List[Dict[str, str]]:
         """
