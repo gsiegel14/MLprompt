@@ -1,0 +1,263 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Metric Configurations{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-chart-bar me-2"></i> Metric Configurations
+            </h1>
+            <p class="lead">
+                Configure evaluation metrics for comparing and optimizing prompts.
+            </p>
+            <div class="mb-3">
+                <a href="{{ url_for('ml_dashboard.create_metric_configuration') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus me-1"></i> New Metric Configuration
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if configurations %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-list-ul me-2"></i> Available Configurations
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for config in configurations %}
+                        <div class="col-lg-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">{{ config.name }}</h5>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ config.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa-solid fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ config.id }}">
+                                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-edit me-2"></i>Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteMetricModal{{ config.id }}"><i class="fa-solid fa-trash me-2"></i>Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="mb-3">Included Metrics</h6>
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        {% for metric in config.metrics %}
+                                        <span class="badge bg-primary">{{ metric }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    {% if config.metric_weights %}
+                                    <h6 class="mb-2">Metric Weights</h6>
+                                    <div class="mb-3">
+                                        {% for metric, weight in config.metric_weights.items() %}
+                                        <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                            <span>{{ metric }}</span>
+                                            <span class="badge bg-light text-dark">{{ weight }}</span>
+                                        </div>
+                                        <div class="progress mb-2" style="height: 0.5rem;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ weight * 100 }}%;" 
+                                                aria-valuenow="{{ weight * 100 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <h6 class="mb-2">Target Threshold</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                        <span>Success Threshold</span>
+                                        <span class="badge bg-success">{{ config.target_threshold }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 0.5rem;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                            style="width: {{ config.target_threshold * 100 }}%;" 
+                                            aria-valuenow="{{ config.target_threshold * 100 }}" 
+                                            aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <div class="card-footer small text-muted">
+                                    Created: {{ config.created_at[:10] }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteMetricModal{{ config.id }}" tabindex="-1" aria-labelledby="deleteMetricModalLabel{{ config.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteMetricModalLabel{{ config.id }}">Delete Metric Configuration</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete the metric configuration <strong>{{ config.name }}</strong>?<br>
+                                        This action cannot be undone.
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form action="#" method="post">
+                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fa-solid fa-info-circle me-2"></i>
+                No metric configurations found. Click the button above to create your first configuration.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-lightbulb me-2"></i> About Evaluation Metrics
+                </div>
+                <div class="card-body">
+                    <h5>Available Metrics</h5>
+                    <p>
+                        The ATLAS platform supports the following evaluation metrics:
+                    </p>
+                    <dl>
+                        <dt>Exact Match</dt>
+                        <dd>Measures the percentage of tokens that match exactly between model output and ground truth.</dd>
+                        
+                        <dt>Semantic Similarity</dt>
+                        <dd>Measures the semantic closeness of model output to ground truth using embedding-based similarity.</dd>
+                        
+                        <dt>Keyword Match</dt>
+                        <dd>Calculates what percentage of key terms from the ground truth appear in the model output.</dd>
+                        
+                        <dt>BLEU Score</dt>
+                        <dd>An n-gram precision-based metric commonly used in machine translation evaluation.</dd>
+                        
+                        <dt>ROUGE Score</dt>
+                        <dd>Recall-oriented metric focused on n-gram overlap, useful for summarization tasks.</dd>
+                    </dl>
+                    
+                    <h5>Metric Weights</h5>
+                    <p>
+                        Weights determine how much each metric contributes to the overall score. The weights should sum to 1.0 for proper normalization.
+                    </p>
+                    
+                    <h5>Target Threshold</h5>
+                    <p>
+                        The target threshold sets the success criteria for optimization. The workflow will attempt to achieve a score at or above this threshold.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-sliders me-2"></i> Recommended Configurations
+                </div>
+                <div class="card-body">
+                    <h5>NLP Task-Specific Recommendations</h5>
+                    
+                    <div class="accordion" id="metricsAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    <i class="fa-solid fa-comment-dots me-2"></i> General Conversation & QA
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#metricsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="small">
+                                        <li><strong>Semantic Similarity (0.7)</strong>: Prioritize meaning over exact wording</li>
+                                        <li><strong>Keyword Match (0.2)</strong>: Ensure key facts are captured</li>
+                                        <li><strong>Exact Match (0.1)</strong>: Minor consideration for precise answers</li>
+                                        <li><strong>Target Threshold:</strong> 0.7</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    <i class="fa-solid fa-file-alt me-2"></i> Document Summarization
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#metricsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="small">
+                                        <li><strong>ROUGE Score (0.4)</strong>: Evaluate recall of key information</li>
+                                        <li><strong>Semantic Similarity (0.4)</strong>: Ensure meaning is preserved</li>
+                                        <li><strong>Keyword Match (0.2)</strong>: Capture important terms</li>
+                                        <li><strong>Target Threshold:</strong> 0.6</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    <i class="fa-solid fa-code me-2"></i> Code Generation
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#metricsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="small">
+                                        <li><strong>Exact Match (0.6)</strong>: Precise syntax is important</li>
+                                        <li><strong>Semantic Similarity (0.4)</strong>: Capture intent and logic</li>
+                                        <li><strong>Target Threshold:</strong> 0.8</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingFour">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                    <i class="fa-solid fa-language me-2"></i> Translation
+                                </button>
+                            </h2>
+                            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#metricsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="small">
+                                        <li><strong>BLEU Score (0.5)</strong>: Standard translation metric</li>
+                                        <li><strong>Semantic Similarity (0.5)</strong>: Preserve meaning across languages</li>
+                                        <li><strong>Target Threshold:</strong> 0.65</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h5>Usage Tips</h5>
+                        <ul class="small">
+                            <li>Use <strong>weighted combinations</strong> of metrics for more robust evaluation</li>
+                            <li>Adjust thresholds based on task difficulty - easier tasks can use higher thresholds</li>
+                            <li>Consider the domain requirements when selecting metrics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

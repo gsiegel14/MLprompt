@@ -1,0 +1,384 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Create Metric Configuration{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-plus-circle me-2"></i> Create Metric Configuration
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.index') }}">ML Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.metric_configurations') }}">Metric Configurations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Create</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-chart-bar me-2"></i> Metric Configuration Details
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('ml_dashboard.create_metric_configuration') }}" method="post" id="metricForm">
+                        <div class="mb-4">
+                            <label for="name" class="form-label">Configuration Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="e.g., Balanced Metrics">
+                            <div class="form-text">A descriptive name to identify this metric configuration</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Select Metrics</label>
+                            <div class="form-text mb-2">Choose which metrics to include in this configuration</div>
+                            
+                            {% for metric in available_metrics %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input metric-checkbox" type="checkbox" name="metrics" 
+                                       value="{{ metric.id }}" id="metric_{{ metric.id }}" {% if loop.index <= 3 %}checked{% endif %}>
+                                <label class="form-check-label" for="metric_{{ metric.id }}">
+                                    {{ metric.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Metric Weights</label>
+                            <div class="form-text mb-2">Specify the weight for each selected metric (values should sum to 1.0)</div>
+                            
+                            <div id="weights-container">
+                                {% for metric in available_metrics %}
+                                <div class="mb-3 weight-input" id="weight_container_{{ metric.id }}" {% if loop.index > 3 %}style="display: none;"{% endif %}>
+                                    <label for="weight_{{ metric.id }}" class="form-label">{{ metric.name }} Weight</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control weight-value" id="weight_{{ metric.id }}" 
+                                               name="weight_{{ metric.id }}" min="0" max="1" step="0.1" 
+                                               value="{% if loop.index == 1 %}0.4{% elif loop.index == 2 %}0.4{% elif loop.index == 3 %}0.2{% else %}0.0{% endif %}">
+                                        <span class="input-group-text"><i class="fa-solid fa-percentage"></i></span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>Weight Distribution</span>
+                                    <span id="total-weight-display" class="badge bg-primary">1.0</span>
+                                </div>
+                                <div class="weight-bars mb-2">
+                                    {% for metric in available_metrics %}
+                                    <div class="weight-bar" id="weight_bar_{{ metric.id }}" 
+                                         style="background-color: {% if loop.index == 1 %}#4361ee{% elif loop.index == 2 %}#3a0ca3{% elif loop.index == 3 %}#7209b7{% elif loop.index == 4 %}#f72585{% elif loop.index == 5 %}#4cc9f0{% else %}#4361ee{% endif %}; 
+                                                width: {% if loop.index == 1 %}40%{% elif loop.index == 2 %}40%{% elif loop.index == 3 %}20%{% else %}0%{% endif %}; 
+                                                display: {% if loop.index > 3 %}none{% else %}block{% endif %};">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div id="weight-error" class="small text-danger mt-1" style="display: none;">
+                                    Weights must sum to 1.0. Currently: <span id="current-sum">0.0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="target_threshold" class="form-label">Target Threshold</label>
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <input type="range" class="form-range" id="target_threshold_range" 
+                                           min="0" max="1" step="0.05" value="0.8">
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="target_threshold" name="target_threshold" 
+                                               min="0" max="1" step="0.05" value="0.8" required>
+                                        <span class="input-group-text"><i class="fa-solid fa-bullseye"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                The target score to achieve for optimization to be considered successful
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('ml_dashboard.metric_configurations') }}" class="btn btn-outline-secondary">
+                                <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submit-btn">
+                                <i class="fa-solid fa-save me-1"></i> Create Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-lightbulb me-2"></i> Metric Guide
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>Exact Match</h5>
+                        <p class="small">
+                            Measures exact token-level matches between generated output and ground truth. Useful for tasks where precision is critical.
+                        </p>
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Good for: Code, Factual QA
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Semantic Similarity</h5>
+                        <p class="small">
+                            Measures meaning similarity using embeddings. Allows for differently worded but semantically similar answers.
+                        </p>
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Good for: General QA, Summarization
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Keyword Match</h5>
+                        <p class="small">
+                            Measures inclusion of key terms from ground truth in generated output. Useful for ensuring outputs contain critical information.
+                        </p>
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Good for: Information Retrieval, Summaries
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>BLEU Score</h5>
+                        <p class="small">
+                            Standard evaluation metric for machine translation and text generation. Based on n-gram precision.
+                        </p>
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Good for: Translation, Generation
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>ROUGE Score</h5>
+                        <p class="small">
+                            Recall-oriented metric focusing on n-gram overlap. Common for summarization tasks.
+                        </p>
+                        <div class="badge bg-light text-dark mb-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Good for: Summarization, Compression
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-magic me-2"></i> Preset Configurations
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary preset-btn" data-preset="balanced">
+                            <i class="fa-solid fa-balance-scale me-1"></i> Balanced
+                        </button>
+                        <button type="button" class="btn btn-outline-primary preset-btn" data-preset="semantic">
+                            <i class="fa-solid fa-brain me-1"></i> Semantic Focus
+                        </button>
+                        <button type="button" class="btn btn-outline-primary preset-btn" data-preset="factual">
+                            <i class="fa-solid fa-check-double me-1"></i> Factual Accuracy
+                        </button>
+                        <button type="button" class="btn btn-outline-primary preset-btn" data-preset="summarization">
+                            <i class="fa-solid fa-file-alt me-1"></i> Summarization
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const metricCheckboxes = document.querySelectorAll('.metric-checkbox');
+        const weightInputs = document.querySelectorAll('.weight-value');
+        const targetThresholdRange = document.getElementById('target_threshold_range');
+        const targetThresholdInput = document.getElementById('target_threshold');
+        const totalWeightDisplay = document.getElementById('total-weight-display');
+        const weightError = document.getElementById('weight-error');
+        const currentSum = document.getElementById('current-sum');
+        const submitBtn = document.getElementById('submit-btn');
+        const presetButtons = document.querySelectorAll('.preset-btn');
+        
+        // Toggle weight inputs based on metric selection
+        metricCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const metricId = this.value;
+                const weightContainer = document.getElementById(`weight_container_${metricId}`);
+                const weightBar = document.getElementById(`weight_bar_${metricId}`);
+                
+                if (this.checked) {
+                    weightContainer.style.display = 'block';
+                    weightBar.style.display = 'block';
+                } else {
+                    weightContainer.style.display = 'none';
+                    weightBar.style.display = 'none';
+                    document.getElementById(`weight_${metricId}`).value = 0;
+                }
+                
+                updateWeightBars();
+            });
+        });
+        
+        // Update weight bars when weight values change
+        weightInputs.forEach(input => {
+            input.addEventListener('input', updateWeightBars);
+        });
+        
+        // Sync target threshold range and input
+        targetThresholdRange.addEventListener('input', function() {
+            targetThresholdInput.value = this.value;
+        });
+        
+        targetThresholdInput.addEventListener('input', function() {
+            targetThresholdRange.value = this.value;
+        });
+        
+        // Update weight bars visualization
+        function updateWeightBars() {
+            let totalWeight = 0;
+            const weights = {};
+            
+            // Calculate total weight
+            metricCheckboxes.forEach(checkbox => {
+                const metricId = checkbox.value;
+                const weightInput = document.getElementById(`weight_${metricId}`);
+                
+                if (checkbox.checked) {
+                    const weight = parseFloat(weightInput.value) || 0;
+                    weights[metricId] = weight;
+                    totalWeight += weight;
+                }
+            });
+            
+            // Update weight bars
+            for (const [metricId, weight] of Object.entries(weights)) {
+                const weightBar = document.getElementById(`weight_bar_${metricId}`);
+                const percentage = totalWeight > 0 ? (weight / totalWeight) * 100 : 0;
+                weightBar.style.width = `${percentage}%`;
+            }
+            
+            // Update total weight display
+            totalWeightDisplay.textContent = totalWeight.toFixed(1);
+            currentSum.textContent = totalWeight.toFixed(1);
+            
+            // Show error if weights don't sum to 1
+            if (Math.abs(totalWeight - 1.0) > 0.01) {
+                weightError.style.display = 'block';
+                totalWeightDisplay.classList.remove('bg-primary');
+                totalWeightDisplay.classList.add('bg-danger');
+                submitBtn.disabled = true;
+            } else {
+                weightError.style.display = 'none';
+                totalWeightDisplay.classList.remove('bg-danger');
+                totalWeightDisplay.classList.add('bg-primary');
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // Apply presets
+        presetButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const preset = this.getAttribute('data-preset');
+                
+                // Reset all checkboxes and weights
+                metricCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    const metricId = checkbox.value;
+                    document.getElementById(`weight_container_${metricId}`).style.display = 'none';
+                    document.getElementById(`weight_bar_${metricId}`).style.display = 'none';
+                    document.getElementById(`weight_${metricId}`).value = 0;
+                });
+                
+                // Apply preset values
+                if (preset === 'balanced') {
+                    // Exact Match, Semantic Similarity, Keyword Match
+                    document.getElementById('metric_exact_match').checked = true;
+                    document.getElementById('metric_semantic_similarity').checked = true;
+                    document.getElementById('metric_keyword_match').checked = true;
+                    
+                    document.getElementById('weight_exact_match').value = 0.3;
+                    document.getElementById('weight_semantic_similarity').value = 0.4;
+                    document.getElementById('weight_keyword_match').value = 0.3;
+                    
+                    document.getElementById('target_threshold').value = 0.7;
+                    document.getElementById('target_threshold_range').value = 0.7;
+                    
+                } else if (preset === 'semantic') {
+                    // Heavily weighted on semantic similarity
+                    document.getElementById('metric_semantic_similarity').checked = true;
+                    document.getElementById('metric_keyword_match').checked = true;
+                    
+                    document.getElementById('weight_semantic_similarity').value = 0.8;
+                    document.getElementById('weight_keyword_match').value = 0.2;
+                    
+                    document.getElementById('target_threshold').value = 0.75;
+                    document.getElementById('target_threshold_range').value = 0.75;
+                    
+                } else if (preset === 'factual') {
+                    // Focus on exact matches and keywords
+                    document.getElementById('metric_exact_match').checked = true;
+                    document.getElementById('metric_keyword_match').checked = true;
+                    document.getElementById('metric_semantic_similarity').checked = true;
+                    
+                    document.getElementById('weight_exact_match').value = 0.5;
+                    document.getElementById('weight_keyword_match').value = 0.3;
+                    document.getElementById('weight_semantic_similarity').value = 0.2;
+                    
+                    document.getElementById('target_threshold').value = 0.8;
+                    document.getElementById('target_threshold_range').value = 0.8;
+                    
+                } else if (preset === 'summarization') {
+                    // Good for summarization tasks
+                    document.getElementById('metric_rouge').checked = true;
+                    document.getElementById('metric_semantic_similarity').checked = true;
+                    document.getElementById('metric_keyword_match').checked = true;
+                    
+                    document.getElementById('weight_rouge').value = 0.4;
+                    document.getElementById('weight_semantic_similarity').value = 0.4;
+                    document.getElementById('weight_keyword_match').value = 0.2;
+                    
+                    document.getElementById('target_threshold').value = 0.65;
+                    document.getElementById('target_threshold_range').value = 0.65;
+                }
+                
+                // Show selected metric weight inputs
+                metricCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        const metricId = checkbox.value;
+                        document.getElementById(`weight_container_${metricId}`).style.display = 'block';
+                        document.getElementById(`weight_bar_${metricId}`).style.display = 'block';
+                    }
+                });
+                
+                updateWeightBars();
+            });
+        });
+        
+        // Initial update
+        updateWeightBars();
+    });
+</script>
+{% endblock %}

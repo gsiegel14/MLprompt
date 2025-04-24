@@ -1,0 +1,229 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Create Model Configuration{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-plus-circle me-2"></i> Create Model Configuration
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.index') }}">ML Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.model_configurations') }}">Model Configurations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Create</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-cog me-2"></i> Configuration Details
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('ml_dashboard.create_model_configuration') }}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Configuration Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="e.g., Standard Gemini Configuration">
+                            <div class="form-text">A descriptive name to identify this configuration</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="primary_model" class="form-label">Primary Model</label>
+                                    <select class="form-select" id="primary_model" name="primary_model" required>
+                                        <option value="gemini-1.5-flash" selected>gemini-1.5-flash</option>
+                                        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                    </select>
+                                    <div class="form-text">Used for inference steps (1 and 4)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="optimizer_model" class="form-label">Optimizer Model</label>
+                                    <select class="form-select" id="optimizer_model" name="optimizer_model" required>
+                                        <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                        <option value="gemini-1.5-pro" selected>gemini-1.5-pro</option>
+                                    </select>
+                                    <div class="form-text">Used for optimization step (3)</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="temperature" class="form-label">Temperature</label>
+                                    <input type="number" class="form-control" id="temperature" name="temperature" 
+                                           step="0.1" min="0" max="1" value="0.0" required>
+                                    <div class="form-text">0.0 (focused) to 1.0 (creative)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="max_tokens" class="form-label">Max Tokens</label>
+                                    <input type="number" class="form-control" id="max_tokens" name="max_tokens" 
+                                           step="1" min="1" max="8192" value="1024" required>
+                                    <div class="form-text">Maximum response length</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="top_p" class="form-label">Top P</label>
+                                    <input type="number" class="form-control" id="top_p" name="top_p" 
+                                           step="0.01" min="0" max="1" value="1.0" required>
+                                    <div class="form-text">Nucleus sampling parameter</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="top_k" class="form-label">Top K</label>
+                                    <input type="number" class="form-control" id="top_k" name="top_k" 
+                                           step="1" min="1" max="100" value="40" required>
+                                    <div class="form-text">Token selection parameter</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_default" name="is_default">
+                            <label class="form-check-label" for="is_default">Set as default configuration</label>
+                            <div class="form-text">This configuration will be used by default for new experiments</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('ml_dashboard.model_configurations') }}" class="btn btn-outline-secondary">
+                                <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-save me-1"></i> Create Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-lightbulb me-2"></i> Parameter Guide
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>Temperature</h5>
+                        <p class="small">
+                            Controls the randomness in the model's output.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Deterministic</span>
+                            <span>Creative</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 0.5rem;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 0%;" 
+                                 id="temperature-preview" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small">0.0</span>
+                            <span class="small">0.5</span>
+                            <span class="small">1.0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Max Tokens</h5>
+                        <p class="small">
+                            The maximum length of the model's response. Higher values allow for longer responses but may increase latency and cost.
+                        </p>
+                        <div class="d-flex justify-content-between small">
+                            <span>Typical values:</span>
+                            <span>256 - 4096</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Top P & Top K</h5>
+                        <p class="small">
+                            Advanced sampling parameters that control token selection.
+                        </p>
+                        <ul class="small">
+                            <li><strong>Top P</strong>: Select tokens with cumulative probability up to the specified value.</li>
+                            <li><strong>Top K</strong>: Select from the top K tokens with highest probability.</li>
+                        </ul>
+                        <div class="alert alert-info small py-2">
+                            For most use cases, the default values work well. Adjust only if you need to fine-tune generation behavior.
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>Recommended Presets</h5>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" 
+                                    data-temp="0.0" data-max-tokens="1024" data-top-p="1.0" data-top-k="40">
+                                <i class="fa-solid fa-bolt me-1"></i> Deterministic Output
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" 
+                                    data-temp="0.7" data-max-tokens="2048" data-top-p="0.95" data-top-k="40">
+                                <i class="fa-solid fa-magic me-1"></i> Creative Optimization
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" 
+                                    data-temp="0.3" data-max-tokens="1536" data-top-p="0.9" data-top-k="50">
+                                <i class="fa-solid fa-balance-scale me-1"></i> Balanced
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Temperature visual feedback
+        const temperatureInput = document.getElementById('temperature');
+        const temperaturePreview = document.getElementById('temperature-preview');
+        
+        function updateTemperaturePreview() {
+            const value = parseFloat(temperatureInput.value);
+            const percentage = (value * 100).toFixed(0) + '%';
+            temperaturePreview.style.width = percentage;
+            temperaturePreview.setAttribute('aria-valuenow', value * 100);
+        }
+        
+        temperatureInput.addEventListener('input', updateTemperaturePreview);
+        updateTemperaturePreview(); // Initialize
+        
+        // Preset buttons
+        const presetButtons = document.querySelectorAll('.preset-btn');
+        presetButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const temp = this.getAttribute('data-temp');
+                const maxTokens = this.getAttribute('data-max-tokens');
+                const topP = this.getAttribute('data-top-p');
+                const topK = this.getAttribute('data-top-k');
+                
+                document.getElementById('temperature').value = temp;
+                document.getElementById('max_tokens').value = maxTokens;
+                document.getElementById('top_p').value = topP;
+                document.getElementById('top_k').value = topK;
+                
+                updateTemperaturePreview();
+            });
+        });
+    });
+</script>
+{% endblock %}

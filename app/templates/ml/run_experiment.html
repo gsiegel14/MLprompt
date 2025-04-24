@@ -1,0 +1,456 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Run Experiment{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-play-circle me-2"></i> Run Experiment: {{ experiment.name }}
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.index') }}">ML Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.experiments') }}">Experiments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.view_experiment', experiment_id=experiment.id) }}">{{ experiment.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Run</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-code-branch me-2"></i> 5-API Workflow Configuration
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('ml_dashboard.run_experiment', experiment_id=experiment.id) }}" method="post" id="runForm">
+                        <div class="mb-4">
+                            <h5>Initial Prompts</h5>
+                            <p class="text-muted small">These prompts will be used as the starting point for optimization.</p>
+                            
+                            <div class="mb-3">
+                                <label for="system_prompt" class="form-label">System Prompt</label>
+                                <textarea class="form-control" id="system_prompt" name="system_prompt" rows="5" required></textarea>
+                                <div class="form-text">Defines the AI assistant's role and behavior</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="output_prompt" class="form-label">Output Prompt</label>
+                                <textarea class="form-control" id="output_prompt" name="output_prompt" rows="5" required></textarea>
+                                <div class="form-text">Formats how the AI should structure its response</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Example Data</h5>
+                            <p class="text-muted small">Select the dataset to use for training and evaluation.</p>
+                            
+                            <div class="mb-3">
+                                <label for="dataset_source" class="form-label">Dataset Source</label>
+                                <select class="form-select" id="dataset_source" name="dataset_source" required>
+                                    <option value="nejm">NEJM Medical Dataset (159 examples)</option>
+                                    <option value="custom">Custom Examples</option>
+                                </select>
+                            </div>
+                            
+                            <div id="custom-examples-section" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="custom_examples" class="form-label">Custom Examples</label>
+                                    <textarea class="form-control" id="custom_examples" name="custom_examples" rows="5" 
+                                             placeholder="Format: User input|||Ground truth output
+Example 1 input|||Example 1 expected output
+Example 2 input|||Example 2 expected output"></textarea>
+                                    <div class="form-text">Enter your examples in the format shown above, one per line</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="file_upload" class="form-label">Or Upload Example File</label>
+                                    <input class="form-control" type="file" id="file_upload" accept=".csv,.txt,.json">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Workflow Settings</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="max_iterations" class="form-label">Max Iterations</label>
+                                        <input type="number" class="form-control" id="max_iterations" name="max_iterations" 
+                                               min="1" max="10" value="5" required>
+                                        <div class="form-text">Maximum optimization attempts</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="target_threshold" class="form-label">Target Threshold</label>
+                                        <input type="range" class="form-range" id="target_threshold_range" 
+                                               min="0.5" max="1" step="0.05" value="0.8">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="target_threshold" name="target_threshold" 
+                                                   min="0.5" max="1" step="0.05" value="0.8" required>
+                                            <span class="input-group-text"><i class="fa-solid fa-bullseye"></i></span>
+                                        </div>
+                                        <div class="form-text">Target score to achieve</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="target_metric" class="form-label">Primary Metric</label>
+                                        <select class="form-select" id="target_metric" name="target_metric" required>
+                                            <option value="exact_match">Exact Match</option>
+                                            <option value="semantic_similarity" selected>Semantic Similarity</option>
+                                            <option value="keyword_match">Keyword Match</option>
+                                            <option value="bleu">BLEU Score</option>
+                                            <option value="rouge">ROUGE Score</option>
+                                        </select>
+                                        <div class="form-text">Main metric to optimize for</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="early_stopping_patience" class="form-label">Early Stopping Patience</label>
+                                        <input type="number" class="form-control" id="early_stopping_patience" name="early_stopping_patience" 
+                                               min="1" max="5" value="2" required>
+                                        <div class="form-text">Stop after N non-improving iterations</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fa-solid fa-info-circle me-2"></i>
+                            <strong>Important:</strong> Running an experiment will execute a 5-API workflow that makes API calls to both Vertex AI (Google) and Hugging Face. 
+                            This process may take several minutes to complete.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('ml_dashboard.view_experiment', experiment_id=experiment.id) }}" class="btn btn-outline-secondary">
+                                <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="run-btn">
+                                <i class="fa-solid fa-play me-1"></i> Start Experiment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-info-circle me-2"></i> Experiment Details
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5">Name:</dt>
+                        <dd class="col-7">{{ experiment.name }}</dd>
+                        
+                        {% if experiment.description %}
+                        <dt class="col-5">Description:</dt>
+                        <dd class="col-7">{{ experiment.description }}</dd>
+                        {% endif %}
+                        
+                        <dt class="col-5">Created:</dt>
+                        <dd class="col-7">{{ experiment.created_at[:10] }}</dd>
+                        
+                        <dt class="col-5">Model Config:</dt>
+                        <dd class="col-7">
+                            {% if experiment.model_config %}
+                            {{ experiment.model_config.name }}
+                            {% else %}
+                            <span class="text-muted">Default</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-5">Metric Config:</dt>
+                        <dd class="col-7">
+                            {% if experiment.metric_config %}
+                            {{ experiment.metric_config.name }}
+                            {% else %}
+                            <span class="text-muted">Default</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-scroll me-2"></i> Prompt Templates
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="system" data-template="medical_qa">
+                            <i class="fa-solid fa-heart-pulse me-1"></i> Medical QA System
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="system" data-template="code_assistant">
+                            <i class="fa-solid fa-code me-1"></i> Code Assistant
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="output" data-template="structured_output">
+                            <i class="fa-solid fa-list-check me-1"></i> Structured Output
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="output" data-template="step_by_step">
+                            <i class="fa-solid fa-diagram-project me-1"></i> Step-by-Step
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-diagram-project me-2"></i> 5-API Workflow
+                </div>
+                <div class="card-body">
+                    <div class="workflow-steps-vertical">
+                        <div class="workflow-step-v d-flex align-items-center mb-3">
+                            <div class="step-circle bg-primary text-white me-3">1</div>
+                            <div>
+                                <div class="step-label">Primary Inference</div>
+                                <div class="small text-muted">Generate baseline responses</div>
+                                <div class="step-api small">Vertex AI</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow-connector-v"></div>
+                        
+                        <div class="workflow-step-v d-flex align-items-center mb-3">
+                            <div class="step-circle bg-info text-white me-3">2</div>
+                            <div>
+                                <div class="step-label">Baseline Evaluation</div>
+                                <div class="small text-muted">Calculate initial metrics</div>
+                                <div class="step-api small">Hugging Face</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow-connector-v"></div>
+                        
+                        <div class="workflow-step-v d-flex align-items-center mb-3">
+                            <div class="step-circle bg-warning text-dark me-3">3</div>
+                            <div>
+                                <div class="step-label">Optimization</div>
+                                <div class="small text-muted">Refine prompts</div>
+                                <div class="step-api small">Vertex AI</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow-connector-v"></div>
+                        
+                        <div class="workflow-step-v d-flex align-items-center mb-3">
+                            <div class="step-circle bg-danger text-white me-3">4</div>
+                            <div>
+                                <div class="step-label">Refined Inference</div>
+                                <div class="small text-muted">Generate new responses</div>
+                                <div class="step-api small">Vertex AI</div>
+                            </div>
+                        </div>
+                        
+                        <div class="workflow-connector-v"></div>
+                        
+                        <div class="workflow-step-v d-flex align-items-center">
+                            <div class="step-circle bg-success text-white me-3">5</div>
+                            <div>
+                                <div class="step-label">Comparative Evaluation</div>
+                                <div class="small text-muted">Compare improvements</div>
+                                <div class="step-api small">Hugging Face</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .workflow-connector-v {
+        width: 3px;
+        height: 20px;
+        background-color: var(--primary-color);
+        margin-left: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .step-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .step-api {
+        background-color: rgba(67, 97, 238, 0.1);
+        border-radius: 12px;
+        padding: 1px 6px;
+        display: inline-block;
+        margin-top: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle custom examples section
+        const datasetSourceSelect = document.getElementById('dataset_source');
+        const customExamplesSection = document.getElementById('custom-examples-section');
+        
+        datasetSourceSelect.addEventListener('change', function() {
+            customExamplesSection.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        // Sync target threshold range and input
+        const targetThresholdRange = document.getElementById('target_threshold_range');
+        const targetThresholdInput = document.getElementById('target_threshold');
+        
+        targetThresholdRange.addEventListener('input', function() {
+            targetThresholdInput.value = this.value;
+        });
+        
+        targetThresholdInput.addEventListener('input', function() {
+            targetThresholdRange.value = this.value;
+        });
+        
+        // Prompt templates
+        const promptTemplates = {
+            system: {
+                medical_qa: `You are an expert physician and master diagnostician with extensive knowledge of internal medicine, diagnostics, and rare conditions. Your task is to provide accurate, evidence-based medical information and differential diagnoses based on the symptoms and clinical information provided.
+
+Always consider both common and rare conditions that match the presented symptoms. Prioritize conditions based on likelihood and severity. Include key diagnostic criteria, potential tests, and next steps in the workup.`,
+                
+                code_assistant: `You are an expert software developer specializing in creating clean, efficient, and maintainable code. Your expertise spans multiple programming languages, software architecture, and best practices.
+
+Provide professional-quality code that follows language-specific conventions and design patterns. Include error handling, appropriate comments, and consider edge cases. When explaining code, focus on the reasoning behind implementation choices.`
+            },
+            
+            output: {
+                structured_output: `Provide your response in the following structured format:
+
+ASSESSMENT:
+[Provide a concise assessment of the situation/question]
+
+DETAILED ANALYSIS:
+[Break down the key components with clear explanations]
+
+RECOMMENDATION:
+[Offer specific, actionable recommendations]
+
+REFERENCES:
+[List any relevant sources or references]`,
+                
+                step_by_step: `Follow these steps in your response:
+
+1. INITIAL THOUGHTS: Briefly share your first impressions of the problem.
+2. ANALYZE: Break down the problem into its core components.
+3. EXPLORE OPTIONS: Consider multiple approaches or solutions.
+4. RECOMMEND: Provide your recommended approach with justification.
+5. IMPLEMENTATION: Outline specific steps to implement your recommendation.
+6. VERIFY: Explain how to validate that the solution works correctly.`
+            }
+        };
+        
+        const templateButtons = document.querySelectorAll('.template-btn');
+        templateButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const target = this.getAttribute('data-target');
+                const template = this.getAttribute('data-template');
+                const promptContent = promptTemplates[target][template];
+                
+                if (target === 'system') {
+                    document.getElementById('system_prompt').value = promptContent;
+                } else if (target === 'output') {
+                    document.getElementById('output_prompt').value = promptContent;
+                }
+            });
+        });
+        
+        // File upload handling
+        const fileUpload = document.getElementById('file_upload');
+        const customExamples = document.getElementById('custom_examples');
+        
+        fileUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                // Basic handling for different file types
+                if (file.name.endsWith('.csv')) {
+                    // Simple CSV parsing (assumes a two-column CSV)
+                    const lines = content.split('\n');
+                    let formattedContent = '';
+                    
+                    for (let i = 1; i < lines.length; i++) { // Skip header
+                        const line = lines[i].trim();
+                        if (line) {
+                            const columns = line.split(',');
+                            if (columns.length >= 2) {
+                                formattedContent += `${columns[0]}|||${columns[1]}\n`;
+                            }
+                        }
+                    }
+                    
+                    customExamples.value = formattedContent;
+                    
+                } else if (file.name.endsWith('.json')) {
+                    // Simple JSON parsing (assumes an array of objects with input/output fields)
+                    try {
+                        const jsonData = JSON.parse(content);
+                        let formattedContent = '';
+                        
+                        if (Array.isArray(jsonData)) {
+                            jsonData.forEach(item => {
+                                const input = item.input || item.user_input || item.question || '';
+                                const output = item.output || item.ground_truth_output || item.answer || '';
+                                
+                                if (input && output) {
+                                    formattedContent += `${input}|||${output}\n`;
+                                }
+                            });
+                        }
+                        
+                        customExamples.value = formattedContent;
+                        
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please check the format.');
+                    }
+                    
+                } else {
+                    // Plain text (assumes the format is already correct)
+                    customExamples.value = content;
+                }
+            };
+            
+            reader.readAsText(file);
+        });
+        
+        // Form submission handling
+        const runForm = document.getElementById('runForm');
+        const runButton = document.getElementById('run-btn');
+        
+        runForm.addEventListener('submit', function(e) {
+            // Disable button and show loading state
+            runButton.disabled = true;
+            runButton.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Starting Experiment...';
+            
+            // The form will submit normally
+        });
+    });
+</script>
+{% endblock %}

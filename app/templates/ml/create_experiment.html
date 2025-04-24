@@ -1,0 +1,422 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Create Experiment{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-plus-circle me-2"></i> Create Experiment
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.index') }}">ML Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('ml_dashboard.experiments') }}">Experiments</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Create</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-flask me-2"></i> Experiment Details
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('ml_dashboard.create_experiment') }}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Experiment Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="e.g., Medical QA Optimization">
+                            <div class="form-text">A descriptive name for this experiment</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                     placeholder="Briefly describe the purpose and goals of this experiment"></textarea>
+                            <div class="form-text">Provide context about what you're trying to optimize</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="model_config_id" class="form-label">Model Configuration</label>
+                                    <select class="form-select" id="model_config_id" name="model_config_id">
+                                        <option value="">Default Configuration</option>
+                                        {% for config in model_configs %}
+                                        <option value="{{ config.id }}" {% if config.is_default %}selected{% endif %}>
+                                            {{ config.name }}
+                                            {% if config.is_default %} (Default){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Select the model configuration to use</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="metric_config_id" class="form-label">Metric Configuration</label>
+                                    <select class="form-select" id="metric_config_id" name="metric_config_id">
+                                        <option value="">Default Metrics</option>
+                                        {% for config in metric_configs %}
+                                        <option value="{{ config.id }}">{{ config.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Select the metrics to use for evaluation</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 border-top pt-4">
+                            <h5 class="mb-3">Initial Prompts</h5>
+                            <p class="text-muted small">These prompts will be used as the starting point for optimization.</p>
+                            
+                            <div class="mb-3">
+                                <label for="system_prompt" class="form-label">Initial System Prompt</label>
+                                <textarea class="form-control" id="system_prompt" name="system_prompt" rows="5"></textarea>
+                                <div class="form-text">The system prompt defines the AI assistant's role and behavior</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="output_prompt" class="form-label">Initial Output Prompt</label>
+                                <textarea class="form-control" id="output_prompt" name="output_prompt" rows="5"></textarea>
+                                <div class="form-text">The output prompt formats how the AI should structure its response</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="use_examples" name="use_examples">
+                                <label class="form-check-label" for="use_examples">Include example data for prompt optimization</label>
+                                <div class="form-text">Load examples from the ATLAS platform's dataset</div>
+                            </div>
+                            
+                            <div id="examples-section" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="example_source" class="form-label">Example Source</label>
+                                    <select class="form-select" id="example_source" name="example_source">
+                                        <option value="nejm_train">NEJM Training Set (127 examples)</option>
+                                        <option value="nejm_validation">NEJM Validation Set (32 examples)</option>
+                                        <option value="custom">Custom Examples</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="custom-examples-section" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="custom_examples" class="form-label">Custom Examples</label>
+                                        <textarea class="form-control" id="custom_examples" name="custom_examples" rows="5" 
+                                                 placeholder="Format: User input|||Ground truth output
+Example 1 input|||Example 1 expected output
+Example 2 input|||Example 2 expected output"></textarea>
+                                        <div class="form-text">Enter your examples in the format shown above, one per line</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="file_upload" class="form-label">Or Upload Example File</label>
+                                        <input class="form-control" type="file" id="file_upload" accept=".csv,.txt,.json">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 border-top pt-4">
+                            <h5 class="mb-3">Workflow Settings</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="max_iterations" class="form-label">Max Iterations</label>
+                                        <input type="number" class="form-control" id="max_iterations" name="max_iterations" 
+                                               min="1" max="10" value="5">
+                                        <div class="form-text">Maximum optimization attempts</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="target_metric" class="form-label">Target Metric</label>
+                                        <select class="form-select" id="target_metric" name="target_metric">
+                                            <option value="exact_match">Exact Match</option>
+                                            <option value="semantic_similarity" selected>Semantic Similarity</option>
+                                            <option value="keyword_match">Keyword Match</option>
+                                            <option value="bleu">BLEU Score</option>
+                                            <option value="rouge">ROUGE Score</option>
+                                        </select>
+                                        <div class="form-text">Primary metric to optimize</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="early_stopping" class="form-label">Early Stopping</label>
+                                        <input type="number" class="form-control" id="early_stopping" name="early_stopping" 
+                                               min="1" max="5" value="2">
+                                        <div class="form-text">Stop after N non-improving iterations</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('ml_dashboard.experiments') }}" class="btn btn-outline-secondary">
+                                <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-save me-1"></i> Create Experiment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-lightbulb me-2"></i> About Experiments
+                </div>
+                <div class="card-body">
+                    <p>
+                        An experiment runs your prompts through the 5-API workflow to optimize for better performance.
+                    </p>
+                    
+                    <h6>Workflow Steps:</h6>
+                    <ol class="small">
+                        <li><strong>Primary Inference</strong> - Generate baseline responses</li>
+                        <li><strong>Baseline Evaluation</strong> - Calculate metrics</li>
+                        <li><strong>Optimization</strong> - Refine prompts based on performance</li>
+                        <li><strong>Refined Inference</strong> - Generate new responses</li>
+                        <li><strong>Comparative Evaluation</strong> - Compare metrics</li>
+                    </ol>
+                    
+                    <h6>Tips for Quality Results:</h6>
+                    <ul class="small">
+                        <li>Start with a well-structured system prompt</li>
+                        <li>Use diverse example data for better generalization</li>
+                        <li>Set a reasonable target threshold (0.7-0.9)</li>
+                        <li>Consider running multiple experiments with different settings</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-scroll me-2"></i> Prompt Templates
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="system" data-template="medical_qa">
+                            <i class="fa-solid fa-heart-pulse me-1"></i> Medical QA System
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="system" data-template="code_assistant">
+                            <i class="fa-solid fa-code me-1"></i> Code Assistant
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="system" data-template="tutor">
+                            <i class="fa-solid fa-graduation-cap me-1"></i> Educational Tutor
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="output" data-template="structured_output">
+                            <i class="fa-solid fa-list-check me-1"></i> Structured Output
+                        </button>
+                        <button type="button" class="btn btn-outline-primary template-btn" data-target="output" data-template="step_by_step">
+                            <i class="fa-solid fa-diagram-project me-1"></i> Step-by-Step
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-gear me-2"></i> Advanced Settings
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="enable_advanced" data-toggle="advanced-options">
+                        <label class="form-check-label" for="enable_advanced">Enable Advanced Options</label>
+                    </div>
+                    
+                    <div id="advanced-options" style="display: none;">
+                        <div class="mb-3">
+                            <label for="validation_split" class="form-label">Validation Split</label>
+                            <div class="input-group">
+                                <input type="range" class="form-range" id="validation_split" min="10" max="40" value="20">
+                                <span class="ms-2" id="validation_split_value">20%</span>
+                            </div>
+                            <div class="form-text">Percentage of examples to use for validation</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="optimization_strategy" class="form-label">Optimization Strategy</label>
+                            <select class="form-select form-select-sm" id="optimization_strategy">
+                                <option value="balanced" selected>Balanced</option>
+                                <option value="aggressive">Aggressive</option>
+                                <option value="conservative">Conservative</option>
+                            </select>
+                            <div class="form-text">Controls how dramatically prompts are modified</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle examples section
+        const useExamplesCheckbox = document.getElementById('use_examples');
+        const examplesSection = document.getElementById('examples-section');
+        
+        useExamplesCheckbox.addEventListener('change', function() {
+            examplesSection.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Toggle custom examples section
+        const exampleSourceSelect = document.getElementById('example_source');
+        const customExamplesSection = document.getElementById('custom-examples-section');
+        
+        exampleSourceSelect.addEventListener('change', function() {
+            customExamplesSection.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        // Toggle advanced options
+        const enableAdvancedCheckbox = document.getElementById('enable_advanced');
+        const advancedOptionsSection = document.getElementById('advanced-options');
+        
+        enableAdvancedCheckbox.addEventListener('change', function() {
+            advancedOptionsSection.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Validation split slider
+        const validationSplitSlider = document.getElementById('validation_split');
+        const validationSplitValue = document.getElementById('validation_split_value');
+        
+        validationSplitSlider.addEventListener('input', function() {
+            validationSplitValue.textContent = this.value + '%';
+        });
+        
+        // Prompt templates
+        const promptTemplates = {
+            system: {
+                medical_qa: `You are an expert physician and master diagnostician with extensive knowledge of internal medicine, diagnostics, and rare conditions. Your task is to provide accurate, evidence-based medical information and differential diagnoses based on the symptoms and clinical information provided.
+
+Always consider both common and rare conditions that match the presented symptoms. Prioritize conditions based on likelihood and severity. Include key diagnostic criteria, potential tests, and next steps in the workup.`,
+                
+                code_assistant: `You are an expert software developer specializing in creating clean, efficient, and maintainable code. Your expertise spans multiple programming languages, software architecture, and best practices.
+
+Provide professional-quality code that follows language-specific conventions and design patterns. Include error handling, appropriate comments, and consider edge cases. When explaining code, focus on the reasoning behind implementation choices.`,
+                
+                tutor: `You are an experienced educational tutor with deep knowledge across multiple subjects. Your approach is to guide students through concepts rather than simply providing answers.
+
+Use the Socratic method to help students discover answers themselves. Break down complex topics into understandable components. Provide explanations that match the student's level of understanding, using analogies and examples when helpful.`
+            },
+            
+            output: {
+                structured_output: `Provide your response in the following structured format:
+
+ASSESSMENT:
+[Provide a concise assessment of the situation/question]
+
+DETAILED ANALYSIS:
+[Break down the key components with clear explanations]
+
+RECOMMENDATION:
+[Offer specific, actionable recommendations]
+
+REFERENCES:
+[List any relevant sources or references]`,
+                
+                step_by_step: `Follow these steps in your response:
+
+1. INITIAL THOUGHTS: Briefly share your first impressions of the problem.
+2. ANALYZE: Break down the problem into its core components.
+3. EXPLORE OPTIONS: Consider multiple approaches or solutions.
+4. RECOMMEND: Provide your recommended approach with justification.
+5. IMPLEMENTATION: Outline specific steps to implement your recommendation.
+6. VERIFY: Explain how to validate that the solution works correctly.`
+            }
+        };
+        
+        const templateButtons = document.querySelectorAll('.template-btn');
+        templateButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const target = this.getAttribute('data-target');
+                const template = this.getAttribute('data-template');
+                const promptContent = promptTemplates[target][template];
+                
+                if (target === 'system') {
+                    document.getElementById('system_prompt').value = promptContent;
+                } else if (target === 'output') {
+                    document.getElementById('output_prompt').value = promptContent;
+                }
+            });
+        });
+        
+        // File upload handling
+        const fileUpload = document.getElementById('file_upload');
+        const customExamples = document.getElementById('custom_examples');
+        
+        fileUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                // Basic handling for different file types
+                if (file.name.endsWith('.csv')) {
+                    // Simple CSV parsing (assumes a two-column CSV)
+                    const lines = content.split('\n');
+                    let formattedContent = '';
+                    
+                    for (let i = 1; i < lines.length; i++) { // Skip header
+                        const line = lines[i].trim();
+                        if (line) {
+                            const columns = line.split(',');
+                            if (columns.length >= 2) {
+                                formattedContent += `${columns[0]}|||${columns[1]}\n`;
+                            }
+                        }
+                    }
+                    
+                    customExamples.value = formattedContent;
+                    
+                } else if (file.name.endsWith('.json')) {
+                    // Simple JSON parsing (assumes an array of objects with input/output fields)
+                    try {
+                        const jsonData = JSON.parse(content);
+                        let formattedContent = '';
+                        
+                        if (Array.isArray(jsonData)) {
+                            jsonData.forEach(item => {
+                                const input = item.input || item.user_input || item.question || '';
+                                const output = item.output || item.ground_truth_output || item.answer || '';
+                                
+                                if (input && output) {
+                                    formattedContent += `${input}|||${output}\n`;
+                                }
+                            });
+                        }
+                        
+                        customExamples.value = formattedContent;
+                        
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please check the format.');
+                    }
+                    
+                } else {
+                    // Plain text (assumes the format is already correct)
+                    customExamples.value = content;
+                }
+            };
+            
+            reader.readAsText(file);
+        });
+    });
+</script>
+{% endblock %}

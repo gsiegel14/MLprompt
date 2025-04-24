@@ -1,0 +1,193 @@
+{% extends "ml/base.html" %}
+
+{% block title %}ATLAS - Model Configurations{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-3">
+                <i class="fa-solid fa-sliders me-2"></i> Model Configurations
+            </h1>
+            <p class="lead">
+                Configure LLM model parameters for the 5-API workflow.
+            </p>
+            <div class="mb-3">
+                <a href="{{ url_for('ml_dashboard.create_model_configuration') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus me-1"></i> New Configuration
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if configurations %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-list-ul me-2"></i> Available Configurations
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Primary Model</th>
+                                    <th>Optimizer Model</th>
+                                    <th>Temperature</th>
+                                    <th>Max Tokens</th>
+                                    <th>Default</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for config in configurations %}
+                                <tr>
+                                    <td>{{ config.name }}</td>
+                                    <td>{{ config.primary_model }}</td>
+                                    <td>{{ config.optimizer_model }}</td>
+                                    <td>{{ config.temperature }}</td>
+                                    <td>{{ config.max_tokens }}</td>
+                                    <td>
+                                        {% if config.is_default %}
+                                        <span class="badge bg-success">Default</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ config.created_at[:10] }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ url_for('ml_dashboard.edit_model_configuration', config_id=config.id) }}" class="btn btn-outline-primary">
+                                                <i class="fa-solid fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ config.id }}">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ config.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ config.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ config.id }}">Delete Configuration</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete the configuration <strong>{{ config.name }}</strong>?<br>
+                                                        This action cannot be undone.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('ml_dashboard.delete_model_configuration', config_id=config.id) }}" method="post">
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fa-solid fa-info-circle me-2"></i>
+                No model configurations found. Click the button above to create your first configuration.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-lightbulb me-2"></i> About Model Configurations
+                </div>
+                <div class="card-body">
+                    <h5>Primary Model vs. Optimizer Model</h5>
+                    <p>
+                        In the 5-API workflow, the platform uses two types of LLM calls:
+                    </p>
+                    <ul>
+                        <li><strong>Primary Model</strong>: Used for steps 1 and 4 (inference)</li>
+                        <li><strong>Optimizer Model</strong>: Used for step 3 (prompt optimization)</li>
+                    </ul>
+                    
+                    <h5>Temperature</h5>
+                    <p>
+                        Controls randomness in the output:
+                    </p>
+                    <ul>
+                        <li><strong>Lower values (0.0 - 0.3)</strong>: More deterministic, focused responses</li>
+                        <li><strong>Higher values (0.7 - 1.0)</strong>: More creative, diverse responses</li>
+                    </ul>
+                    
+                    <h5>Max Tokens</h5>
+                    <p>
+                        Limits the length of generated responses. Balancing this setting helps control costs while ensuring sufficient detail in responses.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-robot me-2"></i> Available Models
+                </div>
+                <div class="card-body">
+                    <h5>Google Vertex AI (Gemini)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Model Name</th>
+                                    <th>Description</th>
+                                    <th>Use Case</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>gemini-1.5-flash</code></td>
+                                    <td>Cost-effective with good quality</td>
+                                    <td>Primary inference, quick evaluations</td>
+                                </tr>
+                                <tr>
+                                    <td><code>gemini-1.5-pro</code></td>
+                                    <td>High quality, more capabilities</td>
+                                    <td>Optimization, complex reasoning</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h5 class="mt-3">Recommended Configurations</h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-light text-dark p-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Primary: gemini-1.5-flash, Temp: 0.0
+                        </span>
+                        <span class="badge bg-light text-dark p-2">
+                            <i class="fa-solid fa-check-circle text-success me-1"></i>
+                            Optimizer: gemini-1.5-pro, Temp: 0.7
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

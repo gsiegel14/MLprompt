@@ -46,6 +46,14 @@ with app.app_context():
 from app.google_auth import google_auth
 app.register_blueprint(google_auth, url_prefix='/google_auth')
 
+# Import and register ML dashboard blueprint
+from app.ml.views import ml_dashboard
+app.register_blueprint(ml_dashboard, url_prefix='/ml-dashboard')
+
+# Import and register ML API blueprint
+from app.ml.routes import ml_api
+app.register_blueprint(ml_api, url_prefix='/api/ml')
+
 # Import routes at the end to avoid circular imports
 from app import main
 from app import api_endpoints  # Import API endpoints
