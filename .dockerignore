@@ -1,0 +1,23 @@
+
+# Exclude large files from deployment
+cache/
+**/*.pkl
+**/*.bin
+**/*.model
+logs/
+**/__pycache__/
+experiments/*/examples/
+experiments/*/examples_*.json
+data/train/*
+data/validation/*
+data/test/*
+data/nejm/*
+!data/train/current_train.json
+!data/validation/current_validation.json
+debug_experiments/
+test_outputs/
+hyperparameter_tuning/
+cross_validation/
+*.pyc
+*.pyo
+*.pyd
