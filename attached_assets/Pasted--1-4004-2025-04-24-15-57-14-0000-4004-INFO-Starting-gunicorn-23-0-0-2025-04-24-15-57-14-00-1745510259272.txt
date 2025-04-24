@@ -1,0 +1,33 @@
+[1] 4004
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Starting gunicorn 23.0.0
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Listening at: http://0.0.0.0:5000 (4004)
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Using worker: sync
+[2025-04-24 15:57:14 +0000] [4009] [INFO] Booting worker with pid: 4009
+INFO:app:Database configuration complete. URI: postgresql://neondb_...
+DEBUG:app.main:Loaded configuration: {'gemini': {'model_name': 'gemini-1.5-flash', 'temperature': 0.0, 'top_p': 0.95, 'top_k': 40, 'max_output_tokens': 1024}, 'app': {'max_examples': 0, 'enable_caching': True, 'debug': True}, 'optimizer': {'model_name': 'gemini-1.5-flash', 'temperature': 0.7, 'max_output_tokens': 2048, 'strategies': ['reasoning_first', 'full_rewrite', 'targeted_edit', 'example_addition']}, 'evaluation': {'metrics': ['exact_match', 'semantic_similarity', 'keyword_match'], 'perfect_threshold': 0.9}, 'training': {'default_train_ratio': 0.8, 'default_max_iterations': 5, 'early_stopping_patience': 2}}
+WARNING:app.data_module:Examples file data/train/current_train.json does not exist
+WARNING:app.data_module:Examples file data/validation/current_validation.json does not exist
+WARNING:app.data_module:Examples file data/train/examples.json does not exist
+WARNING:app.data_module:Examples file data/validation/examples.json does not exist
+INFO:app.data_module:Initialized DataModule with 0 train examples and 0 validation examples
+WARNING:app.data_module:Examples file data/train/current_train.json does not exist
+WARNING:app.data_module:Examples file data/validation/current_validation.json does not exist
+WARNING:app.data_module:Examples file data/train/examples.json does not exist
+WARNING:app.data_module:Examples file data/validation/examples.json does not exist
+INFO:app.data_module:Initialized DataModule with 0 train examples and 0 validation examples
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
