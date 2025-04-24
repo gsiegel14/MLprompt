@@ -1151,3 +1151,280 @@ function appendToTrainingLogs(message) {
         trainingLogsEl.scrollTop = trainingLogsEl.scrollHeight;
     }
 }
+
+/**
+ * Debug Console Functionality
+ * This section implements a debug console that captures and displays errors, warnings, and logs
+ */
+
+// Debug state
+const debugState = {
+    logs: [],
+    errorCount: 0,
+    warningCount: 0,
+    autoScroll: true
+};
+
+/**
+ * Initialize the debug console
+ */
+function initializeDebugConsole() {
+    // Override console methods to capture logs
+    setupConsoleOverrides();
+    
+    // Set up event listeners for debug console
+    setupDebugConsoleEventListeners();
+    
+    // Initial log
+    logToDebugConsole('info', 'Debug console initialized', { timestamp: new Date().toISOString() });
+    
+    // Capture any errors that occurred before initialization (from webview_console_logs)
+    captureExistingErrors();
+}
+
+/**
+ * Set up debug console event listeners
+ */
+function setupDebugConsoleEventListeners() {
+    // Show debug console button
+    const showDebugConsoleBtn = document.getElementById('showDebugConsole');
+    if (showDebugConsoleBtn) {
+        showDebugConsoleBtn.addEventListener('click', function() {
+            const debugModal = new bootstrap.Modal(document.getElementById('debugModal'));
+            debugModal.show();
+        });
+    }
+    
+    // Clear console button
+    const clearDebugConsoleBtn = document.getElementById('clearDebugConsole');
+    if (clearDebugConsoleBtn) {
+        clearDebugConsoleBtn.addEventListener('click', function() {
+            debugState.logs = [];
+            debugState.errorCount = 0;
+            debugState.warningCount = 0;
+            updateDebugConsoleDisplay();
+            updateErrorCounter();
+        });
+    }
+    
+    // Copy logs button
+    const copyDebugLogsBtn = document.getElementById('copyDebugLogs');
+    if (copyDebugLogsBtn) {
+        copyDebugLogsBtn.addEventListener('click', function() {
+            const debugConsole = document.getElementById('debugConsole');
+            if (debugConsole) {
+                const text = debugConsole.innerText;
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            this.innerHTML = 'Copy Logs';
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy logs:', err);
+                        this.innerHTML = '<i class="fas fa-times"></i> Failed';
+                        setTimeout(() => {
+                            this.innerHTML = 'Copy Logs';
+                        }, 2000);
+                    });
+            }
+        });
+    }
+    
+    // Auto-scroll switch
+    const autoScrollSwitch = document.getElementById('autoScrollSwitch');
+    if (autoScrollSwitch) {
+        autoScrollSwitch.addEventListener('change', function() {
+            debugState.autoScroll = this.checked;
+        });
+    }
+}
+
+/**
+ * Override console methods to capture logs
+ */
+function setupConsoleOverrides() {
+    // Store original methods
+    const originalConsole = {
+        log: console.log,
+        info: console.info,
+        warn: console.warn,
+        error: console.error
+    };
+    
+    // Override console.log
+    console.log = function() {
+        originalConsole.log.apply(console, arguments);
+        logToDebugConsole('log', Array.from(arguments).join(' '));
+    };
+    
+    // Override console.info
+    console.info = function() {
+        originalConsole.info.apply(console, arguments);
+        logToDebugConsole('info', Array.from(arguments).join(' '));
+    };
+    
+    // Override console.warn
+    console.warn = function() {
+        originalConsole.warn.apply(console, arguments);
+        logToDebugConsole('warn', Array.from(arguments).join(' '));
+        debugState.warningCount++;
+        updateErrorCounter();
+    };
+    
+    // Override console.error
+    console.error = function() {
+        originalConsole.error.apply(console, arguments);
+        logToDebugConsole('error', Array.from(arguments).join(' '));
+        debugState.errorCount++;
+        updateErrorCounter();
+    };
+    
+    // Capture unhandled errors
+    window.addEventListener('error', function(event) {
+        logToDebugConsole('error', `Unhandled error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`);
+        debugState.errorCount++;
+        updateErrorCounter();
+        return false;
+    });
+    
+    // Capture unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(event) {
+        logToDebugConsole('error', `Unhandled promise rejection: ${event.reason}`);
+        debugState.errorCount++;
+        updateErrorCounter();
+        return false;
+    });
+    
+    // Capture fetch errors
+    const originalFetch = window.fetch;
+    window.fetch = function() {
+        return originalFetch.apply(this, arguments)
+            .catch(error => {
+                logToDebugConsole('error', `Fetch error: ${error.message}`, {
+                    url: arguments[0],
+                    options: arguments[1]
+                });
+                debugState.errorCount++;
+                updateErrorCounter();
+                throw error;
+            });
+    };
+}
+
+/**
+ * Add a log entry to the debug console
+ */
+function logToDebugConsole(level, message, data = null) {
+    const timestamp = new Date().toISOString();
+    const entry = {
+        timestamp,
+        level,
+        message,
+        data
+    };
+    
+    debugState.logs.push(entry);
+    
+    // Limit logs to prevent memory issues (keep last 1000)
+    if (debugState.logs.length > 1000) {
+        debugState.logs.shift();
+    }
+    
+    // Update display
+    updateDebugConsoleDisplay();
+}
+
+/**
+ * Update the debug console display
+ */
+function updateDebugConsoleDisplay() {
+    const debugConsole = document.getElementById('debugConsole');
+    if (!debugConsole) return;
+    
+    // Format logs
+    let html = '';
+    debugState.logs.forEach(log => {
+        const timestamp = log.timestamp.split('T')[1].split('.')[0]; // HH:MM:SS
+        const levelClass = getLevelClass(log.level);
+        const dataStr = log.data ? `\n${JSON.stringify(log.data, null, 2)}` : '';
+        
+        html += `<div class="${levelClass}">[${timestamp}] [${log.level.toUpperCase()}] ${escapeHtml(log.message)}${dataStr}</div>`;
+    });
+    
+    debugConsole.innerHTML = html;
+    
+    // Auto-scroll to bottom
+    if (debugState.autoScroll) {
+        debugConsole.scrollTop = debugConsole.scrollHeight;
+    }
+}
+
+/**
+ * Get CSS class for log level
+ */
+function getLevelClass(level) {
+    switch (level) {
+        case 'error':
+            return 'text-danger';
+        case 'warn':
+            return 'text-warning';
+        case 'info':
+            return 'text-info';
+        default:
+            return 'text-light';
+    }
+}
+
+/**
+ * Update the error counter badge
+ */
+function updateErrorCounter() {
+    const errorCountBadge = document.getElementById('debugErrorCount');
+    if (errorCountBadge) {
+        const count = debugState.errorCount + debugState.warningCount;
+        errorCountBadge.textContent = count.toString();
+        
+        // Change badge color based on count
+        if (debugState.errorCount > 0) {
+            errorCountBadge.className = 'badge bg-danger ms-2';
+        } else if (debugState.warningCount > 0) {
+            errorCountBadge.className = 'badge bg-warning ms-2';
+        } else {
+            errorCountBadge.className = 'badge bg-secondary ms-2';
+        }
+    }
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * Capture errors that may have occurred before debug console initialization
+ */
+function captureExistingErrors() {
+    // Check for any errors in the window object or global scope
+    setTimeout(() => {
+        if (window.webviewConsoleErrors && Array.isArray(window.webviewConsoleErrors)) {
+            window.webviewConsoleErrors.forEach(error => {
+                console.error('Captured error:', error);
+            });
+        }
+        
+        // Log the known issue about metrics summary errors
+        console.error('Checking for "Error fetching metrics summary" issues');
+        
+        // Generate a test log to verify the debug console is working
+        console.log('Debug console is ready');
+    }, 500);
+}

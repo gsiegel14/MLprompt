@@ -1,6 +1,0 @@
-Provide your response using the following structure:
-
-1. **Analysis:** Summarize the key clinical findings and relevant patient history.
-2. **Differential Diagnosis:** List potential diagnoses based on your analysis.  Explain your reasoning for including each diagnosis.
-3. **Reasoning and Elimination:**  Systematically evaluate each potential diagnosis, explaining why some are less likely than others.  Cite any relevant medical knowledge used in your elimination process.
-4. **Final Diagnosis/Recommendation:** State your final diagnosis (if possible) or recommended next steps in managing the case.  Justify your choice based on your reasoning above.
