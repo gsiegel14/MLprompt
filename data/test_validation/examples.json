@@ -1,1 +1,7 @@
 [{"user_input": "Eosinophils", "ground_truth_output": "0\u2013600, 100, 0, 0\u2013900, 20"}, {"user_input": "Creatinine (mg/dl)", "ground_truth_output": "0.5\u20131.2, 3.2, 0.5\u20131.2, 3.4, 0.60\u20131.50, 2.96"}, {"user_input": "During the 7 weeks after the surgery", "ground_truth_output": "shortness of breath occurred with decreasing levels of exertion. Three weeks before the current admission, the patient\u2019s symptoms worsened such that he was unable to walk across a room, and he sought evaluation in the primary care clinic of another hospital. The d-dimer level was 3220 ng per milliliter (reference value, <500), and he was instructed to present to the emergency department of this hospital."}, {"user_input": "Platelet count (per \u00b5l)", "ground_truth_output": "150,000\u2013400,000, 208,000"}, {"user_input": "Fibrinogen (mg/dl)", "ground_truth_output": "150\u2013400, <60"}]
+[
+  {
+    "user_input": "I have a 34-year-old with a history of PE. What is the differential diagnosis?",
+    "ground_truth_output": "Mention of PE"
+  }
+]
