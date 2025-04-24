@@ -297,6 +297,56 @@ class PromptOptimizationWorkflow:
             self.experiment_tracker.save_prompt(experiment_id, 'original_output', output_prompt)
             self.experiment_tracker.save_prompt(experiment_id, 'optimized_system', optimized_system_prompt)
             self.experiment_tracker.save_prompt(experiment_id, 'optimized_output', optimized_output_prompt)
+            
+            # Save validation results
+            validation_examples = []
+            # Make sure we use validation data here
+            for i in range(len(validation_optimized_predictions)):
+                validation_examples.append({
+                    'user_input': validation_batch[i].get('user_input', ''),
+                    'ground_truth_output': validation_references[i],
+                    'original_response': validation_original_predictions[i],
+                    'optimized_response': validation_optimized_predictions[i]
+                })
+                
+            self.experiment_tracker.save_validation_results(
+                experiment_id, 
+                validation_examples,
+                {
+                    'original_metrics': original_hf_metrics,
+                    'optimized_metrics': optimized_hf_metrics
+                }
+            )
+            
+            # Compile the complete results
+            results = {
+                'experiment_id': experiment_id,
+                'internal_metrics': internal_metrics,
+                'huggingface_metrics': {
+                    'original': original_hf_metrics,
+                    'optimized': optimized_hf_metrics
+                },
+                'prompts': {
+                    'original': {
+                        'system_prompt': system_prompt,
+                        'output_prompt': output_prompt
+                    },
+                    'optimized': {
+                        'system_prompt': optimized_system_prompt,
+                        'output_prompt': optimized_output_prompt
+                    }
+                },
+                'examples_count': len(batch),
+                'validation_count': len(validation_batch)
+            }
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in 5-API workflow: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {"error": str(e)}
 
     def _handle_workflow_error(self, error, phase, iteration, experiment_id, context=None):
         """
