@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}ATLAS - ML Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="display-5 mb-4">
+                <i class="fa-solid fa-brain mr-2"></i> ATLAS Machine Learning Dashboard
+            </h1>
+            
+            <div class="alert alert-info">
+                <i class="fa-solid fa-info-circle me-2"></i>
+                Configure, manage, and monitor ML models and experiments for prompt optimization.
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="fa-solid fa-sliders me-2"></i> Model Configurations
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Configure LLM model parameters, including model names, temperature, and other generation settings.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('ml_dashboard.model_configurations') }}" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-gear me-1"></i> Manage Configurations
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="fa-solid fa-chart-bar me-2"></i> Metric Settings
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Configure evaluation metrics, weights, and targets for prompt optimization experiments.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('ml_dashboard.metric_configurations') }}" class="btn btn-outline-info">
+                            <i class="fa-solid fa-chart-pie me-1"></i> Manage Metrics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <i class="fa-solid fa-flask me-2"></i> Experiments
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Create, run, and monitor 5-API workflow experiments for prompt optimization.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('ml_dashboard.experiments') }}" class="btn btn-outline-success">
+                            <i class="fa-solid fa-vial me-1"></i> Manage Experiments
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fa-solid fa-graduation-cap me-2"></i> Meta-Learning
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Configure meta-learning models to predict prompt performance and guide optimization.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('ml_dashboard.meta_learning') }}" class="btn btn-outline-warning">
+                            <i class="fa-solid fa-brain me-1"></i> Manage Models
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-diagram-project me-2"></i> 5-API Workflow Process
+                </div>
+                <div class="card-body">
+                    <div class="workflow-diagram">
+                        <div class="d-flex justify-content-between align-items-center workflow-steps">
+                            <div class="workflow-step text-center">
+                                <div class="step-circle bg-primary text-white">1</div>
+                                <div class="step-label">Primary Inference</div>
+                                <div class="step-api">Vertex AI</div>
+                            </div>
+                            
+                            <div class="workflow-connector"></div>
+                            
+                            <div class="workflow-step text-center">
+                                <div class="step-circle bg-info text-white">2</div>
+                                <div class="step-label">Baseline Evaluation</div>
+                                <div class="step-api">Hugging Face</div>
+                            </div>
+                            
+                            <div class="workflow-connector"></div>
+                            
+                            <div class="workflow-step text-center">
+                                <div class="step-circle bg-warning text-dark">3</div>
+                                <div class="step-label">Optimization</div>
+                                <div class="step-api">Vertex AI</div>
+                            </div>
+                            
+                            <div class="workflow-connector"></div>
+                            
+                            <div class="workflow-step text-center">
+                                <div class="step-circle bg-danger text-white">4</div>
+                                <div class="step-label">Refined Inference</div>
+                                <div class="step-api">Vertex AI</div>
+                            </div>
+                            
+                            <div class="workflow-connector"></div>
+                            
+                            <div class="workflow-step text-center">
+                                <div class="step-circle bg-success text-white">5</div>
+                                <div class="step-label">Comparative Evaluation</div>
+                                <div class="step-api">Hugging Face</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>Workflow Description</h5>
+                        <ul class="workflow-description">
+                            <li><strong>Primary Inference:</strong> Generate initial responses using current prompts</li>
+                            <li><strong>Baseline Evaluation:</strong> Calculate metrics on initial responses</li>
+                            <li><strong>Optimization:</strong> Generate refined prompts based on performance data</li>
+                            <li><strong>Refined Inference:</strong> Generate new responses with optimized prompts</li>
+                            <li><strong>Comparative Evaluation:</strong> Calculate and compare metrics to determine improvement</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <i class="fa-solid fa-chart-simple me-2"></i> Performance Metrics
+                </div>
+                <div class="card-body">
+                    <div id="metrics-summary">
+                        <div class="metric-item mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Training Accuracy</span>
+                                <span class="badge bg-primary" id="training-accuracy">0.00</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="training-accuracy-bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-item mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Validation Accuracy</span>
+                                <span class="badge bg-info" id="validation-accuracy">0.00</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="validation-accuracy-bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-item">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Improvement</span>
+                                <span class="badge bg-success" id="improvement-percentage">+0%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="improvement-bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="fa-solid fa-rocket me-2"></i> Quick Actions
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('ml_dashboard.create_experiment') }}" class="btn btn-primary">
+                            <i class="fa-solid fa-plus me-1"></i> New Experiment
+                        </a>
+                        <a href="{{ url_for('ml_dashboard.create_model_configuration') }}" class="btn btn-outline-secondary">
+                            <i class="fa-solid fa-gear me-1"></i> New Model Config
+                        </a>
+                        <a href="{{ url_for('five_api_workflow_page') }}" class="btn btn-outline-danger">
+                            <i class="fa-solid fa-play me-1"></i> Launch 5-API Workflow
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch metrics summary
+        fetch('/api/ml/metrics-summary')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update training accuracy
+                    const trainingAccuracy = data.training_accuracy || 0;
+                    document.getElementById('training-accuracy').textContent = trainingAccuracy.toFixed(2);
+                    document.getElementById('training-accuracy-bar').style.width = `${trainingAccuracy * 100}%`;
+                    document.getElementById('training-accuracy-bar').setAttribute('aria-valuenow', trainingAccuracy * 100);
+                    
+                    // Update validation accuracy
+                    const validationAccuracy = data.validation_accuracy || 0;
+                    document.getElementById('validation-accuracy').textContent = validationAccuracy.toFixed(2);
+                    document.getElementById('validation-accuracy-bar').style.width = `${validationAccuracy * 100}%`;
+                    document.getElementById('validation-accuracy-bar').setAttribute('aria-valuenow', validationAccuracy * 100);
+                    
+                    // Update improvement
+                    const improvement = data.improvement_percentage || 0;
+                    document.getElementById('improvement-percentage').textContent = `+${improvement}%`;
+                    
+                    // Cap at 100% for progress bar
+                    const improvementPercent = Math.min(improvement, 100);
+                    document.getElementById('improvement-bar').style.width = `${improvementPercent}%`;
+                    document.getElementById('improvement-bar').setAttribute('aria-valuenow', improvementPercent);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching metrics summary:', error);
+            });
+    });
+</script>
+{% endblock %}
