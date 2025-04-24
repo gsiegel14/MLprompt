@@ -498,3 +498,56 @@ class RLModelService:
         db.session.commit()
         
         return model.to_dict()
+        
+    @staticmethod
+    def update_rl_model(model_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update an existing RL model.
+        
+        Args:
+            model_id: The ID of the RL model to update
+            data: Dictionary containing updated model data
+            
+        Returns:
+            The updated RL model as a dictionary, or None if not found
+        """
+        model = RLModel.query.filter_by(id=model_id).first()
+        if not model:
+            return None
+        
+        for key, value in data.items():
+            if hasattr(model, key):
+                setattr(model, key, value)
+        
+        db.session.commit()
+        return model.to_dict()
+        
+    @staticmethod
+    def delete_rl_model(model_id: str) -> bool:
+        """Delete an RL model.
+        
+        Args:
+            model_id: The ID of the RL model to delete
+            
+        Returns:
+            True if the model was deleted, False otherwise
+        """
+        model = RLModel.query.filter_by(id=model_id).first()
+        if not model:
+            return False
+        
+        db.session.delete(model)
+        db.session.commit()
+        return True
+        
+    @staticmethod
+    def get_rl_model(model_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific RL model by ID.
+        
+        Args:
+            model_id: The ID of the RL model
+            
+        Returns:
+            RL model as a dictionary, or None if not found
+        """
+        model = RLModel.query.filter_by(id=model_id).first()
+        return model.to_dict() if model else None

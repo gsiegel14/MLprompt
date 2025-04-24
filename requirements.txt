@@ -49,3 +49,6 @@ oauthlib
 flask-login
 oauthlib
 requests
+prefect
+lightgbm
+stable-baselines3
