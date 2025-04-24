@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Start Application with Database"
+runButton = "Start Application with Database and Prefect"
 
 [[workflows.workflow]]
 name = "Project"
@@ -140,6 +140,28 @@ args = "python -m scripts.init_database"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
+
+[[workflows.workflow]]
+name = "Start Application with Database and Prefect"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
+
+[[workflows.workflow]]
+name = "Initialize PostgreSQL Database"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
 
 [[ports]]
 localPort = 5000

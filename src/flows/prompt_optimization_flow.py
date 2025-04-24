@@ -1,712 +1,610 @@
 """
-Prompt Optimization Flow using Prefect 2.0
+Prompt Optimization Flow using Prefect 2.0 with PostgreSQL database integration
 """
 import logging
 import time
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+import os
+import uuid
 
 from prefect import flow, task, get_run_logger
-from typing import Dict, List, Any, Optional
+from prefect.deployments import run_deployment
 
 from src.app.models.prompt_state import PromptState
 from src.app.clients.vertex_client import VertexAIClient
 from src.app.clients.hf_evaluator import EvaluatorService
+from src.app.database.db import SessionLocal
+from src.app.repositories.prompt_repository import PromptRepository
+from src.app.repositories.experiment_repository import ExperimentRepository
+from src.app.repositories.dataset_repository import DatasetRepository
+from src.app.repositories.ml_settings_repository import MLSettingsRepository
 
 logger = logging.getLogger(__name__)
 
 @task(name="load_prompt_state")
-def load_prompt_state(system_prompt: str, output_prompt: str, version: int = 1) -> PromptState:
-    """
-    Load or create a prompt state
+def load_prompt_state(system_prompt_path: str, output_prompt_path: str) -> PromptState:
+    """Load prompt state from files"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Loading prompts from {system_prompt_path} and {output_prompt_path}")
 
-    Args:
-        system_prompt: System prompt text or path to file
-        output_prompt: Output prompt text or path to file
-        version: Version number
-
-    Returns:
-        PromptState object
-    """
-    # Check if inputs are file paths
-    if system_prompt.endswith('.txt') and output_prompt.endswith('.txt'):
-        try:
-            with open(system_prompt, 'r') as f:
-                system_prompt_text = f.read()
-            with open(output_prompt, 'r') as f:
-                output_prompt_text = f.read()
-
-            return PromptState(
-                system_prompt=system_prompt_text,
-                output_prompt=output_prompt_text,
-                version=version,
-                created_at=datetime.now().isoformat()
-            )
-        except Exception as e:
-            logger.error(f"Error loading prompt files: {str(e)}")
-            raise
-
-    # Otherwise treat as direct text
-    return PromptState(
-        system_prompt=system_prompt,
-        output_prompt=output_prompt,
-        version=version,
-        created_at=datetime.now().isoformat()
-    )
-
-@task(name="primary_llm_inference", retries=2)
-def primary_llm_inference(
-    prompt_state: Dict[str, Any],
-    examples: List[Dict[str, str]],
-    vertex_project_id: str,
-    vertex_location: str,
-    model_name: str
-) -> List[Dict[str, Any]]:
-    """
-    Step 1: Generate baseline responses with current prompts
-
-    Args:
-        prompt_state: Dictionary representation of PromptState
-        examples: List of examples to run inference on
-        vertex_project_id: Google Cloud project ID
-        vertex_location: Google Cloud region
-        model_name: Name of primary LLM model to use
-
-    Returns:
-        List of examples with predictions
-    """
     try:
-        # Initialize Vertex client
-        client = VertexAIClient(vertex_project_id, vertex_location)
+        with open(system_prompt_path, 'r') as f:
+            system_prompt = f.read().strip()
 
-        # Recreate PromptState from dict
-        state = PromptState(**prompt_state)
+        with open(output_prompt_path, 'r') as f:
+            output_prompt = f.read().strip()
 
-        # Run batch prediction
-        prediction_results = client.batch_predict(
-            examples=examples,
-            prompt_state={
-                "system_prompt": state.system_prompt,
-                "output_prompt": state.output_prompt
-            },
-            model_name=model_name
+        # Create prompt state
+        prompt_state = PromptState(
+            system_prompt=system_prompt,
+            output_prompt=output_prompt
         )
 
-        # Add predictions to examples
-        for i, example in enumerate(examples):
-            if i < len(prediction_results["predictions"]):
-                example["model_output"] = prediction_results["predictions"][i]
+        # Try to save to database
+        try:
+            db = SessionLocal()
+            repo = PromptRepository(db)
+            db_prompt = repo.create(
+                system_prompt=system_prompt,
+                output_prompt=output_prompt
+            )
+            prompt_state.id = str(db_prompt.id)
+            run_logger.info(f"Saved prompt to database with ID: {prompt_state.id}")
+        except Exception as e:
+            run_logger.warning(f"Failed to save prompt to database: {str(e)}")
+        finally:
+            db.close()
 
-        return examples
+        return prompt_state
     except Exception as e:
-        logger.error(f"Error in primary inference: {str(e)}")
+        run_logger.error(f"Error loading prompt state: {str(e)}")
         raise
 
-@task(name="evaluate_baseline", retries=1)
-def evaluate_baseline(
-    examples: List[Dict[str, Any]],
-    metrics: Optional[List[str]] = None
-) -> Dict[str, float]:
-    """
-    Step 2: Compute baseline metrics using Hugging Face Evaluate
+@task(name="load_dataset")
+def load_dataset(dataset_path: str, batch_size: int = 5, sample_k: int = 3) -> List[Dict]:
+    """Load dataset from file"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Loading dataset from {dataset_path}")
 
-    Args:
-        examples: List of examples with model predictions
-        metrics: List of metrics to compute
+    import json
+    import random
 
-    Returns:
-        Dictionary of metric scores
-    """
     try:
-        # Extract predictions and references
-        predictions = [ex.get("model_output", "") for ex in examples]
-        references = [ex.get("ground_truth_output", "") for ex in examples]
+        with open(dataset_path, 'r') as f:
+            dataset = json.load(f)
 
-        # Initialize evaluator
-        evaluator = EvaluatorService()
+        # Sample examples if needed
+        if sample_k > 0 and sample_k < len(dataset):
+            dataset = random.sample(dataset, min(sample_k, len(dataset)))
 
-        # Compute metrics
-        results = evaluator.evaluate(
-            predictions=predictions,
-            references=references,
-            metrics=metrics
-        )
+        # Try to save to database
+        try:
+            db = SessionLocal()
+            repo = DatasetRepository(db)
+            dataset_name = os.path.basename(dataset_path)
+            db_dataset = repo.create(
+                name=dataset_name,
+                file_path=dataset_path,
+                row_count=len(dataset)
+            )
+            run_logger.info(f"Saved dataset to database with ID: {db_dataset.id}")
+        except Exception as e:
+            run_logger.warning(f"Failed to save dataset to database: {str(e)}")
+        finally:
+            db.close()
 
-        # Add number of examples
-        results["total_examples"] = len(examples)
+        return dataset[:batch_size]
+    except Exception as e:
+        run_logger.error(f"Error loading dataset: {str(e)}")
+        raise
+
+@task(name="primary_llm_inference")
+def primary_llm_inference(prompt_state: PromptState, examples: List[Dict]) -> List[Dict]:
+    """Run primary LLM inference on examples"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Running primary LLM inference on {len(examples)} examples")
+
+    try:
+        db = SessionLocal()
+        ml_settings_repo = MLSettingsRepository(db)
+        model_config = ml_settings_repo.get_default()
+        db.close()
+
+        # Configure client with settings from database
+        llm_client = VertexAIClient()
+        if model_config:
+            run_logger.info(f"Using model configuration: {model_config.name}")
+            llm_client.configure(
+                model_name=model_config.primary_model,
+                temperature=model_config.temperature,
+                max_tokens=model_config.max_tokens,
+                top_p=model_config.top_p,
+                top_k=model_config.top_k
+            )
+
+        results = []
+
+        for example in examples:
+            user_input = example.get("input", "")
+            expected_output = example.get("expected_output", "")
+
+            response = llm_client.generate(
+                system_prompt=prompt_state.system_prompt,
+                user_prompt=user_input,
+                output_prompt=prompt_state.output_prompt
+            )
+
+            results.append({
+                "input": user_input,
+                "expected_output": expected_output,
+                "actual_output": response,
+                "prompt_id": prompt_state.id
+            })
 
         return results
     except Exception as e:
-        logger.error(f"Error in baseline evaluation: {str(e)}")
+        run_logger.error(f"Error in primary LLM inference: {str(e)}")
         raise
 
-@task(name="optimizer_llm", retries=2)
-def optimizer_llm(
-    prompt_state: Dict[str, Any],
-    baseline_metrics: Dict[str, float],
-    example_sample: List[Dict[str, Any]],
-    vertex_project_id: str,
-    vertex_location: str,
-    optimizer_model_name: str
-) -> Dict[str, Any]:
-    """
-    Step 3: Generate refined prompts based on performance data
+@task(name="evaluate_metrics")
+def evaluate_metrics(examples: List[Dict], metric_names: List[str]) -> Dict[str, float]:
+    """Evaluate metrics using HuggingFace Evaluator"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Evaluating metrics: {', '.join(metric_names)}")
 
-    Args:
-        prompt_state: Dictionary representation of PromptState
-        baseline_metrics: Metrics from baseline evaluation
-        example_sample: Sample of examples with predictions for analysis
-        vertex_project_id: Google Cloud project ID
-        vertex_location: Google Cloud region
-        optimizer_model_name: Name of optimizer LLM model
-
-    Returns:
-        Updated PromptState with refined prompts
-    """
     try:
-        # Initialize Vertex client
-        client = VertexAIClient(vertex_project_id, vertex_location)
+        evaluator = EvaluatorService()
 
-        # Create optimizer prompt
-        optimizer_prompt = f"""
-As an AI prompt optimization expert, analyze the current prompts and performance metrics to create improved prompts.
+        predictions = [example["actual_output"] for example in examples]
+        references = [example["expected_output"] for example in examples]
 
+        # Calculate all requested metrics
+        metrics_results = {}
+        for metric_name in metric_names:
+            metric_score = evaluator.calculate_metric(
+                metric_name=metric_name,
+                predictions=predictions,
+                references=references
+            )
+            metrics_results[metric_name] = metric_score
+
+        # Calculate average score
+        if metrics_results:
+            avg_score = sum(metrics_results.values()) / len(metrics_results)
+            metrics_results["avg_score"] = avg_score
+
+        run_logger.info(f"Metrics: {metrics_results}")
+        return metrics_results
+    except Exception as e:
+        run_logger.error(f"Error evaluating metrics: {str(e)}")
+        raise
+
+@task(name="optimize_prompt")
+def optimize_prompt(
+    prompt_state: PromptState,
+    examples: List[Dict],
+    metrics: Dict[str, float],
+    optimizer_strategy: str = "reasoning_first"
+) -> PromptState:
+    """Optimize prompt using LLM"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Optimizing prompt using strategy: {optimizer_strategy}")
+
+    try:
+        db = SessionLocal()
+        ml_settings_repo = MLSettingsRepository(db)
+        model_config = ml_settings_repo.get_default()
+        db.close()
+
+        # Configure optimizer client with settings from database
+        optimizer_client = VertexAIClient()
+        if model_config:
+            run_logger.info(f"Using optimizer configuration: {model_config.name}")
+            optimizer_client.configure(
+                model_name=model_config.optimizer_model,
+                temperature=0.7,  # Use higher temperature for optimization
+                max_tokens=model_config.max_tokens * 2,  # Need more tokens for reasoning
+                top_p=0.95
+            )
+
+        # Prepare optimizer input
+        optimizer_prompt = get_optimizer_prompt(optimizer_strategy)
+
+        # Format examples and metrics for the optimizer
+        formatted_examples = format_examples_for_optimizer(examples)
+        formatted_metrics = "\n".join([f"{k}: {v:.4f}" for k, v in metrics.items()])
+
+        # Build the full optimizer input
+        optimizer_input = f"""
 CURRENT SYSTEM PROMPT:
-{prompt_state["system_prompt"]}
+{prompt_state.system_prompt}
 
 CURRENT OUTPUT PROMPT:
-{prompt_state["output_prompt"]}
+{prompt_state.output_prompt}
 
-PERFORMANCE METRICS:
-{baseline_metrics}
+EXAMPLES AND CURRENT RESULTS:
+{formatted_examples}
 
-EXAMPLE INPUTS AND OUTPUTS:
-{example_sample[:5]}  # Include only a few examples to avoid overwhelming the model
+METRICS:
+{formatted_metrics}
 
-Based on the above, please generate improved versions of both prompts. Focus on:
-1. Fixing any issues visible in the example outputs
-2. Enhancing clarity and specificity
-3. Improving factual accuracy and reasoning
-
-Respond with a JSON object containing:
-{{"system_prompt": "improved system prompt here", "output_prompt": "improved output prompt here", "reasoning": "explanation of your changes here"}}
+Please analyze and improve both prompts based on the examples and metrics above.
 """
 
-        # Generate improved prompts
-        response = client.generate_response(
-            model_name=optimizer_model_name,
-            user_content=optimizer_prompt,
-            temperature=0.7
+        # Run the optimizer
+        response = optimizer_client.generate(
+            system_prompt=optimizer_prompt,
+            user_prompt=optimizer_input
         )
 
-        # Parse response (assuming it's valid JSON)
+        # Parse the response to get new prompts
+        new_system_prompt, new_output_prompt, reasoning = parse_optimizer_response(
+            response, prompt_state.system_prompt, prompt_state.output_prompt
+        )
+
+        # Create optimized prompt state
+        optimized_prompt = PromptState(
+            system_prompt=new_system_prompt,
+            output_prompt=new_output_prompt,
+            parent_id=prompt_state.id
+        )
+
+        # Save to database
         try:
-            import json
-            optimized = json.loads(response)
-
-            # Create new PromptState
-            new_state = PromptState(
-                system_prompt=optimized.get("system_prompt", prompt_state["system_prompt"]),
-                output_prompt=optimized.get("output_prompt", prompt_state["output_prompt"]),
-                version=prompt_state["version"] + 1,
-                parent_id=prompt_state.get("id"),
-                created_at=datetime.now().isoformat()
+            db = SessionLocal()
+            repo = PromptRepository(db)
+            metadata = {
+                "optimizer_strategy": optimizer_strategy,
+                "metrics": metrics,
+                "reasoning": reasoning
+            }
+            db_prompt = repo.create(
+                system_prompt=new_system_prompt,
+                output_prompt=new_output_prompt,
+                parent_id=prompt_state.id,
+                metadata=metadata
             )
+            optimized_prompt.id = str(db_prompt.id)
+            run_logger.info(f"Saved optimized prompt to database with ID: {optimized_prompt.id}")
+        except Exception as e:
+            run_logger.warning(f"Failed to save optimized prompt to database: {str(e)}")
+        finally:
+            db.close()
 
-            # Add reasoning to metadata
-            new_state.metadata["optimization_reasoning"] = optimized.get("reasoning", "No reasoning provided")
-
-            return new_state.dict()
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse optimizer response as JSON: {response[:100]}...")
-            # Fall back to returning the original state with a version bump
-            state = PromptState(**prompt_state)
-            state.version += 1
-            return state.dict()
-
+        return optimized_prompt
     except Exception as e:
-        logger.error(f"Error in optimizer LLM: {str(e)}")
+        run_logger.error(f"Error optimizing prompt: {str(e)}")
         raise
 
-@task(name="refined_llm_inference", retries=2)
-def refined_llm_inference(
-    optimized_prompt_state: Dict[str, Any],
-    examples: List[Dict[str, Any]],
-    vertex_project_id: str,
-    vertex_location: str,
-    model_name: str
-) -> List[Dict[str, Any]]:
-    """
-    Step 4: Run inference with optimized prompts
+def get_optimizer_prompt(optimizer_strategy: str) -> str:
+    """Get the appropriate optimizer prompt based on strategy"""
+    if optimizer_strategy == "reasoning_first":
+        # Try to load from file first
+        try:
+            with open("prompts/optimizer/reasoning_first.txt", "r") as f:
+                return f.read().strip()
+        except:
+            pass
 
-    Args:
-        optimized_prompt_state: Dictionary representation of optimized PromptState
-        examples: List of examples to run inference on
-        vertex_project_id: Google Cloud project ID
-        vertex_location: Google Cloud region
-        model_name: Name of primary LLM model to use
+        # Default optimizer prompt
+        return """You are an expert prompt engineer specializing in optimizing system and output prompts for LLMs.
+Your task is to analyze examples, results, and metrics, then suggest improvements to both prompts.
+First, analyze exactly what's going wrong with the current responses compared to expected outputs.
+Then, suggest specific changes to both prompts to improve performance.
+Provide your response in this format:
 
-    Returns:
-        List of examples with optimized predictions
-    """
-    try:
-        # Initialize Vertex client
-        client = VertexAIClient(vertex_project_id, vertex_location)
+REASONING: [Your detailed analysis of what's working and what's not]
 
-        # Run batch prediction with optimized prompts
-        prediction_results = client.batch_predict(
-            examples=examples,
-            prompt_state={
-                "system_prompt": optimized_prompt_state["system_prompt"],
-                "output_prompt": optimized_prompt_state["output_prompt"]
-            },
-            model_name=model_name
-        )
+IMPROVED SYSTEM PROMPT:
+[Your improved system prompt]
 
-        # Add optimized predictions to examples
-        for i, example in enumerate(examples):
-            if i < len(prediction_results["predictions"]):
-                example["optimized_output"] = prediction_results["predictions"][i]
+IMPROVED OUTPUT PROMPT:
+[Your improved output prompt]"""
+    else:
+        return """You are an expert prompt engineer. Analyze the current prompts, examples, and metrics.
+Then suggest improved versions of both the system prompt and output prompt.
 
-        return examples
-    except Exception as e:
-        logger.error(f"Error in refined inference: {str(e)}")
-        raise
+Format your response as:
 
-@task(name="evaluate_refined")
-def evaluate_refined(
-    examples: List[Dict[str, Any]],
-    metrics: Optional[List[str]] = None
-) -> Dict[str, float]:
-    """
-    Step 5: Compare metrics and decide whether to continue
+IMPROVED SYSTEM PROMPT:
+[Your improved system prompt]
 
-    Args:
-        examples: List of examples with optimized predictions
-        metrics: List of metrics to compute
+IMPROVED OUTPUT PROMPT:
+[Your improved output prompt]
 
-    Returns:
-        Dictionary of metric scores for optimized outputs
-    """
-    try:
-        # Extract optimized predictions and references
-        predictions = [ex.get("optimized_output", "") for ex in examples]
-        references = [ex.get("ground_truth_output", "") for ex in examples]
+REASONING:
+[Brief explanation of your changes]"""
 
-        # Initialize evaluator
-        evaluator = EvaluatorService()
+def format_examples_for_optimizer(examples: List[Dict]) -> str:
+    """Format examples for the optimizer input"""
+    formatted = []
 
-        # Compute metrics for optimized outputs
-        results = evaluator.evaluate(
-            predictions=predictions,
-            references=references,
-            metrics=metrics
-        )
+    for i, example in enumerate(examples, 1):
+        formatted.append(f"EXAMPLE {i}:")
+        formatted.append(f"Input: {example['input']}")
+        formatted.append(f"Expected: {example['expected_output']}")
+        formatted.append(f"Actual: {example['actual_output']}")
+        formatted.append("")
 
-        # Add number of examples
-        results["total_examples"] = len(examples)
+    return "\n".join(formatted)
 
-        return results
-    except Exception as e:
-        logger.error(f"Error in refined evaluation: {str(e)}")
-        raise
+def parse_optimizer_response(response: str, original_system_prompt: str, original_output_prompt: str) -> tuple:
+    """Parse the optimizer response to extract new prompts and reasoning"""
+    system_prompt = original_system_prompt
+    output_prompt = original_output_prompt
+    reasoning = ""
 
-@flow(name="prompt_optimization_flow")
-def prompt_optimization_flow(
-    system_prompt: str,
-    output_prompt: str,
-    examples: List[Dict[str, str]],
-    vertex_project_id: str,
-    vertex_location: str,
-    primary_model_name: str,
-    optimizer_model_name: str,
-    metrics: Optional[List[str]] = None,
-    target_threshold: float = 0.9,
-    max_iterations: int = 3
-) -> Dict[str, Any]:
-    """
-    Main flow for optimizing prompts through 5-step process
+    # Extract reasoning
+    if "REASONING:" in response:
+        reasoning_parts = response.split("REASONING:")
+        if len(reasoning_parts) > 1:
+            reasoning_text = reasoning_parts[1].strip()
+            next_header = None
+            for header in ["IMPROVED SYSTEM PROMPT:", "SYSTEM PROMPT:", "IMPROVED OUTPUT PROMPT:", "OUTPUT PROMPT:"]:
+                if header in reasoning_text:
+                    next_header = reasoning_text.find(header)
+                    break
 
-    Args:
-        system_prompt: Initial system prompt text or file path
-        output_prompt: Initial output prompt text or file path
-        examples: List of examples for training
-        vertex_project_id: Google Cloud project ID
-        vertex_location: Google Cloud region
-        primary_model_name: Model for inference steps
-        optimizer_model_name: Model for optimization step
-        metrics: List of metrics to compute
-        target_threshold: Target performance threshold
-        max_iterations: Maximum number of optimization iterations
+            if next_header:
+                reasoning = reasoning_text[:next_header].strip()
+            else:
+                reasoning = reasoning_text
 
-    Returns:
-        Dictionary with results including best prompt state and metrics
-    """
-    # Default metrics if not provided
-    if not metrics:
-        metrics = ["exact_match_score", "token_match_score"]
+    # Extract system prompt
+    for header in ["IMPROVED SYSTEM PROMPT:", "SYSTEM PROMPT:"]:
+        if header in response:
+            parts = response.split(header)
+            if len(parts) > 1:
+                system_text = parts[1].strip()
+                next_header = None
+                for h in ["IMPROVED OUTPUT PROMPT:", "OUTPUT PROMPT:", "REASONING:"]:
+                    if h in system_text:
+                        next_header = system_text.find(h)
+                        break
 
-    # Initialize best state and metrics
-    current_prompt_state = load_prompt_state(system_prompt, output_prompt)
-    best_prompt_state = current_prompt_state.dict()
-    best_metrics = None
-    best_examples = None
+                if next_header:
+                    system_prompt = system_text[:next_header].strip()
+                else:
+                    system_prompt = system_text
 
-    # Track history
-    history = []
+    # Extract output prompt
+    for header in ["IMPROVED OUTPUT PROMPT:", "OUTPUT PROMPT:"]:
+        if header in response:
+            parts = response.split(header)
+            if len(parts) > 1:
+                output_text = parts[1].strip()
+                next_header = None
+                for h in ["IMPROVED SYSTEM PROMPT:", "SYSTEM PROMPT:", "REASONING:"]:
+                    if h in output_text:
+                        next_header = output_text.find(h)
+                        break
 
-    #Simple cost tracker (replace with a real implementation)
-    class SimpleCostTracker:
-        def __init__(self):
-            self.costs = []
+                if next_header:
+                    output_prompt = output_text[:next_header].strip()
+                else:
+                    output_prompt = output_text
 
-        def record_cost(self, cost):
-            self.costs.append(cost)
+    return system_prompt, output_prompt, reasoning
 
-        def get_cost_report(self):
-            return {"total_cost": sum(self.costs)}
-
-        def save_report(self, filename):
-            import json
-            with open(filename, 'w') as f:
-                json.dump(self.get_cost_report(), f)
-            return filename
-
-    cost_tracker = SimpleCostTracker()
-
-    optimization_start_time = time.time()
-
-    # Iterate for optimization
-    for iteration in range(max_iterations):
-        logger.info(f"Starting iteration {iteration+1}/{max_iterations}")
-        #Record cost for this iteration (replace with actual cost calculation)
-        cost_tracker.record_cost(iteration + 1) #Example cost
-
-        # Step 1: Primary LLM Inference
-        examples_with_predictions = primary_llm_inference(
-            prompt_state=current_prompt_state.dict(),
-            examples=examples.copy(),  # Copy to avoid modifying original
-            vertex_project_id=vertex_project_id,
-            vertex_location=vertex_location,
-            model_name=primary_model_name
-        )
-
-        # Step 2: Baseline Evaluation
-        baseline_metrics = evaluate_baseline(
-            examples=examples_with_predictions,
-            metrics=metrics
-        )
-
-        # Store metrics on first iteration
-        if iteration == 0:
-            best_metrics = baseline_metrics.copy()
-            best_examples = examples_with_predictions.copy()
-
-        # Step 3: Optimizer LLM
-        optimized_prompt_state = optimizer_llm(
-            prompt_state=current_prompt_state.dict(),
-            baseline_metrics=baseline_metrics,
-            example_sample=examples_with_predictions[:5],  # Sample for analysis
-            vertex_project_id=vertex_project_id,
-            vertex_location=vertex_location,
-            optimizer_model_name=optimizer_model_name
-        )
-
-        # Step 4: Refined LLM Inference
-        examples_with_optimized = refined_llm_inference(
-            optimized_prompt_state=optimized_prompt_state,
-            examples=examples_with_predictions,
-            vertex_project_id=vertex_project_id,
-            vertex_location=vertex_location,
-            model_name=primary_model_name
-        )
-
-        # Step 5: Second Evaluation
-        optimized_metrics = evaluate_refined(
-            examples=examples_with_optimized,
-            metrics=metrics
-        )
-
-        # Record this iteration
-        iteration_record = {
-            "iteration": iteration + 1,
-            "baseline_metrics": baseline_metrics,
-            "optimized_metrics": optimized_metrics,
-            "baseline_prompt_state": current_prompt_state.dict(),
-            "optimized_prompt_state": optimized_prompt_state,
-            "examples": examples_with_optimized
-        }
-        history.append(iteration_record)
-
-        # Determine if optimized prompts are better
-        # Using the first metric as the primary comparison metric
-        primary_metric = metrics[0]
-        baseline_score = baseline_metrics.get(primary_metric, 0)
-        optimized_score = optimized_metrics.get(primary_metric, 0)
-
-        logger.info(f"Iteration {iteration+1} - Baseline {primary_metric}: {baseline_score:.4f}, Optimized: {optimized_score:.4f}")
-
-        # Update best if optimized is better
-        if optimized_score > best_metrics.get(primary_metric, 0):
-            best_prompt_state = optimized_prompt_state
-            best_metrics = optimized_metrics.copy()
-            best_examples = examples_with_optimized.copy()
-            logger.info(f"New best prompt found with {primary_metric}: {optimized_score:.4f}")
-
-        # Early stopping if we reach target threshold
-        if optimized_score >= target_threshold:
-            logger.info(f"Target threshold {target_threshold} reached. Stopping early.")
-            break
-
-        # Update current state for next iteration
-        current_prompt_state = PromptState(**optimized_prompt_state)
-
-    # Calculate total optimization time
-    optimization_duration = time.time() - optimization_start_time
-
-    # Save final cost report
-    cost_report_path = cost_tracker.save_report("final_optimization_costs.json")
-
-    # Return the best prompt state, metrics, and cost information
-    return {
-        "best_prompt_state": best_prompt_state,
-        "best_metrics": best_metrics,
-        "history": history,
-        "iterations_completed": len(history),
-        "optimization_duration_seconds": optimization_duration,
-        "cost_report": cost_tracker.get_cost_report(),
-        "cost_report_path": cost_report_path
-    }
-"""
-Prefect flow for the 5-step prompt optimization workflow
-"""
-from prefect import flow, get_run_logger
-import os
-import json
-from datetime import datetime
-from typing import Dict, List, Any, Optional
-
-from src.flows.tasks.data_tasks import load_state, save_state
-from src.flows.tasks.inference_tasks import vertex_primary_inference, vertex_refined_inference
-from src.flows.tasks.evaluation_tasks import hf_eval_baseline, hf_eval_refined
-from src.flows.tasks.optimization_tasks import vertex_optimizer_refine
-from src.flows.tasks.logging_tasks import compare_and_log
-from src.app.config import settings
-from src.app.utils import calculate_score
-
-@flow(name="prompt-optimization-flow")
+@flow(name="prompt_optimization")
 def prompt_optimization_flow(
     system_prompt_path: str,
     output_prompt_path: str,
     dataset_path: str,
-    metric_names: List[str] = None,
+    metric_names: List[str] = ["exact_match", "bleu"],
     target_metric: str = "avg_score",
-    target_threshold: float = 0.90,
+    target_threshold: float = 0.85,
     patience: int = 3,
-    max_iterations: int = 10,
-    batch_size: int = 10,
-    sample_k: int = 5,
+    max_iterations: int = 5,
+    batch_size: int = 5,
+    sample_k: int = 3,
     optimizer_strategy: str = "reasoning_first",
-    experiment_id: str = None,
-    state_path: str = None,
+    experiment_id: Optional[str] = None
 ):
-    """
-    5-step workflow for prompt optimization:
-    1. Primary LLM Inference
-    2. Hugging Face Evaluation
-    3. Optimizer LLM
-    4. Refined LLM Inference
-    5. Second Evaluation
+    """Main optimization flow that orchestrates the 5-step process"""
+    run_logger = get_run_logger()
+    run_logger.info(f"Starting prompt optimization flow for {dataset_path}")
 
-    Args:
-        system_prompt_path: Path to initial system prompt file
-        output_prompt_path: Path to initial output prompt file
-        dataset_path: Path to dataset file (CSV or JSON)
-        metric_names: List of metrics to calculate
-        target_metric: Primary metric for optimization
-        target_threshold: Target value for early stopping
-        patience: Number of non-improving iterations before stopping
-        max_iterations: Maximum number of optimization cycles
-        batch_size: Batch size for API calls
-        sample_k: Number of worst examples to send to optimizer
-        optimizer_strategy: Strategy for optimization
-        experiment_id: Experiment ID to track in experiment history
-        state_path: Optional path to existing state to resume
+    # Load initial state
+    prompt_state = load_prompt_state(system_prompt_path, output_prompt_path)
+    examples = load_dataset(dataset_path, batch_size, sample_k)
 
-    Returns:
-        Dictionary with final results
-    """
-    logger = get_run_logger()
-    logger.info(f"Starting prompt optimization flow with target {target_metric} >= {target_threshold}")
+    # Get or create experiment
+    try:
+        db = SessionLocal()
+        experiment_repo = ExperimentRepository(db)
 
-    # Set default metric names if not provided
-    if metric_names is None:
-        metric_names = ["exact_match", "bleu"]
+        if experiment_id:
+            # Get existing experiment
+            experiment = experiment_repo.get_by_id(experiment_id)
+            if not experiment:
+                run_logger.error(f"Experiment with ID {experiment_id} not found")
+                raise ValueError(f"Experiment with ID {experiment_id} not found")
 
-    # Initialize experiment tracking
-    if experiment_id is None:
-        experiment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            run_logger.info(f"Using existing experiment: {experiment.name} (ID: {experiment_id})")
+            # Update status to running
+            experiment_repo.update_status(experiment_id, "running")
+        else:
+            # Create new experiment
+            dataset_name = os.path.basename(dataset_path)
+            dataset_repo = DatasetRepository(db)
+            dataset = dataset_repo.get_by_name(dataset_name)
 
-    # Create experiment directory
-    experiment_dir = os.path.join("experiments", experiment_id)
-    os.makedirs(experiment_dir, exist_ok=True)
+            if not dataset:
+                # Create dataset if it doesn't exist
+                dataset = dataset_repo.create(
+                    name=dataset_name,
+                    file_path=dataset_path,
+                    row_count=len(examples)
+                )
 
-    # Initialize tracking variables
-    no_improve_count = 0
-    best_metric_value = 0.0
-    best_state_path = None
+            experiment = experiment_repo.create(
+                name=f"Optimization {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                initial_prompt_id=prompt_state.id,
+                dataset_id=str(dataset.id),
+                metrics=metric_names,
+                max_epochs=max_iterations,
+                target_threshold=target_threshold
+            )
 
-    # Track all results
-    results_history = []
+            experiment_id = str(experiment.id)
+            run_logger.info(f"Created new experiment: {experiment.name} (ID: {experiment_id})")
+    except Exception as e:
+        run_logger.error(f"Error setting up experiment: {str(e)}")
+        raise
+    finally:
+        db.close()
 
-    # Start the optimization loop
+    # Optimization loop
+    best_metric = 0
+    best_prompt = prompt_state
+    no_improvement_count = 0
+
     for iteration in range(max_iterations):
-        logger.info(f"Starting iteration {iteration+1}/{max_iterations}")
+        run_logger.info(f"Starting iteration {iteration + 1}/{max_iterations}")
 
-        # 1. Load or initialize state and dataset
-        state_data = load_state(
-            system_prompt_path, 
-            output_prompt_path, 
-            dataset_path, 
-            state_path
-        )
+        # Step 1: Primary LLM Inference
+        examples_with_results = primary_llm_inference(prompt_state, examples)
 
-        # 2. Run primary inference (Step 1)
-        dataset_with_preds = vertex_primary_inference(
-            state_data["prompt_state"],
-            state_data["dataset"],
-            batch_size=batch_size
-        )
+        # Step 2: HuggingFace Evaluation
+        metrics = evaluate_metrics(examples_with_results, metric_names)
 
-        # 3. Evaluate baseline performance (Step 2)
-        baseline_result = hf_eval_baseline(
-            dataset_with_preds,
-            metric_names
-        )
-        baseline_metrics = baseline_result["metrics"]
-        dataset_with_scores = baseline_result["dataset"]
+        # Save metrics to database
+        try:
+            db = SessionLocal()
+            experiment_repo = ExperimentRepository(db)
+            metrics_record = experiment_repo.add_metrics_record(
+                experiment_id=experiment_id,
+                epoch=iteration + 1,
+                metrics=metrics,
+                prompt_id=prompt_state.id
+            )
+            run_logger.info(f"Saved metrics record for epoch {iteration + 1}")
+        except Exception as e:
+            run_logger.warning(f"Failed to save metrics to database: {str(e)}")
+        finally:
+            db.close()
 
-        # Log baseline metrics
-        logger.info(f"Baseline metrics: {json.dumps(baseline_metrics)}")
+        # Check if target_metric exists in metrics
+        current_metric = metrics.get(target_metric, 0)
+        run_logger.info(f"Current {target_metric}: {current_metric}, Best: {best_metric}, Target: {target_threshold}")
 
-        # 4. Generate refined prompts (Step 3)
-        refined_prompt_state = vertex_optimizer_refine(
-            state_data["prompt_state"],
-            dataset_with_scores,
-            baseline_metrics,
-            optimizer_strategy=optimizer_strategy,
-            sample_k=sample_k
-        )
+        # Update best metric and prompt if improved
+        if current_metric > best_metric:
+            best_metric = current_metric
+            best_prompt = prompt_state
+            no_improvement_count = 0
 
-        # 5. Run inference with refined prompts (Step 4)
-        refined_dataset = vertex_refined_inference(
-            refined_prompt_state,
-            dataset_with_scores,
-            batch_size=batch_size
-        )
+            # Update best prompt in database
+            try:
+                db = SessionLocal()
+                experiment_repo = ExperimentRepository(db)
+                experiment_repo.update_best_prompt(experiment_id, prompt_state.id)
+            except Exception as e:
+                run_logger.warning(f"Failed to update best prompt in database: {str(e)}")
+            finally:
+                db.close()
+        else:
+            no_improvement_count += 1
 
-        # 6. Evaluate refined performance (Step 5)
-        refined_result = hf_eval_refined(
-            refined_dataset,
-            metric_names
-        )
-        refined_metrics = refined_result["metrics"]
-
-        # Log refined metrics
-        logger.info(f"Refined metrics: {json.dumps(refined_metrics)}")
-
-        # 7. Compare and decide whether to continue
-        decision = compare_and_log(
-            baseline_metrics,
-            refined_metrics,
-            state_data["prompt_state"],
-            refined_prompt_state,
-            iteration+1,
-            target_metric,
-            target_threshold,
-            patience,
-            no_improve_count
-        )
-
-        # Update control variables
-        no_improve_count = decision["no_improve_count"]
-
-        # Save iteration data
-        iteration_dir = os.path.join(experiment_dir, f"iteration_{iteration+1}")
-        os.makedirs(iteration_dir, exist_ok=True)
-
-        # Save prompts
-        with open(os.path.join(iteration_dir, "original_system.txt"), "w") as f:
-            f.write(state_data["prompt_state"]["system_prompt"])
-        with open(os.path.join(iteration_dir, "original_output.txt"), "w") as f:
-            f.write(state_data["prompt_state"]["output_prompt"])
-        with open(os.path.join(iteration_dir, "refined_system.txt"), "w") as f:
-            f.write(refined_prompt_state["system_prompt"])
-        with open(os.path.join(iteration_dir, "refined_output.txt"), "w") as f:
-            f.write(refined_prompt_state["output_prompt"])
-
-        # Save metrics
-        with open(os.path.join(iteration_dir, "metrics.json"), "w") as f:
-            json.dump({
-                "baseline": baseline_metrics,
-                "refined": refined_metrics,
-                "decision": decision
-            }, f, indent=2)
-
-        # Save a sample of examples with both responses
-        example_sample = [refined_dataset[i] for i in range(min(5, len(refined_dataset)))]
-        with open(os.path.join(iteration_dir, "examples.json"), "w") as f:
-            json.dump(example_sample, f, indent=2)
-
-        # Determine which state to save for the next iteration
-        state_to_use = refined_prompt_state if decision["use_refined"] else state_data["prompt_state"]
-        state_path = save_state(state_to_use, iteration+1)
-
-        # Track best state
-        current_value = decision["target_value"]
-        if current_value > best_metric_value:
-            best_metric_value = current_value
-            best_state_path = state_path
-
-            # Save best prompts
-            if decision["use_refined"]:
-                with open(os.path.join(experiment_dir, "best_system_prompt.txt"), "w") as f:
-                    f.write(refined_prompt_state["system_prompt"])
-                with open(os.path.join(experiment_dir, "best_output_prompt.txt"), "w") as f:
-                    f.write(refined_prompt_state["output_prompt"])
-            else:
-                with open(os.path.join(experiment_dir, "best_system_prompt.txt"), "w") as f:
-                    f.write(state_data["prompt_state"]["system_prompt"])
-                with open(os.path.join(experiment_dir, "best_output_prompt.txt"), "w") as f:
-                    f.write(state_data["prompt_state"]["output_prompt"])
-
-        # Add to results history
-        results_history.append({
-            "iteration": iteration+1,
-            "baseline_metrics": baseline_metrics,
-            "refined_metrics": refined_metrics,
-            "decision": decision,
-            "state_path": state_path
-        })
-
-        # Check if we should stop early
-        if decision["should_stop"]:
-            logger.info(f"Early stopping at iteration {iteration+1}")
+        # Early stopping if target reached or no improvement for 'patience' iterations
+        if current_metric >= target_threshold:
+            run_logger.info(f"Target threshold {target_threshold} reached. Stopping optimization.")
             break
 
-    # Create final summary
-    final_results = {
+        if no_improvement_count >= patience:
+            run_logger.info(f"No improvement for {patience} iterations. Stopping optimization.")
+            break
+
+        # Step 3: Optimize Prompt
+        prompt_state = optimize_prompt(prompt_state, examples_with_results, metrics, optimizer_strategy)
+
+        # Wait a bit to avoid rate limiting
+        time.sleep(2)
+
+    # Final status update
+    try:
+        db = SessionLocal()
+        experiment_repo = ExperimentRepository(db)
+        experiment_repo.update_status(experiment_id, "completed")
+
+        # Ensure best prompt is set
+        experiment_repo.update_best_prompt(experiment_id, best_prompt.id)
+    except Exception as e:
+        run_logger.warning(f"Failed to update experiment status: {str(e)}")
+    finally:
+        db.close()
+
+    run_logger.info(f"Prompt optimization completed. Best {target_metric}: {best_metric}")
+
+    return {
         "experiment_id": experiment_id,
-        "iterations_completed": iteration+1,
-        "best_metric_value": best_metric_value,
-        "best_state_path": best_state_path,
-        "history": results_history,
-        "final_metrics": refined_metrics if decision.get("use_refined", False) else baseline_metrics
+        "best_prompt_id": best_prompt.id,
+        "best_metric": best_metric,
+        "target_metric": target_metric,
+        "iterations_completed": min(max_iterations, iteration + 1),
+        "target_reached": best_metric >= target_threshold
     }
 
-    # Save final results
-    with open(os.path.join(experiment_dir, "final_results.json"), "w") as f:
-        json.dump(final_results, f, indent=2)
+# Prefect entry point for deployment
+def start_optimization_flow(experiment_id: str):
+    """Start a prompt optimization flow from an experiment ID"""
+    # Get experiment details from database
+    db = SessionLocal()
+    experiment_repo = ExperimentRepository(db)
+    prompt_repo = PromptRepository(db)
+    dataset_repo = DatasetRepository(db)
 
-    logger.info(f"Optimization completed with best {target_metric}: {best_metric_value:.4f}")
-    return final_results
+    try:
+        experiment = experiment_repo.get_by_id(experiment_id)
+        if not experiment:
+            raise ValueError(f"Experiment with ID {experiment_id} not found")
+
+        initial_prompt = prompt_repo.get_by_id(str(experiment.initial_prompt_id))
+        if not initial_prompt:
+            raise ValueError(f"Initial prompt with ID {experiment.initial_prompt_id} not found")
+
+        dataset = dataset_repo.get_by_id(str(experiment.dataset_id))
+        if not dataset:
+            raise ValueError(f"Dataset with ID {experiment.dataset_id} not found")
+
+        # Save prompt files
+        temp_dir = os.path.join("temp", experiment_id)
+        os.makedirs(temp_dir, exist_ok=True)
+
+        system_prompt_path = os.path.join(temp_dir, "system_prompt.txt")
+        output_prompt_path = os.path.join(temp_dir, "output_prompt.txt")
+
+        with open(system_prompt_path, "w") as f:
+            f.write(initial_prompt.system_prompt)
+
+        with open(output_prompt_path, "w") as f:
+            f.write(initial_prompt.output_prompt)
+
+        # Start the flow
+        return prompt_optimization_flow(
+            system_prompt_path=system_prompt_path,
+            output_prompt_path=output_prompt_path,
+            dataset_path=dataset.file_path,
+            metric_names=experiment.metrics,
+            target_metric="avg_score",  # Default
+            target_threshold=experiment.target_threshold,
+            max_iterations=experiment.max_epochs,
+            experiment_id=experiment_id
+        )
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    # Example usage for local testing
+    result = prompt_optimization_flow(
+        system_prompt_path="prompts/system/medical_diagnosis.txt",
+        output_prompt_path="prompts/output/medical_diagnosis.txt",
+        dataset_path="data/train/examples.json",
+        metric_names=["exact_match", "bleu"],
+        target_metric="avg_score",
+        max_iterations=3
+    )
+
+    print(f"Optimization result: {result}")
