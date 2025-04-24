@@ -1,376 +1,304 @@
 """
-Flask views for ML settings and dashboards in the ATLAS platform.
+Frontend views for the ML functionality in the ATLAS platform.
 
-This module defines routes for:
-- ML settings dashboard
-- Model configuration management
-- Metric configuration management
-- Experiment visualization
-- Meta-learning management
+This module provides routes for:
+1. ML Dashboard
+2. Prompt Management
+3. Experiment Monitoring
+4. Model Configuration 
 """
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
-from flask_login import login_required, current_user
+import os
 import logging
-from typing import Dict, Any, List, Optional
+import json
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import login_required, current_user
 
 from app.ml.services import (
-    MLSettingsService, 
-    MLExperimentService, 
+    MLSettingsService as MLConfigService,
+    MLExperimentService,
     MetaLearningService,
     RLModelService
 )
 
 logger = logging.getLogger(__name__)
 
-ml_dashboard = Blueprint('ml_dashboard', __name__, url_prefix='/ml-dashboard')
+# Create the blueprint
+ml_views = Blueprint('ml_views', __name__, url_prefix='/ml')
 
-# ML Settings Dashboard
-@ml_dashboard.route('/')
+# ML Dashboard
+@ml_views.route('/', methods=['GET'])
 @login_required
 def index():
-    """Render the ML settings dashboard."""
-    return render_template('ml/index.html', title="ML Dashboard")
-
-# Model Configuration Views
-@ml_dashboard.route('/model-configurations')
-@login_required
-def model_configurations():
-    """Render the model configurations page."""
+    """Render the ML Dashboard."""
+    # Get metrics summary
+    service = MLExperimentService()
     user_id = current_user.id if current_user.is_authenticated else None
     
-    service = MLSettingsService()
-    configurations = service.get_model_configurations(user_id)
+    # Get recent experiments
+    recent_experiments = service.get_experiments(user_id, limit=5)
+    
+    # Get metrics
+    metrics = {
+        'training_accuracy': 0.0,
+        'validation_accuracy': 0.0,
+        'improvement_percentage': 0
+    }
+    
+    # Calculate metrics from completed experiments
+    completed_experiments = [exp for exp in recent_experiments if exp.get('status') == 'completed']
+    if completed_experiments:
+        # Get the most recent completed experiment
+        most_recent = max(completed_experiments, key=lambda x: x.get('updated_at', ''))
+        result_data = most_recent.get('result_data', {})
+        final_metrics = result_data.get('final_metrics', {})
+        
+        metrics['training_accuracy'] = final_metrics.get('training_score', 0.0)
+        metrics['validation_accuracy'] = final_metrics.get('validation_score', 0.0)
+        
+        # Calculate improvement percentage
+        iterations = result_data.get('iterations', [])
+        if iterations:
+            first_iteration = iterations[0]
+            primary_score = first_iteration.get('primary_metrics', {}).get(
+                'exact_match', 0.0
+            )
+            
+            if primary_score > 0:
+                metrics['improvement_percentage'] = int(100 * (metrics['training_accuracy'] - primary_score) / primary_score)
+    
+    # Get models
+    ml_service = MetaLearningService()
+    rl_service = RLModelService()
+    
+    ml_models = ml_service.get_meta_learning_models(user_id)
+    rl_models = rl_service.get_rl_models(user_id)
     
     return render_template(
-        'ml/model_configurations.html',
-        configurations=configurations,
-        title="ML Model Configurations"
+        'ml/index.html',
+        experiments=recent_experiments,
+        metrics=metrics,
+        ml_models=ml_models,
+        rl_models=rl_models,
+        active_page='ml_dashboard'
     )
 
-@ml_dashboard.route('/model-configurations/create', methods=['GET', 'POST'])
-@login_required
-def create_model_configuration():
-    """Create a new model configuration."""
-    if request.method == 'POST':
-        user_id = current_user.id if current_user.is_authenticated else None
-        
-        config_data = {
-            "name": request.form.get('name'),
-            "primary_model": request.form.get('primary_model'),
-            "optimizer_model": request.form.get('optimizer_model'),
-            "temperature": float(request.form.get('temperature', 0.0)),
-            "max_tokens": int(request.form.get('max_tokens', 1024)),
-            "top_p": float(request.form.get('top_p', 1.0)),
-            "top_k": int(request.form.get('top_k', 40)),
-            "is_default": 'is_default' in request.form
-        }
-        
-        service = MLSettingsService()
-        service.create_model_configuration(config_data, user_id)
-        
-        flash("Model configuration created successfully.", "success")
-        return redirect(url_for('ml_dashboard.model_configurations'))
-    
-    return render_template(
-        'ml/create_model_configuration.html',
-        title="Create Model Configuration"
-    )
-
-@ml_dashboard.route('/model-configurations/<config_id>/edit', methods=['GET', 'POST'])
-@login_required
-def edit_model_configuration(config_id):
-    """Edit an existing model configuration."""
-    service = MLSettingsService()
-    config = service.get_model_configuration(config_id)
-    
-    if not config:
-        flash("Model configuration not found.", "danger")
-        return redirect(url_for('ml_dashboard.model_configurations'))
-    
-    if request.method == 'POST':
-        config_data = {
-            "name": request.form.get('name'),
-            "primary_model": request.form.get('primary_model'),
-            "optimizer_model": request.form.get('optimizer_model'),
-            "temperature": float(request.form.get('temperature', 0.0)),
-            "max_tokens": int(request.form.get('max_tokens', 1024)),
-            "top_p": float(request.form.get('top_p', 1.0)),
-            "top_k": int(request.form.get('top_k', 40)),
-            "is_default": 'is_default' in request.form
-        }
-        
-        service.update_model_configuration(config_id, config_data)
-        
-        flash("Model configuration updated successfully.", "success")
-        return redirect(url_for('ml_dashboard.model_configurations'))
-    
-    return render_template(
-        'ml/edit_model_configuration.html',
-        config=config,
-        title="Edit Model Configuration"
-    )
-
-@ml_dashboard.route('/model-configurations/<config_id>/delete', methods=['POST'])
-@login_required
-def delete_model_configuration(config_id):
-    """Delete a model configuration."""
-    service = MLSettingsService()
-    result = service.delete_model_configuration(config_id)
-    
-    if result:
-        flash("Model configuration deleted successfully.", "success")
-    else:
-        flash("Failed to delete model configuration.", "danger")
-    
-    return redirect(url_for('ml_dashboard.model_configurations'))
-
-# Metric Configuration Views
-@ml_dashboard.route('/metric-configurations')
-@login_required
-def metric_configurations():
-    """Render the metric configurations page."""
-    user_id = current_user.id if current_user.is_authenticated else None
-    
-    service = MLSettingsService()
-    configurations = service.get_metric_configurations(user_id)
-    
-    return render_template(
-        'ml/metric_configurations.html',
-        configurations=configurations,
-        title="ML Metric Configurations"
-    )
-
-@ml_dashboard.route('/metric-configurations/create', methods=['GET', 'POST'])
-@login_required
-def create_metric_configuration():
-    """Create a new metric configuration."""
-    if request.method == 'POST':
-        user_id = current_user.id if current_user.is_authenticated else None
-        
-        # Process the form data
-        metrics = request.form.getlist('metrics')
-        weights = {}
-        for metric in metrics:
-            weight_key = f'weight_{metric}'
-            if weight_key in request.form:
-                try:
-                    weights[metric] = float(request.form.get(weight_key, 1.0))
-                except ValueError:
-                    weights[metric] = 1.0
-        
-        config_data = {
-            "name": request.form.get('name'),
-            "metrics": metrics,
-            "metric_weights": weights,
-            "target_threshold": float(request.form.get('target_threshold', 0.8))
-        }
-        
-        service = MLSettingsService()
-        service.create_metric_configuration(config_data, user_id)
-        
-        flash("Metric configuration created successfully.", "success")
-        return redirect(url_for('ml_dashboard.metric_configurations'))
-    
-    # Available metrics for the form
-    available_metrics = [
-        {"id": "exact_match", "name": "Exact Match"},
-        {"id": "semantic_similarity", "name": "Semantic Similarity"},
-        {"id": "keyword_match", "name": "Keyword Match"},
-        {"id": "bleu", "name": "BLEU Score"},
-        {"id": "rouge", "name": "ROUGE Score"},
-        {"id": "f1_score", "name": "F1 Score"}
-    ]
-    
-    return render_template(
-        'ml/create_metric_configuration.html',
-        available_metrics=available_metrics,
-        title="Create Metric Configuration"
-    )
-
-# Experiment Views
-@ml_dashboard.route('/experiments')
+# Experiment Management
+@ml_views.route('/experiments', methods=['GET'])
 @login_required
 def experiments():
     """Render the experiments page."""
+    service = MLExperimentService()
     user_id = current_user.id if current_user.is_authenticated else None
     
-    service = MLExperimentService()
     experiments = service.get_experiments(user_id)
     
     return render_template(
         'ml/experiments.html',
         experiments=experiments,
-        title="ML Experiments"
+        active_page='ml_experiments'
     )
 
-@ml_dashboard.route('/experiments/create', methods=['GET', 'POST'])
+@ml_views.route('/experiments/<experiment_id>', methods=['GET'])
 @login_required
-def create_experiment():
-    """Create a new experiment."""
-    if request.method == 'POST':
-        user_id = current_user.id if current_user.is_authenticated else None
-        
-        service = MLExperimentService()
-        experiment = service.create_experiment(
-            name=request.form.get('name'),
-            description=request.form.get('description'),
-            model_config_id=request.form.get('model_config_id'),
-            metric_config_id=request.form.get('metric_config_id'),
-            user_id=user_id
-        )
-        
-        flash("Experiment created successfully.", "success")
-        return redirect(url_for('ml_dashboard.experiments'))
-    
-    # Get available model and metric configurations
-    ml_settings_service = MLSettingsService()
-    model_configs = ml_settings_service.get_model_configurations()
-    metric_configs = ml_settings_service.get_metric_configurations()
-    
-    return render_template(
-        'ml/create_experiment.html',
-        model_configs=model_configs,
-        metric_configs=metric_configs,
-        title="Create Experiment"
-    )
-
-@ml_dashboard.route('/experiments/<experiment_id>')
-@login_required
-def view_experiment(experiment_id):
-    """View a specific experiment."""
+def experiment_detail(experiment_id):
+    """Render the experiment detail page."""
     service = MLExperimentService()
-    experiment = service.get_experiment(experiment_id)
     
+    experiment = service.get_experiment(experiment_id)
     if not experiment:
-        flash("Experiment not found.", "danger")
-        return redirect(url_for('ml_dashboard.experiments'))
+        flash('Experiment not found', 'error')
+        return redirect(url_for('ml_views.experiments'))
     
     iterations = service.get_experiment_iterations(experiment_id)
     
     return render_template(
-        'ml/view_experiment.html',
+        'ml/experiment_detail.html',
         experiment=experiment,
         iterations=iterations,
-        title=f"Experiment: {experiment.get('name', 'Unknown')}"
+        active_page='ml_experiments'
     )
 
-@ml_dashboard.route('/experiments/<experiment_id>/run', methods=['GET', 'POST'])
+@ml_views.route('/experiments/new', methods=['GET'])
 @login_required
-def run_experiment(experiment_id):
-    """Run an experiment with the 5-API workflow."""
-    service = MLExperimentService()
-    experiment = service.get_experiment(experiment_id)
-    
-    if not experiment:
-        flash("Experiment not found.", "danger")
-        return redirect(url_for('ml_dashboard.experiments'))
-    
-    if request.method == 'POST':
-        # In a real implementation, this would start a background task
-        # For now, we'll just update the status
-        service.update_experiment_status(experiment_id, "running")
-        
-        flash("Experiment started successfully. Check back later for results.", "success")
-        return redirect(url_for('ml_dashboard.view_experiment', experiment_id=experiment_id))
-    
+def new_experiment():
+    """Render the new experiment page."""
     return render_template(
-        'ml/run_experiment.html',
-        experiment=experiment,
-        title=f"Run Experiment: {experiment.get('name', 'Unknown')}"
+        'ml/new_experiment.html',
+        active_page='ml_experiments'
     )
 
-# Meta-Learning Views
-@ml_dashboard.route('/meta-learning')
+# Model Configurations
+@ml_views.route('/models/configurations', methods=['GET'])
 @login_required
-def meta_learning():
-    """Render the meta-learning page."""
+def model_configurations():
+    """Render the model configurations page."""
+    service = MLConfigService()
     user_id = current_user.id if current_user.is_authenticated else None
     
+    model_configs = service.get_model_configurations(user_id)
+    metric_configs = service.get_metric_configurations(user_id)
+    
+    return render_template(
+        'ml/model_configurations.html',
+        model_configs=model_configs,
+        metric_configs=metric_configs,
+        active_page='ml_configurations'
+    )
+
+# Meta-Learning Models
+@ml_views.route('/models/meta-learning', methods=['GET'])
+@login_required
+def meta_learning_models():
+    """Render the meta-learning models page."""
     service = MetaLearningService()
+    user_id = current_user.id if current_user.is_authenticated else None
+    
     models = service.get_meta_learning_models(user_id)
     
     return render_template(
-        'ml/meta_learning.html',
+        'ml/meta_learning_models.html',
         models=models,
-        title="Meta-Learning Models"
+        active_page='ml_meta_learning'
     )
 
-@ml_dashboard.route('/meta-learning/create', methods=['GET', 'POST'])
+@ml_views.route('/models/meta-learning/<model_id>', methods=['GET'])
 @login_required
-def create_meta_learning_model():
-    """Create a new meta-learning model."""
-    if request.method == 'POST':
-        user_id = current_user.id if current_user.is_authenticated else None
-        
-        # Process the form data
-        hyperparameters = {}
-        for key in request.form:
-            if key.startswith('hyper_'):
-                param_name = key[6:]  # Remove 'hyper_' prefix
-                try:
-                    value = float(request.form.get(key))
-                except ValueError:
-                    value = request.form.get(key)
-                hyperparameters[param_name] = value
-        
-        feature_config = {
-            "selected_features": request.form.getlist('features'),
-            "feature_extraction": request.form.get('feature_extraction', 'manual'),
-            "normalization": request.form.get('normalization', 'standard')
-        }
-        
-        model_data = {
-            "name": request.form.get('name'),
-            "model_type": request.form.get('model_type'),
-            "hyperparameters": hyperparameters,
-            "feature_config": feature_config,
-            "is_active": 'is_active' in request.form
-        }
-        
-        service = MetaLearningService()
-        service.create_meta_learning_model(model_data, user_id)
-        
-        flash("Meta-learning model created successfully.", "success")
-        return redirect(url_for('ml_dashboard.meta_learning'))
+def meta_learning_model_detail(model_id):
+    """Render the meta-learning model detail page."""
+    service = MetaLearningService()
     
-    # Available model types and features for the form
-    model_types = [
-        {"id": "lightgbm", "name": "LightGBM"},
-        {"id": "xgboost", "name": "XGBoost"},
-        {"id": "random_forest", "name": "Random Forest"},
-        {"id": "neural_network", "name": "Neural Network"}
-    ]
-    
-    available_features = [
-        {"id": "prompt_length", "name": "Prompt Length"},
-        {"id": "output_length", "name": "Output Length"},
-        {"id": "keyword_density", "name": "Keyword Density"},
-        {"id": "semantic_complexity", "name": "Semantic Complexity"},
-        {"id": "instruction_clarity", "name": "Instruction Clarity"},
-        {"id": "example_count", "name": "Example Count"},
-        {"id": "token_count", "name": "Token Count"}
-    ]
+    model = service.get_meta_learning_model(model_id)
+    if not model:
+        flash('Model not found', 'error')
+        return redirect(url_for('ml_views.meta_learning_models'))
     
     return render_template(
-        'ml/create_meta_learning_model.html',
-        model_types=model_types,
-        available_features=available_features,
-        title="Create Meta-Learning Model"
+        'ml/meta_learning_model_detail.html',
+        model=model,
+        active_page='ml_meta_learning'
     )
 
-# RL Model Views
-@ml_dashboard.route('/rl-models')
+# RL Models
+@ml_views.route('/models/rl', methods=['GET'])
 @login_required
 def rl_models():
     """Render the RL models page."""
+    service = RLModelService()
     user_id = current_user.id if current_user.is_authenticated else None
     
-    service = RLModelService()
     models = service.get_rl_models(user_id)
     
     return render_template(
         'ml/rl_models.html',
         models=models,
-        title="Reinforcement Learning Models"
+        active_page='ml_rl_models'
+    )
+
+@ml_views.route('/models/rl/<model_id>', methods=['GET'])
+@login_required
+def rl_model_detail(model_id):
+    """Render the RL model detail page."""
+    service = RLModelService()
+    
+    model = service.get_rl_model(model_id)
+    if not model:
+        flash('Model not found', 'error')
+        return redirect(url_for('ml_views.rl_models'))
+    
+    return render_template(
+        'ml/rl_model_detail.html',
+        model=model,
+        active_page='ml_rl_models'
+    )
+
+# Prompt Management
+@ml_views.route('/prompts', methods=['GET'])
+@login_required
+def prompts():
+    """Render the prompts page."""
+    service = MLExperimentService()
+    user_id = current_user.id if current_user.is_authenticated else None
+    
+    # Get recent experiments for their prompts
+    experiments = service.get_experiments(user_id)
+    
+    # Extract prompts from experiments
+    original_prompts = []
+    evaluator_prompts = []
+    optimizer_prompts = []
+    final_prompts = []
+    
+    for exp in experiments:
+        if exp.get('status') == 'completed':
+            # Original prompt is stored in the experiment
+            original_prompts.append({
+                'experiment_id': exp.get('id'),
+                'name': exp.get('name', 'Unnamed'),
+                'system_prompt': exp.get('system_prompt', ''),
+                'output_prompt': exp.get('output_prompt', ''),
+                'created_at': exp.get('created_at')
+            })
+            
+            # Extract other prompts from iterations
+            iterations = service.get_experiment_iterations(exp.get('id'))
+            if iterations:
+                # Evaluator and Optimizer prompts are in metadata
+                metadata = exp.get('metadata', {})
+                if 'evaluator_prompt' in metadata:
+                    evaluator_prompts.append({
+                        'experiment_id': exp.get('id'),
+                        'name': f"Evaluator for {exp.get('name', 'Unnamed')}",
+                        'system_prompt': metadata.get('evaluator_prompt', {}).get('system_prompt', ''),
+                        'output_prompt': metadata.get('evaluator_prompt', {}).get('output_prompt', ''),
+                        'created_at': exp.get('created_at')
+                    })
+                
+                if 'optimizer_prompt' in metadata:
+                    optimizer_prompts.append({
+                        'experiment_id': exp.get('id'),
+                        'name': f"Optimizer for {exp.get('name', 'Unnamed')}",
+                        'system_prompt': metadata.get('optimizer_prompt', {}).get('system_prompt', ''),
+                        'output_prompt': metadata.get('optimizer_prompt', {}).get('output_prompt', ''),
+                        'created_at': exp.get('created_at')
+                    })
+                
+                # Final prompt is in the last iteration
+                if iterations:
+                    last_iteration = iterations[-1]
+                    final_prompts.append({
+                        'experiment_id': exp.get('id'),
+                        'name': f"Final for {exp.get('name', 'Unnamed')}",
+                        'system_prompt': last_iteration.get('system_prompt', ''),
+                        'output_prompt': last_iteration.get('output_prompt', ''),
+                        'created_at': last_iteration.get('created_at', exp.get('created_at'))
+                    })
+    
+    return render_template(
+        'ml/prompts.html',
+        original_prompts=original_prompts,
+        evaluator_prompts=evaluator_prompts,
+        optimizer_prompts=optimizer_prompts,
+        final_prompts=final_prompts,
+        active_page='ml_prompts'
+    )
+
+# Workflow Visualization
+@ml_views.route('/workflow', methods=['GET'])
+@login_required
+def workflow():
+    """Render the workflow visualization page."""
+    return render_template(
+        'ml/workflow.html',
+        active_page='ml_workflow'
+    )
+
+# Settings
+@ml_views.route('/settings', methods=['GET'])
+@login_required
+def settings():
+    """Render the ML settings page."""
+    return render_template(
+        'ml/settings.html',
+        active_page='ml_settings'
     )
