@@ -141,7 +141,7 @@ def callback():
     logger.info(f"Logged in user: {users_email}")
     
     # Redirect to main dashboard
-    return redirect(url_for("index"))
+    return redirect(url_for("dashboard"))
 
 @google_auth.route("/logout")
 @login_required

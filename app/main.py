@@ -51,17 +51,30 @@ experiment_tracker = ExperimentTracker()
 data_module = DataModule()
 prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, config)
 
+# Explicitly handle the root URL without authentication
+@app.route('/')
+def root():
+    """Root URL handler. Redirect to main app if authenticated, otherwise to login."""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    else:
+        logger.debug("User not authenticated, redirecting to login page")
+        return redirect(url_for('login'))
+
 # Login page - no authentication required
 @app.route('/login')
 def login():
     """Render the login page."""
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
+    # Make debugging easier by logging template rendering
+    logger.debug("Rendering login.html template")
     return render_template('login.html')
 
-@app.route('/')
+# Main dashboard page (renamed from index to dashboard for clarity)
+@app.route('/dashboard')
 @login_required
-def index():
+def dashboard():
     """Render the main page of the application."""
     return render_template('index.html', user=current_user)
 
