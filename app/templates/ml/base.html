@@ -182,7 +182,7 @@
                         <a class="nav-link" href="/five_api_workflow_page"><i class="fa-solid fa-code-branch me-1"></i> 5-API Workflow</a>
                     </li>
                     <li class="nav-item active">
-                        <a class="nav-link active" href="{{ url_for('ml_dashboard.index') }}"><i class="fa-solid fa-brain me-1"></i> ML Dashboard</a>
+                        <a class="nav-link active" href="{{ url_for('ml_views.index') }}"><i class="fa-solid fa-brain me-1"></i> ML Dashboard</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/history"><i class="fa-solid fa-clock-rotate-left me-1"></i> History</a>
@@ -211,22 +211,22 @@
                     <h5 class="fw-bold text-primary">ML Dashboard</h5>
                 </div>
                 <div class="list-group list-group-flush">
-                    <a href="{{ url_for('ml_dashboard.index') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.index' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.index') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.index' %}active{% endif %}">
                         <i class="fa-solid fa-gauge-high me-2"></i> Overview
                     </a>
-                    <a href="{{ url_for('ml_dashboard.model_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.model_configurations' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.model_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.model_configurations' %}active{% endif %}">
                         <i class="fa-solid fa-sliders me-2"></i> Model Configs
                     </a>
-                    <a href="{{ url_for('ml_dashboard.metric_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.metric_configurations' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.metric_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.metric_configurations' %}active{% endif %}">
                         <i class="fa-solid fa-chart-bar me-2"></i> Metric Configs
                     </a>
-                    <a href="{{ url_for('ml_dashboard.experiments') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.experiments' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.experiments') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.experiments' %}active{% endif %}">
                         <i class="fa-solid fa-flask me-2"></i> Experiments
                     </a>
-                    <a href="{{ url_for('ml_dashboard.meta_learning') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.meta_learning' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.meta_learning') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.meta_learning' %}active{% endif %}">
                         <i class="fa-solid fa-graduation-cap me-2"></i> Meta-Learning
                     </a>
-                    <a href="{{ url_for('ml_dashboard.rl_models') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_dashboard.rl_models' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.rl_models') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.rl_models' %}active{% endif %}">
                         <i class="fa-solid fa-robot me-2"></i> RL Models
                     </a>
                     <div class="border-top my-3"></div>
@@ -241,19 +241,19 @@
                 <div class="card">
                     <div class="card-body p-2">
                         <div class="d-flex overflow-auto py-1">
-                            <a href="{{ url_for('ml_dashboard.index') }}" class="btn btn-sm {% if request.endpoint == 'ml_dashboard.index' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.index') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.index' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-gauge-high me-1"></i> Overview
                             </a>
-                            <a href="{{ url_for('ml_dashboard.model_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_dashboard.model_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.model_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.model_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-sliders me-1"></i> Models
                             </a>
-                            <a href="{{ url_for('ml_dashboard.metric_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_dashboard.metric_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.metric_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.metric_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-chart-bar me-1"></i> Metrics
                             </a>
-                            <a href="{{ url_for('ml_dashboard.experiments') }}" class="btn btn-sm {% if request.endpoint == 'ml_dashboard.experiments' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.experiments') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.experiments' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-flask me-1"></i> Experiments
                             </a>
-                            <a href="{{ url_for('ml_dashboard.meta_learning') }}" class="btn btn-sm {% if request.endpoint == 'ml_dashboard.meta_learning' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.meta_learning') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.meta_learning' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-graduation-cap me-1"></i> Meta-Learning
                             </a>
                         </div>

@@ -195,7 +195,7 @@ class WorkflowAnimator {
 }
 
 // Initialize when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     // Add workflow animation styles
     const styleElement = document.createElement('style');
     styleElement.textContent = `
@@ -268,40 +268,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the workflow animator
     const workflowDiagrams = document.querySelectorAll('.workflow-diagram');
     
-    workflowDiagrams.forEach((diagram, index) => {
-        if (diagram) {
-            diagram.id = `workflow-diagram-${index}`;
-            const animator = new WorkflowAnimator(diagram.id);
-            animator.init();
-            
-            // Add demo buttons if they don't exist
-            if (!document.querySelector(`#workflow-demo-btn-${index}`)) {
-                const demoBtn = document.createElement('button');
-                demoBtn.id = `workflow-demo-btn-${index}`;
-                demoBtn.className = 'btn btn-sm btn-outline-primary mt-3';
-                demoBtn.innerHTML = '<i class="fa-solid fa-play me-1"></i> Run Animation Demo';
-                demoBtn.addEventListener('click', () => animator.runDemo());
+    if (workflowDiagrams.length > 0) {
+        workflowDiagrams.forEach(function(diagram, index) {
+            if (diagram) {
+                diagram.id = `workflow-diagram-${index}`;
+                const animator = new WorkflowAnimator(diagram.id);
+                animator.init();
                 
-                // Add after diagram but before description
-                const nextElement = diagram.nextElementSibling;
-                if (nextElement) {
-                    diagram.parentNode.insertBefore(demoBtn, nextElement);
-                } else {
-                    diagram.parentNode.appendChild(demoBtn);
+                // Add demo buttons if they don't exist
+                if (!document.querySelector(`#workflow-demo-btn-${index}`)) {
+                    const demoBtn = document.createElement('button');
+                    demoBtn.id = `workflow-demo-btn-${index}`;
+                    demoBtn.className = 'btn btn-sm btn-outline-primary mt-3';
+                    demoBtn.innerHTML = '<i class="fa-solid fa-play me-1"></i> Run Animation Demo';
+                    demoBtn.onclick = function() { animator.runDemo(); };
+                    
+                    // Add after diagram but before description
+                    const nextElement = diagram.nextElementSibling;
+                    if (nextElement) {
+                        diagram.parentNode.insertBefore(demoBtn, nextElement);
+                    } else {
+                        diagram.parentNode.appendChild(demoBtn);
+                    }
                 }
+                
+                // Store the animator on the window for access from other scripts
+                window[`workflowAnimator${index}`] = animator;
             }
-            
-            // Store the animator on the window for access from other scripts
-            window[`workflowAnimator${index}`] = animator;
-        }
-    });
+        });
+    }
     
     // If there's a 5-API workflow page, add controls
     const apiWorkflowPage = document.getElementById('five-api-workflow-page');
     if (apiWorkflowPage) {
         const simulateBtn = document.getElementById('simulate-workflow-btn');
         if (simulateBtn && window.workflowAnimator0) {
-            simulateBtn.addEventListener('click', () => window.workflowAnimator0.runDemo());
+            simulateBtn.onclick = function() {
+                window.workflowAnimator0.runDemo();
+            };
         }
     }
 });
