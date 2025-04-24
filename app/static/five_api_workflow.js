@@ -223,18 +223,26 @@ function processWorkflowResults(data) {
  */
 function updateMetricsDisplay(metrics) {
     try {
-        // Detailed null/undefined check with more specific error messages
-        if (!metrics) {
-            console.error("Error fetching metrics summary: metrics object is null or undefined");
-            logToDebugConsole('error', 'Metrics data is missing - potential API response issue', { received: metrics });
-            return;
-        }
+        // Log the metrics data for debugging
+        console.log("Received metrics data:", metrics);
+        logToDebugConsole('info', 'Received metrics data for display', metrics);
         
-        // Check if metrics has the right structure
-        if (typeof metrics !== 'object') {
-            console.error("Error fetching metrics summary: metrics is not an object", typeof metrics);
-            logToDebugConsole('error', 'Metrics data has wrong type', { expectedType: 'object', actualType: typeof metrics });
-            return;
+        // Create default metrics structure if it doesn't exist or is empty
+        if (!metrics || Object.keys(metrics).length === 0) {
+            console.warn("Creating default metrics structure for display");
+            logToDebugConsole('warn', 'Creating default metrics structure for display');
+            
+            // Create a minimal structure for display
+            metrics = {
+                exact_match: {
+                    original: { training: 0, validation: 0 },
+                    optimized: { training: 0, validation: 0 }
+                },
+                semantic_similarity: {
+                    original: { training: 0, validation: 0 },
+                    optimized: { training: 0, validation: 0 }
+                }
+            };
         }
         
         // Update metrics table
@@ -258,23 +266,71 @@ function updateMetricsDisplay(metrics) {
         
         let foundAnyMetrics = false;
         
+        // Check if the metrics follow the expected structure
+        let hasNestedStructure = false;
+        for (const key in metrics) {
+            if (metrics[key] && typeof metrics[key] === 'object' && 
+                metrics[key].original && metrics[key].optimized) {
+                hasNestedStructure = true;
+                break;
+            }
+        }
+        
+        // If no nested structure, create a compatible structure
+        if (!hasNestedStructure && typeof metrics === 'object') {
+            console.warn("Converting flat metrics structure to nested format");
+            logToDebugConsole('warn', 'Converting flat metrics structure to nested format', metrics);
+            
+            const restructuredMetrics = {};
+            
+            // For each potential metric, check if it exists in the flat structure
+            for (const [key, _] of Object.entries(metricNames)) {
+                if (key in metrics) {
+                    restructuredMetrics[key] = {
+                        original: { 
+                            training: metrics[`${key}_original_training`] || metrics[`${key}_original`] || 0,
+                            validation: metrics[`${key}_original_validation`] || metrics[`${key}_original`] || 0
+                        },
+                        optimized: {
+                            training: metrics[`${key}_optimized_training`] || metrics[`${key}_optimized`] || 0,
+                            validation: metrics[`${key}_optimized_validation`] || metrics[`${key}_optimized`] || 0
+                        }
+                    };
+                }
+            }
+            
+            // Use the restructured metrics
+            metrics = restructuredMetrics;
+        }
+        
+        // Populate the table with metrics
         for (const [key, label] of Object.entries(metricNames)) {
             if (metrics[key]) {
                 foundAnyMetrics = true;
                 const row = document.createElement('tr');
                 
                 // Safe access to nested properties with detailed null checks
-                const originalTraining = metrics[key]?.original?.training;
-                const originalValidation = metrics[key]?.original?.validation;
-                const optimizedTraining = metrics[key]?.optimized?.training;
-                const optimizedValidation = metrics[key]?.optimized?.validation;
+                let originalTraining = 0;
+                let originalValidation = 0;
+                let optimizedTraining = 0;
+                let optimizedValidation = 0;
+                
+                if (metrics[key].original) {
+                    originalTraining = metrics[key].original.training || 0;
+                    originalValidation = metrics[key].original.validation || 0;
+                }
+                
+                if (metrics[key].optimized) {
+                    optimizedTraining = metrics[key].optimized.training || 0;
+                    optimizedValidation = metrics[key].optimized.validation || 0;
+                }
                 
                 row.innerHTML = `
                     <td>${label}</td>
-                    <td>${formatPercent(originalTraining || 0)}</td>
-                    <td>${formatPercent(originalValidation || 0)}</td>
-                    <td>${formatPercent(optimizedTraining || 0)}</td>
-                    <td>${formatPercent(optimizedValidation || 0)}</td>
+                    <td>${formatPercent(originalTraining)}</td>
+                    <td>${formatPercent(originalValidation)}</td>
+                    <td>${formatPercent(optimizedTraining)}</td>
+                    <td>${formatPercent(optimizedValidation)}</td>
                 `;
                 
                 metricsTableBody.appendChild(row);
@@ -346,7 +402,43 @@ function createMetricsChart(metrics) {
             });
             
             // Create an empty chart to avoid errors
-            createEmptyChart(chartCanvas);
+            // Define default placeholder data
+            const placeholderLabels = ['No Data Available'];
+            const placeholderData = [0];
+            
+            workflowState.metricsChart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: placeholderLabels,
+                    datasets: [{
+                        label: 'No metrics data available',
+                        data: placeholderData,
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                        borderColor: 'rgba(200, 200, 200, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Metrics Comparison (No Data)'
+                        }
+                    }
+                }
+            });
+            
             return;
         }
         
