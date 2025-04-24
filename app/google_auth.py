@@ -44,8 +44,12 @@ def login():
     # Get the absolute URL for the callback
     callback_url = url_for("google_auth.callback", _external=True)
     
-    # Ensure HTTPS for the callback URL
-    callback_url = callback_url.replace("http://", "https://")
+    # In development, we need to use the actual domain for OAuth callbacks
+    if os.environ.get("REPLIT_DOMAIN"):
+        callback_url = f"https://{os.environ.get('REPLIT_DOMAIN')}/google_auth/callback"
+    else:
+        # For local development
+        callback_url = callback_url.replace("http://", "https://")
     
     # Use library to construct the request for Google login
     # Request offline access (refresh_token) and user's profile and email
@@ -73,11 +77,29 @@ def callback():
     # Prepare and send a request to get tokens
     # Get the absolute URL for the callback again
     callback_url = url_for("google_auth.callback", _external=True)
-    callback_url = callback_url.replace("http://", "https://")
+    
+    # In development, we need to use the actual domain for OAuth callbacks
+    if os.environ.get("REPLIT_DOMAIN"):
+        callback_url = f"https://{os.environ.get('REPLIT_DOMAIN')}/google_auth/callback"
+    else:
+        # For local development
+        callback_url = callback_url.replace("http://", "https://")
+    
+    # Make sure we use the correct domain in the authorization response
+    authorization_response = request.url
+    if os.environ.get("REPLIT_DOMAIN"):
+        # Extract just the path portion and use the Replit domain
+        path = request.path
+        query = request.query_string.decode('utf-8')
+        query_part = f"?{query}" if query else ""
+        authorization_response = f"https://{os.environ.get('REPLIT_DOMAIN')}{path}{query_part}"
+    else:
+        # For local development
+        authorization_response = authorization_response.replace("http://", "https://")
     
     token_url, headers, body = client.prepare_token_request(
         token_endpoint,
-        authorization_response=request.url.replace("http://", "https://"),
+        authorization_response=authorization_response,
         redirect_url=callback_url,
         code=code
     )
