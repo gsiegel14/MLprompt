@@ -210,6 +210,8 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Workflow animations script -->
+<script src="{{ url_for('static', filename='js/workflow_animations.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Fetch metrics summary
