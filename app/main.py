@@ -795,11 +795,15 @@ def five_api_workflow():
     try:
         # Create a log file for this run
         import traceback
+        import gc  # Import garbage collector
         from datetime import datetime
         log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file_path = f"logs/five_api_workflow_{log_timestamp}.log"
         os.makedirs("logs", exist_ok=True)
 
+        # Run garbage collection before starting to ensure we have clean memory
+        gc.collect()
+        
         # Log start with request info
         logger.info(f"========== 5-API WORKFLOW STARTED AT {log_timestamp} ==========")
 
@@ -818,6 +822,12 @@ def five_api_workflow():
         batch_size = int(data.get('batch_size', 10))
         optimizer_strategy = data.get('optimizer_strategy', 'reasoning_first')
         hf_metrics = data.get('hf_metrics', ["exact_match", "bleu"])
+        
+        # Limit batch size to prevent memory issues
+        max_safe_batch_size = 5
+        if batch_size > max_safe_batch_size:
+            logger.warning(f"Reducing batch size from {batch_size} to {max_safe_batch_size} to prevent memory issues")
+            batch_size = max_safe_batch_size
 
         # Validate parameters
         if not system_prompt or not output_prompt:

@@ -933,8 +933,31 @@ function loadNejmDataset(datasetType) {
             if (data.error) {
                 showAlert(data.error, 'danger');
             } else if (data.examples && data.examples.length > 0) {
+                // Get the selected number of cases
+                const casesCountSelect = document.getElementById('nejm-cases-count');
+                const selectedValue = casesCountSelect.value;
+                
+                // Determine how many examples to use
+                let exampleCount = data.examples.length;
+                if (selectedValue !== 'all') {
+                    exampleCount = Math.min(parseInt(selectedValue), data.examples.length);
+                }
+                
+                // If not using all examples, take a random subset
+                let selectedExamples = data.examples;
+                if (exampleCount < data.examples.length) {
+                    // Shuffle the array using Fisher-Yates algorithm
+                    const shuffled = [...data.examples];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    // Take the first N examples
+                    selectedExamples = shuffled.slice(0, exampleCount);
+                }
+                
                 // Store the examples in our state
-                workflowState.examples = data.examples;
+                workflowState.examples = selectedExamples;
                 
                 // Update UI
                 updateExamplesUI();
@@ -954,7 +977,7 @@ function loadNejmDataset(datasetType) {
                         .catch(error => console.error('Error loading NEJM prompts:', error));
                 }
                 
-                showAlert(`Loaded ${data.examples.length} NEJM ${datasetType} examples`, 'success');
+                showAlert(`Loaded ${selectedExamples.length} NEJM ${datasetType} examples (from ${data.examples.length} total)`, 'success');
             } else {
                 showAlert(`No NEJM ${datasetType} examples found`, 'warning');
             }
