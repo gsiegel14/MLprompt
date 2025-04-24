@@ -5,21 +5,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cost Monitoring Dashboard - Prompt Optimization Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .navbar {
+            background-color: #1e293b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .nav-link {
+            color: #e2e8f0;
+            transition: color 0.2s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #6366f1;
+        }
+        .cost-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .metric {
+            background-color: #fff;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .metric h3 {
+            color: #555;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .metric p {
+            color: #111827;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .chart-container {
+            height: 300px;
+            margin: 1.5rem 0;
+        }
+        .actions-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-start;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Cost Monitoring Dashboard</h1>
-            <nav>
-                <a href="{{ url_for('root') }}">Home</a>
-                <a href="{{ url_for('history') }}">Experiment History</a>
-                <a href="{{ url_for('training') }}">Training</a>
-                <a href="{{ url_for('cost_dashboard') }}" class="active">Cost Dashboard</a>
-            </nav>
-        </header>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('root') }}">
+                <i class="fas fa-brain me-2"></i>
+                ATLAS Platform
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('root') }}">
+                            <i class="fas fa-home me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('five_api_workflow_page') }}">
+                            <i class="fas fa-project-diagram me-1"></i> Autonomous Workflow
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('training') }}">
+                            <i class="fas fa-graduation-cap me-1"></i> Training
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('history') }}">
+                            <i class="fas fa-history me-1"></i> Experiment History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('cost_dashboard') }}">
+                            <i class="fas fa-chart-line me-1"></i> Cost Dashboard
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <a href="#" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-gear me-1"></i> Settings
+                    </a>
+                    <a href="#" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-question-circle me-1"></i> Help
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="fw-bold text-dark">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Cost Monitoring Dashboard
+                </h1>
+                <p class="text-muted">Track and analyze API usage and estimated costs</p>
+            </div>
+        </div>
 
         <main>
             <div class="card">
@@ -291,6 +392,201 @@
         function downloadReport(filename) {
             window.location.href = `/api/cost_tracking/reports/${filename}`;
         }
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Debug Console Script -->
+    <script>
+        // Debug Console Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create debug console button if it doesn't exist
+            if (!document.getElementById('debug-console-btn')) {
+                const debugBtn = document.createElement('button');
+                debugBtn.id = 'debug-console-btn';
+                debugBtn.className = 'btn btn-dark position-fixed';
+                debugBtn.style.cssText = 'bottom: 20px; right: 20px; z-index: 1050; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;';
+                debugBtn.innerHTML = '<i class="fas fa-bug"></i> <span class="badge bg-danger ms-1" id="error-count" style="display: none;">0</span>';
+                debugBtn.title = 'Toggle Debug Console';
+                
+                document.body.appendChild(debugBtn);
+                
+                // Create debug console if it doesn't exist
+                if (!document.getElementById('debug-console')) {
+                    const debugConsole = document.createElement('div');
+                    debugConsole.id = 'debug-console';
+                    debugConsole.className = 'position-fixed bg-dark text-light p-3';
+                    debugConsole.style.cssText = 'bottom: 80px; right: 20px; width: 400px; max-height: 400px; overflow-y: auto; z-index: 1049; border-radius: 8px; display: none; box-shadow: 0 0 15px rgba(0,0,0,0.2);';
+                    
+                    debugConsole.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="m-0">Debug Console</h6>
+                            <div>
+                                <button id="copy-logs" class="btn btn-sm btn-outline-light me-1" title="Copy Logs">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button id="clear-logs" class="btn btn-sm btn-outline-light" title="Clear Logs">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="console-tabs" class="mb-2">
+                            <button class="btn btn-sm btn-outline-light active" data-tab="all">All</button>
+                            <button class="btn btn-sm btn-outline-danger" data-tab="errors">Errors <span id="tab-error-count">0</span></button>
+                            <button class="btn btn-sm btn-outline-warning" data-tab="warnings">Warnings</button>
+                            <button class="btn btn-sm btn-outline-info" data-tab="logs">Logs</button>
+                        </div>
+                        <div id="console-logs" class="small"></div>
+                    `;
+                    
+                    document.body.appendChild(debugConsole);
+                    
+                    // Set up event listeners for debug console
+                    document.getElementById('debug-console-btn').addEventListener('click', function() {
+                        const console = document.getElementById('debug-console');
+                        console.style.display = console.style.display === 'none' ? 'block' : 'none';
+                    });
+                    
+                    document.getElementById('copy-logs').addEventListener('click', function() {
+                        const logs = document.getElementById('console-logs').innerText;
+                        navigator.clipboard.writeText(logs).then(() => {
+                            alert('Logs copied to clipboard!');
+                        });
+                    });
+                    
+                    document.getElementById('clear-logs').addEventListener('click', function() {
+                        document.getElementById('console-logs').innerHTML = '';
+                        document.getElementById('error-count').textContent = '0';
+                        document.getElementById('error-count').style.display = 'none';
+                        document.getElementById('tab-error-count').textContent = '0';
+                    });
+                    
+                    // Tab switching
+                    document.querySelectorAll('#console-tabs button').forEach(button => {
+                        button.addEventListener('click', function() {
+                            // Remove active class from all buttons
+                            document.querySelectorAll('#console-tabs button').forEach(btn => {
+                                btn.classList.remove('active');
+                            });
+                            
+                            // Add active class to clicked button
+                            this.classList.add('active');
+                            
+                            // Filter logs based on tab
+                            const tab = this.getAttribute('data-tab');
+                            const logs = document.querySelectorAll('#console-logs div');
+                            
+                            logs.forEach(log => {
+                                if (tab === 'all') {
+                                    log.style.display = 'block';
+                                } else {
+                                    log.style.display = log.classList.contains(tab.slice(0, -1)) ? 'block' : 'none';
+                                }
+                            });
+                        });
+                    });
+                }
+                
+                // Intercept console logs
+                const originalConsole = {
+                    log: console.log,
+                    warn: console.warn,
+                    error: console.error,
+                    info: console.info
+                };
+                
+                // Error counter
+                let errorCount = 0;
+                
+                function addLogToConsole(type, args) {
+                    const consoleElement = document.getElementById('console-logs');
+                    if (!consoleElement) return;
+                    
+                    const log = document.createElement('div');
+                    log.className = `${type} mb-1 pb-1 border-bottom border-secondary`;
+                    
+                    // Convert arguments to readable format
+                    let message = '';
+                    for (let i = 0; i < args.length; i++) {
+                        if (typeof args[i] === 'object') {
+                            try {
+                                message += JSON.stringify(args[i], null, 2) + ' ';
+                            } catch (e) {
+                                message += args[i] + ' ';
+                            }
+                        } else {
+                            message += args[i] + ' ';
+                        }
+                    }
+                    
+                    // Add timestamp and format based on type
+                    const now = new Date();
+                    const timestamp = now.getTime();
+                    const formattedTime = now.toLocaleTimeString();
+                    
+                    let icon = 'fa-circle-info';
+                    let color = 'text-info';
+                    
+                    if (type === 'error') {
+                        icon = 'fa-circle-exclamation';
+                        color = 'text-danger';
+                        errorCount++;
+                        
+                        // Update error count badges
+                        const errorCountBadge = document.getElementById('error-count');
+                        errorCountBadge.textContent = errorCount;
+                        errorCountBadge.style.display = 'inline-block';
+                        
+                        const tabErrorCount = document.getElementById('tab-error-count');
+                        tabErrorCount.textContent = errorCount;
+                    } else if (type === 'warn') {
+                        icon = 'fa-triangle-exclamation';
+                        color = 'text-warning';
+                    } else if (type === 'info') {
+                        icon = 'fa-circle-info';
+                        color = 'text-info';
+                    } else if (type === 'log') {
+                        icon = 'fa-circle';
+                        color = 'text-light';
+                    }
+                    
+                    log.innerHTML = `
+                        <div>
+                            <span class="${color} me-2"><i class="fas ${icon}"></i></span>
+                            <span class="text-muted">${formattedTime}</span> - 
+                            <span class="console-msg">${message}</span>
+                        </div>
+                    `;
+                    
+                    consoleElement.appendChild(log);
+                    consoleElement.scrollTop = consoleElement.scrollHeight;
+                }
+                
+                // Override console methods
+                console.log = function() {
+                    addLogToConsole('log', arguments);
+                    originalConsole.log.apply(console, arguments);
+                };
+                
+                console.warn = function() {
+                    addLogToConsole('warn', arguments);
+                    originalConsole.warn.apply(console, arguments);
+                };
+                
+                console.error = function() {
+                    addLogToConsole('error', arguments);
+                    originalConsole.error.apply(console, arguments);
+                };
+                
+                console.info = function() {
+                    addLogToConsole('info', arguments);
+                    originalConsole.info.apply(console, arguments);
+                };
+                
+                console.log("Debug console is ready and capturing errors");
+            }
+        });
     </script>
 </body>
 </html>
