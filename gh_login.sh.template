@@ -1,0 +1,10 @@
+
+#!/bin/bash
+# Template for GitHub login
+# Replace YOUR_TOKEN_HERE with your actual token when using locally
+# DO NOT commit the file with actual tokens
+
+# Login to GitHub CLI with token
+gh auth login --with-token <<< "YOUR_TOKEN_HERE"
+
+echo "GitHub login completed"

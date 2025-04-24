@@ -1,4 +1,9 @@
 
+# Ignore sensitive files with credentials
+gh_login.sh
+.config/gh/hosts.yml
+
+
 # ML Platform .gitignore
 
 # Cached data and models
