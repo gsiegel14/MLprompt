@@ -10,7 +10,6 @@ run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 build = ["sh", "-c", "chmod +x deployment_cleanup.sh && ./deployment_cleanup.sh"]
 
 [workflows]
-runButton = "Troubleshoot and Fix API Workflow"
 
 [[workflows.workflow]]
 name = "Project"

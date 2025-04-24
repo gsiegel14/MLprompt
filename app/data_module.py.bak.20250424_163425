@@ -125,24 +125,9 @@ class DataModule:
         Returns:
             tuple: (train_examples, validation_examples)
         """
-
         if not examples:
-            logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
-            # Try reloading examples from file
-            if validation:
-                examples_file = os.path.join(self.validation_dir, 'current_validation.json')
-                self.validation_examples = self._load_examples_from_file(examples_file)
-                examples = self.validation_examples
-            else:
-                examples_file = os.path.join(self.train_dir, 'current_train.json')
-                self.train_examples = self._load_examples_from_file(examples_file)
-                examples = self.train_examples
-            
-            logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
-            
-            if not examples:
-                logger.warning("No examples to split")
-                return [], []
+            logger.warning("No examples to split")
+            return [], []
 
         # Shuffle the examples
         random.shuffle(examples)
@@ -188,7 +173,6 @@ class DataModule:
         else:
             examples = self.train_examples
             
-
         if not examples:
             logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
             # Try reloading examples from file
@@ -200,38 +184,11 @@ class DataModule:
                 examples_file = os.path.join(self.train_dir, 'current_train.json')
                 self.train_examples = self._load_examples_from_file(examples_file)
                 examples = self.train_examples
-            
-            logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
-            
-            if not examples:
-                logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
-                # Try reloading examples from file
-                if validation:
-                    examples_file = os.path.join(self.validation_dir, 'current_validation.json')
-                    self.validation_examples = self._load_examples_from_file(examples_file)
-                    examples = self.validation_examples
-                else:
-                    examples_file = os.path.join(self.train_dir, 'current_train.json')
-                    self.train_examples = self._load_examples_from_file(examples_file)
-                    examples = self.train_examples
-            logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
-
+                
+        logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
+                
         if not examples:
-            logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
-            # Try reloading examples from file
-            if validation:
-                examples_file = os.path.join(self.validation_dir, 'current_validation.json')
-                self.validation_examples = self._load_examples_from_file(examples_file)
-                examples = self.validation_examples
-            else:
-                examples_file = os.path.join(self.train_dir, 'current_train.json')
-                self.train_examples = self._load_examples_from_file(examples_file)
-                examples = self.train_examples
-            
-            logger.info(f"After reload attempt, have {len(examples)} {'validation' if validation else 'training'} examples")
-            
-            if not examples:
-                return []
+            return []
             
         # Return up to batch_size examples (randomly sampled if more available)
         if len(examples) <= batch_size:
