@@ -10,6 +10,8 @@ import json
 import time
 import sys
 import logging
+import subprocess
+import signal
 from pathlib import Path
 import requests
 from requests.exceptions import ConnectionError, RequestException, Timeout
@@ -33,6 +35,63 @@ logger = logging.getLogger(__name__)
 # Base URL for API endpoints
 BASE_URL = "http://0.0.0.0:5000"
 
+# Global variable to store server process
+server_process = None
+
+def start_api_server():
+    """Start the API server if it's not already running"""
+    global server_process
+    
+    # Check if server is already running
+    if check_server_status():
+        logger.info("API server is already running")
+        return True
+    
+    logger.info("Starting API server...")
+    try:
+        # Start the server as a subprocess
+        server_process = subprocess.Popen(
+            ["gunicorn", "--bind", "0.0.0.0:5000", "--reuse-port", "--reload", "main:app"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid  # To create a new process group for termination
+        )
+        
+        # Wait for server to start (max 10 seconds)
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            if check_server_status():
+                logger.info("API server started successfully")
+                return True
+            time.sleep(0.5)
+        
+        logger.error("Failed to start API server within timeout period")
+        stop_api_server()
+        return False
+    except Exception as e:
+        logger.error(f"Error starting API server: {e}")
+        return False
+
+def stop_api_server():
+    """Stop the API server if it was started by this script"""
+    global server_process
+    
+    if server_process:
+        logger.info("Stopping API server...")
+        try:
+            # Kill the entire process group
+            os.killpg(os.getpgid(server_process.pid), signal.SIGTERM)
+            server_process.wait(timeout=5)
+            logger.info("API server stopped")
+        except Exception as e:
+            logger.error(f"Error stopping API server: {e}")
+            try:
+                os.killpg(os.getpgid(server_process.pid), signal.SIGKILL)
+            except:
+                pass
+        finally:
+            server_process = None
+
 # Function to check if the server is running
 def check_server_status():
     """Check if the API server is running and accessible"""
@@ -45,7 +104,7 @@ def check_server_status():
             logger.warning(f"API server returned status code: {response.status_code}")
             return False
     except requests.exceptions.ConnectionError:
-        logger.error("API server is not running or not accessible")
+        logger.debug("API server is not running or not accessible")
         return False
     except Exception as e:
         logger.error(f"Error checking server status: {e}")
@@ -188,6 +247,9 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     logger.info("RUNNING 5-API WORKFLOW WITH ROW 2 FROM NEJM DATASET")
     logger.info("=" * 80)
 
+    # Create results directory
+    os.makedirs("row2_results", exist_ok=True)
+
     # Step 1: Initial LLM inference with Primary LLM
     logger.info("Step 1: Initial LLM inference with Primary LLM (Google Vertex API)")
     step1_data = {
@@ -226,7 +288,6 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
 
         # Save the full response to a file
         if isinstance(step1_result, dict) and "response" in step1_result:
-            os.makedirs("row2_results", exist_ok=True)
             with open("row2_results/initial_response.txt", "w") as f:
                 f.write(step1_result["response"])
             logger.info("Saved initial response to row2_results/initial_response.txt")
@@ -455,34 +516,47 @@ def main():
     logger.info("## Testing the 5-API workflow with row 2 from NEJM dataset")
     logger.info("#" * 80 + "\n")
 
-    # Check if the API server is running
-    if not check_server_status():
-        logger.error("API server is not available. Please start the server first.")
-        logger.info("You can start the server by running the 'Start API Server' workflow")
+    # Start the API server
+    if not start_api_server():
+        logger.error("Failed to start API server. Cannot continue with tests.")
         return False
 
-    # Load the test example
-    test_input, ground_truth = load_test_example()
-    if not test_input or not ground_truth:
-        logger.error("Could not load test example. Please run test_nejm_row.py first.")
-        return False
-
-    # Load the NEJM prompts
-    system_prompt, output_prompt = load_prompts("nejm")
-    if not system_prompt or not output_prompt:
-        logger.warning("Could not load NEJM prompts, trying base prompts")
-        system_prompt, output_prompt = load_prompts("base")
-        if not system_prompt or not output_prompt:
-            logger.error("Could not load any prompts. Test cannot continue.")
+    try:
+        # Load the test example
+        test_input, ground_truth = load_test_example()
+        if not test_input or not ground_truth:
+            logger.error("Could not load test example. Please run test_nejm_row.py first.")
             return False
 
-    # Run the workflow with the example
-    success = test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
+        # Load the NEJM prompts
+        system_prompt, output_prompt = load_prompts("nejm")
+        if not system_prompt or not output_prompt:
+            logger.warning("Could not load NEJM prompts, trying base prompts")
+            system_prompt, output_prompt = load_prompts("base")
+            if not system_prompt or not output_prompt:
+                logger.error("Could not load any prompts. Test cannot continue.")
+                return False
 
-    logger.info("\n" + "#" * 80)
-    logger.info("## TEST COMPLETED")
-    logger.info("#" * 80)
-    return success
+        # Run the workflow with the example
+        success = test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
+
+        logger.info("\n" + "#" * 80)
+        logger.info("## TEST COMPLETED")
+        logger.info("#" * 80)
+        return success
+    finally:
+        # Only stop the server if we started it
+        if server_process:
+            stop_api_server()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Test interrupted by user")
+        # Make sure to clean up server process
+        stop_api_server()
+    except Exception as e:
+        logger.exception(f"Unexpected error: {e}")
+        # Make sure to clean up server process
+        stop_api_server()
