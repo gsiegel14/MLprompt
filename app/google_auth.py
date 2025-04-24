@@ -42,27 +42,30 @@ def login_page():
 @google_auth.route("/login")
 def login():
     """
-    Google login route. Redirects to login page or Google's OAuth consent screen.
+    Google login route. Redirects to Google's OAuth consent screen.
     """
-    # If we're already coming from the login page, proceed to Google OAuth
-    if request.referrer and 'login_page' in request.referrer:
-        # Find out what URL to hit for Google login
-        google_provider_cfg = get_google_provider_cfg()
-        authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    # Find out what URL to hit for Google login
+    google_provider_cfg = get_google_provider_cfg()
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-        # Use library to construct the request for Google login
-        # Request offline access (refresh_token) and user's profile and email
-        request_uri = client.prepare_request_uri(
-            authorization_endpoint,
-            redirect_uri=request.base_url.replace("http://", "https://") + "/callback",
-            scope=["openid", "email", "profile"],
-        )
-        return redirect(request_uri)
+    # Get the absolute URL for the callback
+    callback_url = url_for("google_auth.callback", _external=True)
     
-    # Otherwise show the login page first
-    return redirect(url_for('google_auth.login_page'))
+    # Ensure HTTPS for the callback URL
+    callback_url = callback_url.replace("http://", "https://")
+    
+    # Use library to construct the request for Google login
+    # Request offline access (refresh_token) and user's profile and email
+    request_uri = client.prepare_request_uri(
+        authorization_endpoint,
+        redirect_uri=callback_url,
+        scope=["openid", "email", "profile"],
+    )
+    
+    # Redirect to Google's OAuth consent screen
+    return redirect(request_uri)
 
-@google_auth.route("/login/callback")
+@google_auth.route("/callback")
 def callback():
     """
     Google OAuth callback route. Handles the response from Google.
@@ -75,18 +78,33 @@ def callback():
     token_endpoint = google_provider_cfg["token_endpoint"]
     
     # Prepare and send a request to get tokens
+    # Get the absolute URL for the callback again
+    callback_url = url_for("google_auth.callback", _external=True)
+    callback_url = callback_url.replace("http://", "https://")
+    
     token_url, headers, body = client.prepare_token_request(
         token_endpoint,
         authorization_response=request.url.replace("http://", "https://"),
-        redirect_url=request.base_url.replace("http://", "https://"),
+        redirect_url=callback_url,
         code=code
     )
-    token_response = requests.post(
-        token_url,
-        headers=headers,
-        data=body,
-        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
-    )
+    # Use auth only if both ID and SECRET are available as strings
+    if isinstance(GOOGLE_CLIENT_ID, str) and isinstance(GOOGLE_CLIENT_SECRET, str):
+        auth = (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+        token_response = requests.post(
+            token_url,
+            headers=headers,
+            data=body,
+            auth=auth,
+        )
+    else:
+        # Log the issue with credentials
+        logger.warning("Google OAuth credentials are missing or invalid. Attempting without auth.")
+        token_response = requests.post(
+            token_url,
+            headers=headers,
+            data=body,
+        )
 
     # Parse the tokens
     client.parse_request_body_response(json.dumps(token_response.json()))
