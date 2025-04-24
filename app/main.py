@@ -91,6 +91,12 @@ def dashboard():
     """Render the main page of the application."""
     return render_template('index.html', user=current_user)
 
+@app.route('/five_api_workflow_page')
+@login_required
+def five_api_workflow_page():
+    """Render the 5-API workflow page."""
+    return render_template('five_api_workflow.html', user=current_user)
+
 @app.route('/training')
 @login_required
 def training():
@@ -109,11 +115,7 @@ def final_prompts():
     """Render the final prompts interface."""
     return render_template('final_prompts.html', user=current_user)
 
-@app.route('/five_api_workflow_page')
-@login_required
-def five_api_workflow_page():
-    """Render the 5-API workflow interface."""
-    return render_template('five_api_workflow.html', user=current_user)
+# Route already defined above
 
 @app.route('/prompts')
 @login_required
