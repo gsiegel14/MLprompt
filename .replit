@@ -10,7 +10,7 @@ run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 build = ["sh", "-c", "chmod +x deployment_cleanup.sh && ./deployment_cleanup.sh"]
 
 [workflows]
-runButton = "Run 5-API Workflow Test"
+runButton = "Run Test with API Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -297,6 +297,23 @@ args = "python test_five_api_workflow_row2.py"
 name = "Run 5-API Workflow Test"
 author = 41794870
 mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_five_api_workflow_row2.py"
+
+[[workflows.workflow]]
+name = "Run Test with API Server"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --timeout 120 --workers 1 --reuse-port --reload main:app &"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 5"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
