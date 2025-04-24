@@ -479,6 +479,103 @@ textarea, .results-section {
     animation: highlight 2s ease-out;
 }
 
+/* 5-API Workflow Visualization */
+.workflow-visualization {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.workflow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 90px;
+    cursor: pointer;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.step-name {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.workflow-connector {
+    flex-grow: 1;
+    height: 2px;
+    background-color: #dee2e6;
+    min-width: 30px;
+    margin: 0 -5px;
+    margin-top: 20px;
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+/* Active step */
+.workflow-step.active .step-number {
+    background-color: #6366f1;
+    border-color: #6366f1;
+    color: white;
+    box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.2);
+    animation: pulse 2s infinite;
+}
+
+.workflow-step.active .step-name {
+    color: #6366f1;
+    font-weight: bold;
+}
+
+/* Completed step */
+.workflow-step.completed .step-number {
+    background-color: #22c55e;
+    border-color: #22c55e;
+    color: white;
+}
+
+.workflow-step.completed .step-name {
+    color: #22c55e;
+}
+
+.workflow-step.completed + .workflow-connector {
+    background-color: #22c55e;
+}
+
+/* Animation for active step */
+@keyframes stepPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
+}
+
+.workflow-step.active .step-number {
+    animation: stepPulse 2s infinite;
+}
+
 /* History page styles */
 .history-container {
     padding: 20px;
