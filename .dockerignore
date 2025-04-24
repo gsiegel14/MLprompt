@@ -1,23 +1,49 @@
 
-# Exclude large files from deployment
-cache/
-**/*.pkl
-**/*.bin
-**/*.model
-logs/
-**/__pycache__/
-experiments/*/examples/
-experiments/*/examples_*.json
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Local development files
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+.env
+
+# Exclude large data directories
 data/train/*
 data/validation/*
 data/test/*
 data/nejm/*
-!data/train/current_train.json
-!data/validation/current_validation.json
-debug_experiments/
+!data/train/.gitkeep
+!data/validation/.gitkeep
+!data/test/.gitkeep
+!data/nejm/.gitkeep
+
+# Exclude cache files
+cache/
+*.cache
+*.pkl
+*.bin
+*.model
+*.h5
+*.parquet
+*.sqlite
+*.db
+
+# Exclude test and debug directories
 test_outputs/
 hyperparameter_tuning/
 cross_validation/
-*.pyc
-*.pyo
-*.pyd
+debug_experiments/
+attached_assets/
+clean_repo/
+download/
+
+# Exclude large experiment files
+experiments/*/examples/
+experiments/*/examples_*.json
