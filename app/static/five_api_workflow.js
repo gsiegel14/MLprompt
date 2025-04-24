@@ -9,7 +9,11 @@ const workflowState = {
     currentStep: 0,
     examples: [],
     metricsChart: null,
-    validationSplit: 0.8 // Default training/validation split ratio
+    validationChart: null,
+    validationSplit: 0.8, // Default training/validation split ratio
+    experimentId: null,
+    currentIteration: 0,
+    customOptimizerInstructions: null
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -44,6 +48,12 @@ function initializeUI() {
             csvModal.show();
         });
     }
+    
+    // Set up training configuration UI
+    initializeTrainingConfigUI();
+    
+    // Set up validation and training logs UI
+    initializeTrainingLogsUI();
     
     // Initialize copy buttons
     initializeCopyButtons();
@@ -771,4 +781,325 @@ function formatPercent(value) {
 function truncateText(text, maxLength) {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Initialize the Training Configuration UI elements
+ */
+function initializeTrainingConfigUI() {
+    // Set up Optimizer Instructions modal
+    const viewOptimizerInstructionsBtn = document.getElementById('view-optimizer-instructions');
+    const saveOptimizerInstructionsBtn = document.getElementById('save-optimizer-instructions');
+    const useCustomInstructionsCheckbox = document.getElementById('use-custom-instructions');
+    const customInstructionsContainer = document.getElementById('custom-instructions-container');
+    const optimizationStrategySelect = document.getElementById('optimization-strategy');
+    
+    // Update optimizer type when strategy changes
+    if (optimizationStrategySelect) {
+        optimizationStrategySelect.addEventListener('change', function() {
+            const strategyText = this.options[this.selectedIndex].text;
+            const optimizerTypeEl = document.getElementById('optimizer-type');
+            if (optimizerTypeEl) {
+                optimizerTypeEl.textContent = strategyText;
+            }
+            
+            // Also update in the modal
+            const modalStrategyNameEl = document.getElementById('modal-strategy-name');
+            if (modalStrategyNameEl) {
+                modalStrategyNameEl.textContent = strategyText;
+            }
+            
+            // Update instructions content based on strategy
+            updateOptimizerInstructions(this.value);
+        });
+    }
+    
+    // Toggle custom instructions
+    if (useCustomInstructionsCheckbox) {
+        useCustomInstructionsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                customInstructionsContainer.classList.remove('d-none');
+            } else {
+                customInstructionsContainer.classList.add('d-none');
+            }
+        });
+    }
+    
+    // Save optimizer instructions
+    if (saveOptimizerInstructionsBtn) {
+        saveOptimizerInstructionsBtn.addEventListener('click', function() {
+            const customInstructions = document.getElementById('custom-optimizer-instructions').value.trim();
+            if (useCustomInstructionsCheckbox.checked && customInstructions) {
+                // Save custom instructions to workflowState
+                workflowState.customOptimizerInstructions = customInstructions;
+                showAlert('Custom optimizer instructions saved', 'success');
+            } else {
+                // Reset to default
+                workflowState.customOptimizerInstructions = null;
+                showAlert('Using default optimizer instructions', 'info');
+            }
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('optimizerInstructionsModal'));
+            if (modal) {
+                modal.hide();
+            }
+        });
+    }
+    
+    // Set up validation split UI
+    const validationModeSelect = document.getElementById('validation-mode');
+    const validationPercentageInput = document.getElementById('validation-percentage');
+    
+    if (validationModeSelect && validationPercentageInput) {
+        // Update validation split when inputs change
+        validationModeSelect.addEventListener('change', updateValidationSplit);
+        validationPercentageInput.addEventListener('change', updateValidationSplit);
+        validationPercentageInput.addEventListener('input', updateValidationSplit);
+    }
+}
+
+/**
+ * Update the validation split based on UI inputs
+ */
+function updateValidationSplit() {
+    const validationMode = document.getElementById('validation-mode').value;
+    const validationPercentage = parseInt(document.getElementById('validation-percentage').value) / 100;
+    
+    workflowState.validationSplit = validationMode === 'train' ? validationPercentage : 1 - validationPercentage;
+    
+    // Update data stats display
+    updateDataStats();
+}
+
+/**
+ * Update the optimizer instructions based on selected strategy
+ */
+function updateOptimizerInstructions(strategy) {
+    const instructionsContent = document.getElementById('optimizer-instructions-content');
+    if (!instructionsContent) return;
+    
+    let content = '';
+    
+    switch (strategy) {
+        case 'reasoning_first':
+            content = `
+                <p class="mb-2"><strong>Reasoning-First Refinement</strong></p>
+                <p>This strategy prioritizes improving the reasoning process by first analyzing the original prompts' weaknesses, then developing a step-by-step refinement plan, and finally implementing targeted improvements focused on reasoning clarity and structure.</p>
+                
+                <p class="mb-2 mt-3"><strong>Workflow:</strong></p>
+                <ol>
+                    <li>Analyze current prompts and identify weaknesses</li>
+                    <li>Develop a refinement plan focused on improving the reasoning paths</li>
+                    <li>Make targeted edits to enhance clarity and logical flow</li>
+                    <li>Re-evaluate the refined prompts against original examples</li>
+                </ol>
+            `;
+            break;
+            
+        case 'balanced':
+            content = `
+                <p class="mb-2"><strong>Balanced Optimization</strong></p>
+                <p>This strategy aims to balance improvements in both accuracy and creativity, making moderate adjustments to the prompts that preserve their core structure while enhancing performance.</p>
+                
+                <p class="mb-2 mt-3"><strong>Workflow:</strong></p>
+                <ol>
+                    <li>Identify strengths and weaknesses in the original prompts</li>
+                    <li>Make targeted improvements while preserving effective elements</li>
+                    <li>Ensure balanced optimization of both accuracy and creative aspects</li>
+                    <li>Test refined prompts against diverse example types</li>
+                </ol>
+            `;
+            break;
+            
+        case 'accuracy':
+            content = `
+                <p class="mb-2"><strong>Maximize Accuracy</strong></p>
+                <p>This strategy focuses exclusively on improving the factual accuracy and precision of responses, even at the expense of creativity or stylistic elements.</p>
+                
+                <p class="mb-2 mt-3"><strong>Workflow:</strong></p>
+                <ol>
+                    <li>Identify accuracy issues in the current prompts</li>
+                    <li>Add explicit instructions for fact-checking and verification</li>
+                    <li>Enhance structure for step-by-step reasoning</li>
+                    <li>Test with emphasis on factual correctness metrics</li>
+                </ol>
+            `;
+            break;
+            
+        case 'creativity':
+            content = `
+                <p class="mb-2"><strong>Enhanced Creativity</strong></p>
+                <p>This strategy prioritizes improving the creative aspects of responses, encouraging novel perspectives and expressive language while maintaining reasonable accuracy.</p>
+                
+                <p class="mb-2 mt-3"><strong>Workflow:</strong></p>
+                <ol>
+                    <li>Analyze areas where responses could be more engaging or innovative</li>
+                    <li>Add instructions to encourage creative approaches and diverse perspectives</li>
+                    <li>Balance creativity with accuracy requirements</li>
+                    <li>Test for improvement in engagement and uniqueness metrics</li>
+                </ol>
+            `;
+            break;
+            
+        default:
+            content = `<p>Select a strategy to view instructions.</p>`;
+    }
+    
+    instructionsContent.innerHTML = content;
+}
+
+/**
+ * Initialize the Training Logs UI elements
+ */
+function initializeTrainingLogsUI() {
+    // Set up validation button
+    const runValidationBtn = document.getElementById('run-validation');
+    if (runValidationBtn) {
+        runValidationBtn.addEventListener('click', runValidation);
+    }
+    
+    // Set up clear logs button
+    const clearLogsBtn = document.getElementById('clear-logs');
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener('click', function() {
+            const trainingLogsEl = document.getElementById('training-logs');
+            if (trainingLogsEl) {
+                trainingLogsEl.textContent = '';
+            }
+        });
+    }
+}
+
+/**
+ * Run validation on the current prompts
+ */
+function runValidation() {
+    const runValidationBtn = document.getElementById('run-validation');
+    if (runValidationBtn) {
+        runValidationBtn.disabled = true;
+    }
+    
+    showAlert('Running validation on prompts...', 'info');
+    
+    // Log to the training logs
+    appendToTrainingLogs('Starting validation run...');
+    
+    // TODO: Implement actual validation call to backend
+    // This is a placeholder - would be replaced with actual API call
+    
+    setTimeout(() => {
+        // Update validation section with results
+        document.getElementById('validation-message').textContent = 'Validation complete';
+        document.getElementById('validation-results').classList.remove('d-none');
+        
+        // Create sample validation chart
+        createValidationChart();
+        
+        // Re-enable the button
+        if (runValidationBtn) {
+            runValidationBtn.disabled = false;
+        }
+        
+        appendToTrainingLogs('Validation complete');
+        showAlert('Validation completed successfully!', 'success');
+    }, 1500);
+}
+
+/**
+ * Create a chart for validation results
+ */
+function createValidationChart() {
+    const chartCanvas = document.getElementById('validation-chart');
+    if (!chartCanvas) return;
+    
+    // Destroy existing chart if it exists
+    if (workflowState.validationChart) {
+        workflowState.validationChart.destroy();
+    }
+    
+    // Sample data for demonstration
+    const metrics = {
+        'Exact Match': 0.75,
+        'Semantic Similarity': 0.82,
+        'Keyword Match': 0.68,
+    };
+    
+    // Prepare chart data
+    const labels = Object.keys(metrics);
+    const values = Object.values(metrics).map(v => v * 100);
+    
+    // Create chart
+    workflowState.validationChart = new Chart(chartCanvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Validation Score',
+                data: values,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Score (%)'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Validation Metrics'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Score: ${context.raw.toFixed(1)}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Also populate validation metrics summary
+    const validationMetricsEl = document.getElementById('validation-metrics');
+    if (validationMetricsEl) {
+        let html = '';
+        for (const [key, value] of Object.entries(metrics)) {
+            html += `
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body p-2 text-center">
+                            <div class="small text-muted">${key}</div>
+                            <div class="fs-5">${formatPercent(value)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        validationMetricsEl.innerHTML = html;
+    }
+}
+
+/**
+ * Append a message to the training logs
+ */
+function appendToTrainingLogs(message) {
+    const trainingLogsEl = document.getElementById('training-logs');
+    if (trainingLogsEl) {
+        const timestamp = new Date().toLocaleTimeString();
+        trainingLogsEl.textContent += `[${timestamp}] ${message}\n`;
+        
+        // Scroll to bottom
+        trainingLogsEl.scrollTop = trainingLogsEl.scrollHeight;
+    }
 }
