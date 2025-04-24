@@ -437,6 +437,12 @@ What's the square root of 64?,8`;
      * Initialize dashboard components with data
      */
     function initDashboard() {
+        // Set a flag to prevent multiple initializations on the same page
+        if (window.dashboardInitialized) {
+            return;
+        }
+        window.dashboardInitialized = true;
+        
         // Fetch dataset counts
         fetchDatasetCounts();
         
@@ -454,8 +460,7 @@ What's the square root of 64?,8`;
             validationAccuracy.textContent = '0.84';
             optimizerImprovement.textContent = '+12%';
             
-            // In a real implementation, fetch the data from the backend
-            // This would connect to the experiment tracker and workflow results
+            // Fetch real metrics data only once
             fetch('/api/metrics_summary')
                 .then(response => response.json())
                 .then(data => {
@@ -483,8 +488,24 @@ What's the square root of 64?,8`;
     function initMetricsChart() {
         if (!metricsChart) return;
         
+        // Destroy existing chart instance if it exists
+        if (window.dashboardMetricsChart && typeof window.dashboardMetricsChart.destroy === 'function') {
+            window.dashboardMetricsChart.destroy();
+        }
+        
+        // Clear the canvas manually for safety
+        const parent = metricsChart.parentNode;
+        if (parent) {
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = 'metrics-chart';
+            newCanvas.className = metricsChart.className;
+            newCanvas.height = metricsChart.height;
+            parent.replaceChild(newCanvas, metricsChart);
+            metricsChart = newCanvas;
+        }
+        
         const ctx = metricsChart.getContext('2d');
-        const chart = new Chart(ctx, {
+        window.dashboardMetricsChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Original', 'Evaluator', 'Optimizer', 'Validation', 'Final'],
