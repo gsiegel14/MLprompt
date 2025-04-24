@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Setup PostgreSQL and Prefect"
+runButton = "Initialize PostgreSQL Database"
 
 [[workflows.workflow]]
 name = "Project"
@@ -218,44 +218,6 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m scripts.init_database"
-
-[[workflows.workflow]]
-name = "Setup PostgreSQL and Prefect"
-author = 41794870
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pip install -r requirements.txt"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m scripts.init_database"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m scripts.setup_prefect"
-
-[[workflows.workflow]]
-name = "Start Platform with PostgreSQL"
-author = 41794870
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m scripts.init_database"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m scripts.setup_prefect"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m scripts.start_prefect_agent &"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
 
 [[ports]]
 localPort = 5000

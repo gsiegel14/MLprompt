@@ -28,29 +28,11 @@ from src.app.repositories.ml_settings_repository import MLSettingsRepository
 
 def check_database_exists():
     """Check if the database exists and create it if it doesn't"""
-    # Check if we're running on Replit
-    is_replit = "REPL_ID" in os.environ and "REPLIT_DB_URL" in os.environ
-    
     # Get PostgreSQL URL from environment or use default
-    db_url = os.getenv("DATABASE_URL")
+    db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/promptopt")
     
-    if is_replit and os.getenv("REPLIT_DB_URL"):
-        # Using Replit's PostgreSQL
-        logger.info("Running on Replit with built-in PostgreSQL database")
-        
-        try:
-            # Test connection to the database
-            conn = psycopg2.connect(db_url)
-            conn.close()
-            logger.info("Successfully connected to Replit PostgreSQL database")
-            return True
-        except Exception as e:
-            logger.error(f"Error connecting to Replit PostgreSQL: {str(e)}")
-            logger.error("Please create a PostgreSQL database in the Replit interface")
-            return False
-    
-    # Standard PostgreSQL setup for non-Replit environments
-    if not db_url or not db_url.startswith("postgresql"):
+    # Ensure it's a PostgreSQL URL
+    if not db_url.startswith("postgresql"):
         db_url = "postgresql://postgres:postgres@localhost:5432/promptopt"
         os.environ["DATABASE_URL"] = db_url
     
@@ -160,34 +142,7 @@ def create_default_model_configurations():
 def check_prefect_database():
     """Check if Prefect database exists and create it if needed"""
     try:
-        # Check if we're running on Replit
-        is_replit = "REPL_ID" in os.environ and "REPLIT_DB_URL" in os.environ
-        
-        if is_replit and os.getenv("REPLIT_DB_URL"):
-            # Using Replit's PostgreSQL
-            main_db_url = os.getenv("DATABASE_URL")
-            
-            # Create a prefect-specific database URL (same server, different database)
-            # For Replit, we just need to modify the database name part in the URL
-            prefect_db_url = main_db_url.rsplit('/', 1)[0] + "/prefect"
-            
-            # Set environment variable for Prefect
-            os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
-            
-            # Test if we can connect (we can't create databases in Replit, so we'll need to
-            # create this through the Replit database UI)
-            try:
-                test_conn = psycopg2.connect(prefect_db_url)
-                test_conn.close()
-                logger.info(f"Connected to existing Prefect database on Replit")
-            except Exception as e:
-                logger.warning(f"Prefect database doesn't exist on Replit yet: {str(e)}")
-                logger.warning("Please create a 'prefect' database in the Replit Database UI")
-                
-            logger.info(f"Configured Prefect to use Replit PostgreSQL database")
-            return True
-            
-        # Standard PostgreSQL setup for non-Replit environments
+        # Set up Prefect to use PostgreSQL
         logger.info("Checking if Prefect database exists")
         
         # Get PostgreSQL URL from environment or use default

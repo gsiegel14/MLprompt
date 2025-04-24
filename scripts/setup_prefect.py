@@ -26,15 +26,8 @@ def create_prefect_profile():
     """Create a new Prefect profile for PostgreSQL"""
     logger.info("Creating Prefect profile for PostgreSQL")
     try:
-        # Check if we're running on Replit
-        is_replit = "REPL_ID" in os.environ and "REPLIT_DB_URL" in os.environ
-        
-        # Get main database URL
-        if is_replit and os.getenv("REPLIT_DB_URL"):
-            main_db_url = os.getenv("DATABASE_URL")
-            logger.info("Using Replit PostgreSQL database for Prefect")
-        else:
-            main_db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/promptopt")
+        # Get main database URL from environment
+        main_db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/promptopt")
         
         # Create a prefect-specific database URL (same server, different database)
         parts = main_db_url.rsplit('/', 1)
@@ -44,11 +37,8 @@ def create_prefect_profile():
         # Set environment variable for Prefect
         os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
         
-        # Create profile name based on environment
-        profile_name = "replit-postgres-profile" if is_replit else "postgres-profile"
-        
         # Create a new profile
-        subprocess.run(["prefect", "profile", "create", profile_name], check=True)
+        subprocess.run(["prefect", "profile", "create", "postgres-profile"], check=True)
         
         # Configure the profile
         subprocess.run([
@@ -57,13 +47,7 @@ def create_prefect_profile():
         ], check=True)
         
         # Set as active profile
-        subprocess.run(["prefect", "profile", "use", profile_name], check=True)
-        
-        # Set API URL to bind to all interfaces so it's accessible from Replit
-        subprocess.run([
-            "prefect", "config", "set",
-            "PREFECT_API_URL=http://0.0.0.0:4200/api"
-        ], check=True)
+        subprocess.run(["prefect", "profile", "use", "postgres-profile"], check=True)
         
         logger.info(f"Prefect profile created and configured to use PostgreSQL at {prefect_db_url}")
         return True
