@@ -5,6 +5,7 @@ import json
 import pandas as pd
 from datetime import datetime
 from flask import render_template, request, jsonify, flash, redirect, url_for, send_from_directory
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import app
 from app.llm_client import get_llm_response
@@ -51,51 +52,61 @@ data_module = DataModule()
 prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, config)
 
 @app.route('/')
+@login_required
 def index():
     """Render the main page of the application."""
-    return render_template('index.html')
+    return render_template('index.html', user=current_user)
 
 @app.route('/training')
+@login_required
 def training():
     """Render the ML training interface."""
-    return render_template('training.html')
+    return render_template('training.html', user=current_user)
 
 @app.route('/evaluation')
+@login_required
 def evaluation():
     """Render the prompt evaluation interface."""
-    return render_template('evaluation.html')
+    return render_template('evaluation.html', user=current_user)
 
 @app.route('/final_prompts')
+@login_required
 def final_prompts():
     """Render the final prompts interface."""
-    return render_template('final_prompts.html')
+    return render_template('final_prompts.html', user=current_user)
 
 @app.route('/five_api_workflow_page')
+@login_required
 def five_api_workflow_page():
     """Render the 5-API workflow interface."""
-    return render_template('five_api_workflow.html')
+    return render_template('five_api_workflow.html', user=current_user)
 
 @app.route('/prompts')
+@login_required
 def prompts_page():
     """Render the all prompts interface."""
-    return render_template('prompts.html')
+    return render_template('prompts.html', user=current_user)
 
 @app.route('/prompts/<path:filename>')
+@login_required
 def serve_prompt_file(filename):
     """Serve prompt files from the prompts folder."""
     return send_from_directory('prompts', filename)
 
 @app.route('/history')
+@login_required
 def history():
     """Render the experiment history page."""
-    return render_template('history.html')
+    return render_template('history.html', user=current_user)
 
 @app.route('/todo')
+@login_required
 def todo():
     """Render the todo list page."""
-    return render_template('todo.html')
+    return render_template('todo.html', user=current_user)
 
 @app.route('/run', methods=['POST'])
+@login_required
 def run_evaluation():
     """Process inputs, run the model, and return evaluation results."""
     try:
@@ -205,6 +216,7 @@ def run_evaluation():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/upload_csv', methods=['POST'])
+@login_required
 def upload_csv():
     """Handle CSV file uploads with example data."""
     if 'file' not in request.files:

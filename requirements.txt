@@ -46,3 +46,6 @@ selenium
 pyyaml
 flask-login
 oauthlib
+flask-login
+oauthlib
+requests
