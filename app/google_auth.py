@@ -45,8 +45,13 @@ def login():
     callback_url = url_for("google_auth.callback", _external=True)
     
     # In development, we need to use the actual domain for OAuth callbacks
-    if os.environ.get("REPLIT_DOMAIN"):
+    if os.environ.get("REPLIT_DEV_DOMAIN"):
+        callback_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/google_auth/callback"
+        # Print the exact callback URL for debugging
+        print(f"Using callback URL: {callback_url}")
+    elif os.environ.get("REPLIT_DOMAIN"):
         callback_url = f"https://{os.environ.get('REPLIT_DOMAIN')}/google_auth/callback"
+        print(f"Using callback URL: {callback_url}")
     else:
         # For local development
         callback_url = callback_url.replace("http://", "https://")
@@ -79,20 +84,31 @@ def callback():
     callback_url = url_for("google_auth.callback", _external=True)
     
     # In development, we need to use the actual domain for OAuth callbacks
-    if os.environ.get("REPLIT_DOMAIN"):
+    if os.environ.get("REPLIT_DEV_DOMAIN"):
+        callback_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/google_auth/callback"
+        # Print the exact callback URL for debugging
+        print(f"Callback function using URL: {callback_url}")
+    elif os.environ.get("REPLIT_DOMAIN"):
         callback_url = f"https://{os.environ.get('REPLIT_DOMAIN')}/google_auth/callback"
+        print(f"Callback function using URL: {callback_url}")
     else:
         # For local development
         callback_url = callback_url.replace("http://", "https://")
     
     # Make sure we use the correct domain in the authorization response
     authorization_response = request.url
-    if os.environ.get("REPLIT_DOMAIN"):
-        # Extract just the path portion and use the Replit domain
-        path = request.path
-        query = request.query_string.decode('utf-8')
-        query_part = f"?{query}" if query else ""
+    
+    # Extract just the path portion and use the correct domain
+    path = request.path
+    query = request.query_string.decode('utf-8')
+    query_part = f"?{query}" if query else ""
+    
+    if os.environ.get("REPLIT_DEV_DOMAIN"):
+        authorization_response = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}{path}{query_part}"
+        print(f"Using authorization_response: {authorization_response}")
+    elif os.environ.get("REPLIT_DOMAIN"):
         authorization_response = f"https://{os.environ.get('REPLIT_DOMAIN')}{path}{query_part}"
+        print(f"Using authorization_response: {authorization_response}")
     else:
         # For local development
         authorization_response = authorization_response.replace("http://", "https://")
