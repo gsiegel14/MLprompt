@@ -28,39 +28,42 @@ from src.app.repositories.ml_settings_repository import MLSettingsRepository
 
 def check_database_exists():
     """Check if the database exists and create it if it doesn't"""
-    db_url = os.getenv("DATABASE_URL", "postgresql://promptopt:devpassword@localhost:5432/promptopt")
-
-    # Parse the URL to get database name and connection string
-    parts = db_url.split("/")
-    db_name = parts[-1]
-    connection_str = "/".join(parts[:-1]) + "/postgres"
-
-    logger.info(f"Checking if database '{db_name}' exists")
-
-    try:
-        # Connect to postgres database to create our database if needed
-        conn = psycopg2.connect(connection_str)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
-
-        # Check if database exists
-        cursor.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
-        exists = cursor.fetchone()
-
-        if not exists:
-            logger.info(f"Creating database '{db_name}'")
-            cursor.execute(f'CREATE DATABASE "{db_name}"')
-            logger.info(f"Database '{db_name}' created successfully")
-        else:
-            logger.info(f"Database '{db_name}' already exists")
-
-        cursor.close()
-        conn.close()
-
+    # For Replit, we'll use SQLite as a fallback if PostgreSQL is not configured
+    db_url = os.getenv("DATABASE_URL")
+    
+    # If no DATABASE_URL is provided, default to SQLite
+    if not db_url:
+        db_dir = Path(__file__).parent.parent / "data" / "db"
+        db_dir.mkdir(exist_ok=True, parents=True)
+        db_path = db_dir / "promptopt.db"
+        db_url = f"sqlite:///{db_path}"
+        os.environ["DATABASE_URL"] = db_url
+        logger.info(f"No PostgreSQL configured, using SQLite at {db_path}")
         return True
-    except Exception as e:
-        logger.error(f"Error checking/creating database: {str(e)}")
-        return False
+        
+    # If PostgreSQL URL is provided, attempt to connect
+    if db_url.startswith("postgresql"):
+        try:
+            # For Replit PostgreSQL, we don't need to create the database
+            # Just verify connection works
+            conn = psycopg2.connect(db_url)
+            conn.close()
+            logger.info("Successfully connected to PostgreSQL database")
+            return True
+        except Exception as e:
+            logger.error(f"Error connecting to PostgreSQL: {str(e)}")
+            logger.warning("Falling back to SQLite database")
+            # Fall back to SQLite
+            db_dir = Path(__file__).parent.parent / "data" / "db"
+            db_dir.mkdir(exist_ok=True, parents=True)
+            db_path = db_dir / "promptopt.db"
+            db_url = f"sqlite:///{db_path}"
+            os.environ["DATABASE_URL"] = db_url
+            logger.info(f"Using SQLite at {db_path}")
+            return True
+    
+    # Non-PostgreSQL URL was provided (like SQLite)
+    return True
 
 def run_migrations():
     """Run database migrations using Alembic"""

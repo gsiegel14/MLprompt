@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Initialize Database"
+runButton = "Initialize Database with Fallback"
 
 [[workflows.workflow]]
 name = "Project"
@@ -200,6 +200,15 @@ args = "python -m scripts.setup_prefect"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m scripts.start_prefect_agent"
+
+[[workflows.workflow]]
+name = "Initialize Database with Fallback"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
 
 [[ports]]
 localPort = 5000
