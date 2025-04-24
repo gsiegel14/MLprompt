@@ -551,6 +551,7 @@ def load_dataset_api():
     - nejm_train: NEJM case studies for training
     - nejm_validation: NEJM case studies for validation
     - nejm_prompts: Specialized prompts for medical cases
+    - base_prompts: Base prompts from the repository
     """
     try:
         import traceback
@@ -623,6 +624,28 @@ def load_dataset_api():
                 })
             except Exception as e:
                 error_msg = f"Error loading NEJM prompts: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                with open(log_file_path, 'a') as f:
+                    f.write(f"ERROR: {error_msg}\n{traceback.format_exc()}\n")
+                return jsonify({'error': error_msg}), 500
+        
+        elif dataset_type == 'base_prompts':
+            # Load base prompts from the repository
+            try:
+                with open('prompts/Base Prompts/Base_system_message.md', 'r') as f:
+                    system_prompt = f.read().strip()
+                
+                with open('prompts/Base Prompts/Base_output_prompt.md', 'r') as f:
+                    output_prompt = f.read().strip()
+                
+                logger.info("Loaded Base prompts from repository")
+                return jsonify({
+                    'system_prompt': system_prompt,
+                    'output_prompt': output_prompt
+                })
+            except Exception as e:
+                error_msg = f"Error loading Base prompts: {str(e)}"
                 logger.error(error_msg)
                 logger.error(traceback.format_exc())
                 with open(log_file_path, 'a') as f:

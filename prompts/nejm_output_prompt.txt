@@ -1,0 +1,127 @@
+<instructions>
+Follow the instructions below to generate an accurate and prioritized differential diagnosis for the patient described in the Patient Summary above. Your goal is to produce a highly accurate and clinically effective differential diagnosis.
+
+**Case Discussion**
+
+Provide one or two paragraphs that:
+
+1. **Summarize the Patient's Case:**
+    - Include key details: demographics, primary symptoms, duration, site of care, relevant medical, surgical, psychosocial, and family history, physical exam findings, medications, diagnostic results, and initial treatments/responses.
+    - Note any missing information important for the diagnostic process.
+    - ENSURE that you have NOT inadvertently included information from the few-shot examples below in your summary and analysis of the patient's case. If you confuse the information presented as Patient Summary with information from the examples, you FAIL at your task.
+
+2. **Analyze the Presentation and apply Advanced Diagnostic Reasoning:**
+    - Discuss how the clinical features align with common and likely conditions.
+    - Consider less common or rare diagnoses if they fit the presentation.
+    - If a particular diagnosis is strongly supported, state that it is likely or established but acknowledge any uncertainties.
+    - Provide a balanced, evidence-based assessment without prematurely focusing on one diagnosis.
+    - Any diagnoses discussed should be **bolded using markdown**.
+
+**Differential Diagnosis**
+
+Immediately after the **Case Discussion**, present three subsections:
+
+**Most Likely Diagnoses**
+
+- **Definition:**
+    - These are the diagnoses that are **highly probable** and best explain the patient's presentation. They are strongly supported by clinical evidence—such as symptoms, signs, risk factors, and epidemiological data. These diagnoses should account for **all major aspects** of the patient's case and are the primary considerations for treatment and management.
+- **Inclusion Criteria:**
+    - Diagnoses that are **plausible and highly likely** based on the patient's specific clinical features.
+    - Conditions supported by a combination of the patient's history, physical examination findings, and initial diagnostic results.
+    - **Can include life-threatening conditions** if they are deemed highly probable given the clinical reference excerpt.
+- **Exclusion Criteria:**
+    - Diagnoses that are less likely explanations for the patient's symptoms.
+    - Conditions considered primarily due to their severity rather than their likelihood (these belong in the **Can't Miss Diagnoses** section if life-threatening).
+- **Instructions:**
+    - **Number each diagnosis** and provide the following for each:
+        1. **Diagnosis Name**
+            - **Supporting Evidence:** Provide detailed, full-sentence explanations of the clinical features, history, examination findings, and diagnostic results that support this diagnosis. Clearly explain how these elements make the diagnosis highly probable.
+            - **Opposing Evidence:** Provide detailed, full-sentence explanations of any aspects of the patient's presentation that are inconsistent with the diagnosis or argue against it. Acknowledge uncertainties or atypical features.
+
+**Expanded Differential**
+
+- **Definition:**
+    - These are **non-life-threatening conditions** that are **plausible but less likely** explanations for the patient's symptoms. They could explain the patient's presentation but are not the primary considerations. These diagnoses should be considered, especially if initial investigations do not confirm the most likely diagnoses. Emergently life-threatening illnesses should NOT be included in the expanded differential; these belong under **Can't Miss Diagnoses**.
+- **Inclusion Criteria:**
+    - Diagnoses that are reasonable possibilities based on some aspects of the patient's presentation.
+    - Conditions that are **less probable** due to lack of supporting evidence, atypical features, or lower prevalence.
+    - Diagnoses that are **not immediately life-threatening** (non-critical conditions).
+- **Exclusion Criteria:**
+    - Diagnoses that are highly probable (these belong in **Most Likely Diagnoses**).
+    - **Any life-threatening conditions** (these belong in **Can't Miss Diagnoses**).
+
+**Can't Miss Diagnoses**
+
+- **Definition:**
+    - These are **life-threatening or critical conditions** that are **plausible explanations** for the patient's presentation, **regardless of their likelihood relative to other diagnoses**. They must be considered because missing them could lead to significant morbidity or mortality.
+- **Inclusion Criteria:**
+    - **Any life-threatening condition that is a plausible cause** of the patient's symptoms, regardless of its likelihood.
+    - Include common life-threatening conditions (e.g., **Acute Coronary Syndrome**, **Pulmonary Embolism**, **Sepsis**, **Meningitis**) that must be actively ruled out.
+- **Exclusion Criteria:**
+    - Diagnoses that are highly probable and life-threatening (these belong in **Most Likely Diagnoses**).
+    - Non-life-threatening conditions (these belong in **Expanded Differential**).
+
+**Diagnostic Next Steps**
+
+- **List specific diagnostic next steps that will narrow the differential and help confirm a final diagnosis in bullet points, without subsections or numbering and follow these rules:**
+
+**Consolidated Directives for Diagnostic Reasoning and Test Selection**
+
+1. **Initial History, Clarifications, and Physical Exam Maneuvers:**
+    - Start your list with any key historical and physical exam findings that would differentiate among likely diagnoses.
+    - Identify missing information that would refine the differential. Obtain essential missing data promptly, if possible, before testing.
+
+2. **Immediate, High-Yield, Non-Invasive Tests First:**
+    - After history and physical exam suggestions, list simple, low-risk, non-invasive and high-yield tests that address urgent clinical questions.
+    - Prioritize tests that directly exclude critical, cannot-miss diagnoses.
+    - Ensure each test is clearly tied to narrowing the differential or ruling out severe conditions.
+
+3. **Minimize Invasiveness:**
+    - Reserve invasive or high-risk tests for scenarios where immediate, critical information cannot be obtained by non-invasive means.
+    - Justify any invasive recommendations based on clinical urgency and necessity.
+
+4. **Organize Tests by Diagnostic Goals:**
+    - Group recommended tests/imaging by the conditions they aim to confirm or exclude.
+    - Clearly state the purpose of each test and its specific diagnostic objective.
+
+5. **Avoid Redundancy:**
+    - Do not repeat tests or exam maneuvers already performed without clear justification.
+    - If repeating a test, explain the rationale (e.g., verifying suspicious results or tracking progression).
+
+6. **Acknowledge Test Limitations:**
+    - Recognize potential false positives and false negatives.
+    - Interpret test results within the broader clinical reference excerpt and avoid over-reliance on a single result.
+
+7. **Exclude Low-Value Tests:**
+    - Do not recommend tests with little immediate diagnostic value.
+    - Emphasize high-impact tests that significantly narrow the differential or confirm critical diagnoses.
+
+8. **Guard Against Anchoring Bias:**
+    - Remain open to new data and flexible with the testing strategy as clinical information evolves.
+    - Do not prematurely focus on initial leading diagnoses without considering alternative explanations.
+
+9. **Step-Wise Diagnostic Reasoning:**
+    - Progress through the diagnostic approach methodically.
+    - Do not jump ahead to specialized or invasive tests without a strong clinical reason.
+    - If a test will only be valuable after certain results are known, specify those conditions and how it adds incremental value.
+
+**Relevance and Justification**
+
+- **Ensure Clinical Justification:**
+    - Recommend only those diagnostic steps that are essential and directly supported by the patient's presentation.
+    - Ensure that each step is prioritized based on clinical urgency and impact on patient care.
+- **Avoid Redundancy and Low-Yield Tests:**
+    - Do not include tests that have already been performed unless there is a justified reason for repeating them.
+    - Exclude low-value tests that are unlikely to impact immediate management.
+    - Prioritize non-invasive, readily available tests before suggesting invasive procedures.
+</instructions>
+
+<formatting>
+• Begin with a clear "Case Discussion" section summarizing pertinent details.  Do NOT print any preamble before the "Case Discussion" header.
+• Follow with differential diagnosis sections labeled "Most Likely Diagnoses," "Expanded Differential," and "Can't Miss Differential."
+• Print an empty line between these headers and the diagnoses that follow them.
+• For each differential section, list items using numbered headings in the exact format: "# 1. Diagnosis" (each on a new line). If you do NOT place a "#" as part of the numbered heading in your markdown to ensure correct rendering in HTML, you FAIL. • Do NOT put bolding around the diagnosis. If you bold the diagnosis, you FAIL. Simply use the # [numb]. [Diagnosis] format.
+• Do not bold the words "Supporting" or "Opposing" when providing explanation details.  
+• Present the "Diagnostic Next Steps" section as a straightforward bullet-point list without numbered headings.  
+• Do not add lines to separate sections.
+</formatting>
