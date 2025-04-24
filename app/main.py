@@ -55,21 +55,34 @@ prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, co
 @app.route('/')
 def root():
     """Root URL handler. Redirect to main app if authenticated, otherwise to login."""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    else:
-        logger.debug("User not authenticated, redirecting to login page")
-        return redirect(url_for('login'))
+    logger.debug("Root route accessed")
+    try:
+        if current_user.is_authenticated:
+            logger.debug("User is authenticated, redirecting to dashboard")
+            return redirect(url_for('dashboard'))
+        else:
+            logger.debug("User not authenticated, redirecting to login page")
+            return redirect(url_for('login'))
+    except Exception as e:
+        logger.error(f"Error in root route: {str(e)}")
+        return render_template('login.html')
 
 # Login page - no authentication required
 @app.route('/login')
 def login():
     """Render the login page."""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    # Make debugging easier by logging template rendering
-    logger.debug("Rendering login.html template")
-    return render_template('login.html')
+    logger.debug("Login route accessed")
+    try:
+        if current_user.is_authenticated:
+            logger.debug("User is authenticated, redirecting to dashboard")
+            return redirect(url_for('dashboard'))
+        # Make debugging easier by logging template rendering
+        logger.debug("Rendering login.html template")
+        return render_template('login.html')
+    except Exception as e:
+        logger.error(f"Error in login route: {str(e)}")
+        # In case of error, still try to render the login page
+        return render_template('login.html')
 
 # Main dashboard page (renamed from index to dashboard for clarity)
 @app.route('/dashboard')

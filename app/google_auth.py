@@ -28,7 +28,7 @@ def index():
     Home page route. If user is not logged in, redirect to login.
     """
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('login'))
 

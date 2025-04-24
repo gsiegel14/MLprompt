@@ -12,7 +12,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Set the secret key (for session management)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET", "atlas-prompt-optimization-platform-dev-secret-2025")
+# Set session cookie parameters
+app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # Session timeout in seconds (1 hour)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session on each request
 
 # Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
