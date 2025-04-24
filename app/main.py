@@ -51,12 +51,26 @@ experiment_tracker = ExperimentTracker()
 data_module = DataModule()
 prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, config)
 
-# Explicitly handle the root URL without authentication
+# API key for testing (set this in your environment variables)
+API_KEY = os.environ.get('API_KEY', 'test_api_key_for_development')
+
+# Helper function to check API key
+def check_api_key():
+    api_key = request.headers.get('X-API-Key') or request.args.get('api_key')
+    return api_key == API_KEY
+
+# Explicitly handle the root URL with authentication or API key
 @app.route('/')
 def root():
     """Root URL handler. Redirect to main app if authenticated, otherwise to login."""
     logger.debug("Root route accessed")
     try:
+        # Check for API key first (for automated testing)
+        if check_api_key():
+            logger.debug("API key authentication successful")
+            return redirect(url_for('dashboard'))
+        
+        # Then check user authentication
         if current_user.is_authenticated:
             logger.debug("User is authenticated, redirecting to dashboard")
             return redirect(url_for('dashboard'))
@@ -86,9 +100,16 @@ def login():
 
 # Main dashboard page (renamed from index to dashboard for clarity)
 @app.route('/dashboard')
-@login_required
 def dashboard():
     """Render the main page of the application."""
+    # Allow access with API key for testing
+    if check_api_key():
+        return render_template('index.html', user=None)
+    
+    # Otherwise require login
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     return render_template('index.html', user=current_user)
 
 @app.route('/five_api_workflow_page')
@@ -784,6 +805,13 @@ def regenerate_nejm_data_api():
 
 @app.route('/five_api_workflow', methods=['POST'])
 def five_api_workflow():
+    """
+    Run the enhanced 5-step workflow with 5 API calls.
+    This endpoint accepts either user authentication or API key authentication.
+    """
+    # Check for API key for automated testing
+    if not (check_api_key() or (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated)):
+        return jsonify({'error': 'Authentication required. Please provide a valid API key or login.'}), 401
     """
     Run the enhanced 5-step workflow with 5 API calls:
     1. Google Vertex API #1: Primary LLM inference

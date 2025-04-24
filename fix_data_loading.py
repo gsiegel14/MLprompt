@@ -201,11 +201,75 @@ def verify_data_files():
     
     return True
 
+def create_example_data():
+    """Create sample example data if none exists."""
+    train_dir = "data/train"
+    validation_dir = "data/validation"
+    
+    # Ensure directories exist
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(validation_dir, exist_ok=True)
+    
+    # Create examples.json in train directory if it doesn't exist
+    train_examples_path = os.path.join(train_dir, "examples.json")
+    if not os.path.exists(train_examples_path):
+        logger.info(f"Creating sample train examples at {train_examples_path}")
+        examples = [
+            {
+                "user_input": "A 45-year-old man presents with crushing chest pain radiating to the left arm that started 1 hour ago. He has a history of hypertension and smoking. Vital signs: BP 160/95, HR 110, RR 22. ECG shows ST elevation in leads II, III, and aVF.",
+                "ground_truth_output": "Acute inferior myocardial infarction"
+            },
+            {
+                "user_input": "A 60-year-old woman presents with sudden onset of weakness and numbness on the left side of her face and left arm that started 2 hours ago. She has a history of atrial fibrillation and is on warfarin. Vital signs: BP 170/90, HR 80, RR 16. CT scan of the head shows no bleeding.",
+                "ground_truth_output": "Ischemic stroke (cerebrovascular accident)"
+            },
+            {
+                "user_input": "A 35-year-old woman presents with severe headache that began suddenly while exercising. She describes it as \"the worst headache of my life.\" Neurological exam shows nuchal rigidity and photophobia. CT scan of the head shows subarachnoid blood.",
+                "ground_truth_output": "Subarachnoid hemorrhage"
+            }
+        ]
+        with open(train_examples_path, 'w') as f:
+            json.dump(examples, f, indent=2)
+        
+        # Copy to current_train.json as well
+        current_train_path = os.path.join(train_dir, "current_train.json")
+        with open(current_train_path, 'w') as f:
+            json.dump(examples, f, indent=2)
+        
+        logger.info(f"Created sample train examples with {len(examples)} examples")
+    
+    # Create examples.json in validation directory if it doesn't exist
+    validation_examples_path = os.path.join(validation_dir, "examples.json")
+    if not os.path.exists(validation_examples_path):
+        logger.info(f"Creating sample validation examples at {validation_examples_path}")
+        examples = [
+            {
+                "user_input": "A 50-year-old man presents with gradually worsening shortness of breath over the past 2 weeks. He has a history of congestive heart failure. Physical exam reveals bilateral lower extremity edema and crackles in both lung bases. BNP is elevated.",
+                "ground_truth_output": "Acute exacerbation of congestive heart failure"
+            },
+            {
+                "user_input": "A 25-year-old woman presents with fever, right flank pain, and dysuria for the past 2 days. Urinalysis shows pyuria and bacteriuria. CBC reveals leukocytosis.",
+                "ground_truth_output": "Pyelonephritis"
+            }
+        ]
+        with open(validation_examples_path, 'w') as f:
+            json.dump(examples, f, indent=2)
+        
+        # Copy to current_validation.json as well
+        current_validation_path = os.path.join(validation_dir, "current_validation.json")
+        with open(current_validation_path, 'w') as f:
+            json.dump(examples, f, indent=2)
+        
+        logger.info(f"Created sample validation examples with {len(examples)} examples")
+
 def main():
     logger.info("=== FIXING DATA LOADING STARTED ===")
     
     # Verify data files
     verify_data_files()
+    
+    # Create example data if needed
+    create_example_data()
     
     # Fix data module
     fix_data_module_loading()
