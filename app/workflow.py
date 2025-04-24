@@ -13,7 +13,9 @@ Each training run follows this sequence, with results tracked for comparison.
 """
 
 import os
+import gc
 import logging
+import psutil
 from typing import Dict, List, Any, Optional, Tuple
 import json
 import time
@@ -88,9 +90,22 @@ class PromptOptimizationWorkflow:
         Returns:
             dict: Results of the workflow with all metrics
         """
+        # Collect garbage and monitor memory usage
+        gc.collect()
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        start_memory = memory_info.rss / 1024 / 1024  # Convert to MB
+        
         logger.info("=== STARTING 5-API WORKFLOW ===")
+        logger.info(f"Memory usage at start: {start_memory:.2f} MB")
         logger.info(f"System prompt length: {len(system_prompt)} chars")
         logger.info(f"Output prompt length: {len(output_prompt)} chars")
+
+        # Ensure batch size is not too large to prevent memory issues
+        max_safe_batch_size = 5
+        if batch_size > max_safe_batch_size:
+            logger.warning(f"Reducing batch size from {batch_size} to {max_safe_batch_size} to prevent memory issues")
+            batch_size = max_safe_batch_size
 
         if hf_metrics is None:
             hf_metrics = ["exact_match", "bleu"]
@@ -131,6 +146,11 @@ class PromptOptimizationWorkflow:
                 references.append(ground_truth)
                 inputs.append(user_input)
 
+            # Run garbage collection to free memory
+            gc.collect()
+            current_memory = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+            logger.info(f"Memory usage after Phase 1: {current_memory:.2f} MB")
+            
             # Phase 2: Hugging Face API - First External Validation
             logger.info("PHASE 2: Hugging Face API - First External Validation")
 

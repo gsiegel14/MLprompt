@@ -48,6 +48,9 @@ BASE_URL = "http://localhost:5000"  # Change if running on a different port
 TEST_INPUT = "I have a 34-year-old with a history of PE. What is the differential diagnosis?"
 GROUND_TRUTH = "Mention of PE"
 
+# Set the batch size to 1 to reduce memory usage
+BATCH_SIZE = 1
+
 # Configuration parameters
 WAIT_TIME = 2  # Wait time between API calls (in seconds)
 REQUEST_TIMEOUT = 30  # Timeout for HTTP requests (in seconds)
@@ -276,7 +279,8 @@ def run_full_five_api_workflow(system_prompt, output_prompt):
         "system_prompt": system_prompt,
         "output_prompt": output_prompt,
         "user_input": TEST_INPUT,
-        "ground_truth": GROUND_TRUTH
+        "ground_truth": GROUND_TRUTH,
+        "batch_size": BATCH_SIZE  # Use small batch size to reduce memory usage
     }
     
     # Tracking completion status
