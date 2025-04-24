@@ -51,6 +51,14 @@ experiment_tracker = ExperimentTracker()
 data_module = DataModule()
 prompt_workflow = PromptOptimizationWorkflow(data_module, experiment_tracker, config)
 
+# Login page - no authentication required
+@app.route('/login')
+def login():
+    """Render the login page."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('login.html')
+
 @app.route('/')
 @login_required
 def index():

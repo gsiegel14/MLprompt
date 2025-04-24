@@ -30,14 +30,7 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     else:
-        return redirect(url_for('google_auth.login'))
-        
-@google_auth.route("/login_page")
-def login_page():
-    """
-    Render the login page with Google sign-in button.
-    """
-    return render_template('login.html')
+        return redirect(url_for('login'))
 
 @google_auth.route("/login")
 def login():
@@ -155,4 +148,4 @@ def callback():
 def logout():
     logout_user()
     flash("You have been logged out.", "info")
-    return redirect(url_for("google_auth.login"))
+    return redirect(url_for("login"))
