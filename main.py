@@ -4,9 +4,8 @@ from src.app.utils.logger import configure_logging
 import logging
 
 # Configure advanced logging
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-numeric_level = getattr(logging, log_level, logging.INFO)
-configure_logging(level=numeric_level)
+log_level = os.environ.get("LOG_LEVEL", "INFO")
+configure_logging(log_level=log_level)
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

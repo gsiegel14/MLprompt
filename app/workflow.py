@@ -464,12 +464,6 @@ class PromptOptimizationWorkflow:
 
             return results
 
-        except Exception as e:
-            logger.error(f"Error in 5-API workflow: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return {"error": str(e)}
-
     def run_training_cycle(self, 
                           system_prompt: str, 
                           output_prompt: str, 

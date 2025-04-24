@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Fix and Restart Application"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
