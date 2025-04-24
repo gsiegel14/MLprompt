@@ -26,7 +26,7 @@
                 <div class="card-body">
                     <p class="card-text">Configure LLM model parameters, including model names, temperature, and other generation settings.</p>
                     <div class="d-grid">
-                        <a href="{{ url_for('ml_dashboard.model_configurations') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('ml_views.model_configurations') }}" class="btn btn-outline-primary">
                             <i class="fa-solid fa-gear me-1"></i> Manage Configurations
                         </a>
                     </div>
@@ -42,7 +42,7 @@
                 <div class="card-body">
                     <p class="card-text">Configure evaluation metrics, weights, and targets for prompt optimization experiments.</p>
                     <div class="d-grid">
-                        <a href="{{ url_for('ml_dashboard.metric_configurations') }}" class="btn btn-outline-info">
+                        <a href="{{ url_for('ml_views.metric_configurations') }}" class="btn btn-outline-info">
                             <i class="fa-solid fa-chart-pie me-1"></i> Manage Metrics
                         </a>
                     </div>
@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <p class="card-text">Create, run, and monitor 5-API workflow experiments for prompt optimization.</p>
                     <div class="d-grid">
-                        <a href="{{ url_for('ml_dashboard.experiments') }}" class="btn btn-outline-success">
+                        <a href="{{ url_for('ml_views.experiments') }}" class="btn btn-outline-success">
                             <i class="fa-solid fa-vial me-1"></i> Manage Experiments
                         </a>
                     </div>
@@ -74,7 +74,7 @@
                 <div class="card-body">
                     <p class="card-text">Configure meta-learning models to predict prompt performance and guide optimization.</p>
                     <div class="d-grid">
-                        <a href="{{ url_for('ml_dashboard.meta_learning') }}" class="btn btn-outline-warning">
+                        <a href="{{ url_for('ml_views.meta_learning_models') }}" class="btn btn-outline-warning">
                             <i class="fa-solid fa-brain me-1"></i> Manage Models
                         </a>
                     </div>
@@ -192,10 +192,10 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('ml_dashboard.create_experiment') }}" class="btn btn-primary">
+                        <a href="{{ url_for('ml_views.new_experiment') }}" class="btn btn-primary">
                             <i class="fa-solid fa-plus me-1"></i> New Experiment
                         </a>
-                        <a href="{{ url_for('ml_dashboard.create_model_configuration') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('ml_views.model_configurations') }}" class="btn btn-outline-secondary">
                             <i class="fa-solid fa-gear me-1"></i> New Model Config
                         </a>
                         <a href="{{ url_for('five_api_workflow_page') }}" class="btn btn-outline-danger">
