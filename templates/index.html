@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-dark rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Prompt Optimizer</h1>
+        <p class="col-md-8 fs-4">Optimize your prompts with automated tools and base prompts to get better results from AI systems.</p>
+        <a href="{{ url_for('optimize') }}" class="btn btn-primary btn-lg">Start Optimizing</a>
+    </div>
+</div>
+
+<div class="row align-items-md-stretch">
+    <div class="col-md-6 mb-4">
+        <div class="h-100 p-5 bg-dark border rounded-3">
+            <h2>Manage Your Prompts</h2>
+            <p>Create, edit, and organize your prompts. Mark important prompts as base prompts to use them in optimization.</p>
+            <a href="{{ url_for('prompts') }}" class="btn btn-outline-light">View Prompts</a>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="h-100 p-5 bg-dark border rounded-3">
+            <h2>View Optimizations</h2>
+            <p>Review your previously optimized prompts and see how they've improved over time.</p>
+            <a href="{{ url_for('view_optimizations') }}" class="btn btn-outline-light">View History</a>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">How It Works</h2>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">1. Create Base Prompts</h3>
+                <p class="card-text">Define base prompts that contain your best practices and guidelines for prompt engineering.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">2. Select Prompts to Optimize</h3>
+                <p class="card-text">Choose which prompts you want to improve and which base prompts to incorporate.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">3. Get Optimized Results</h3>
+                <p class="card-text">The system automatically optimizes your prompt using the selected base prompts.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

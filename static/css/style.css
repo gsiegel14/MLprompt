@@ -1,0 +1,41 @@
+/* Additional custom styles beyond Bootstrap */
+
+.prompt-card {
+    margin-bottom: 1.5rem;
+    transition: transform .2s;
+}
+
+.prompt-card:hover {
+    transform: translateY(-5px);
+}
+
+.base-prompt-badge {
+    background-color: var(--bs-info);
+    color: white;
+}
+
+.card-header-base {
+    background-color: rgba(var(--bs-info-rgb), 0.2);
+}
+
+.optimization-result {
+    border-left: 4px solid var(--bs-primary);
+    padding-left: 1rem;
+    margin: 1rem 0;
+}
+
+.comparison-container {
+    display: flex;
+    gap: 2rem;
+}
+
+.comparison-column {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .comparison-container {
+        flex-direction: column;
+    }
+}
