@@ -17,10 +17,17 @@ Usage:
 import os
 import json
 import time
-import requests
-import logging
 import sys
-from requests.exceptions import Timeout, ConnectionError, RequestException
+import logging
+from pathlib import Path
+import requests
+from requests.exceptions import ConnectionError, RequestException, Timeout
+
+# Check for API keys
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+HUGGINGFACE_API_KEY = os.environ.get("HUGGINGFACE_API_KEY")
+SIMULATION_MODE = True  # Use simulations if API keys not available
 
 # Configure logging
 logging.basicConfig(
@@ -198,7 +205,7 @@ def make_api_request(method, url, headers=None, json=None, params=None, timeout=
                 return True, result
             else:
                 error_msg = f"API call failed with status code: {response.status_code}"
-                if is_json and 'error' in result:
+                if is_json and isinstance(result, dict) and 'error' in result:
                     error_msg += f", Error: {result['error']}"
                 elif not is_json:
                     error_msg += f", Response: {result[:200]}..." if len(result) > 200 else f", Response: {result}"

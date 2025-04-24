@@ -27,7 +27,7 @@ echo "========================="
 echo "Starting tests..."
 
 # Run the tests and capture output to log file
-python test_five_api_workflow.py | tee ${LOG_FILE}
+python test_five_api_workflow.py 2>&1 | tee ${LOG_FILE}
 TEST_STATUS=${PIPESTATUS[0]}
 
 echo "========================="
