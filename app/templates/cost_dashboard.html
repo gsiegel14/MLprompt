@@ -272,8 +272,24 @@
             const ctx = document.getElementById('tokenUsageChart').getContext('2d');
             
             // Destroy existing chart if it exists
-            if (window.tokenUsageChart) {
+            if (window.tokenUsageChart && typeof window.tokenUsageChart.destroy === 'function') {
                 window.tokenUsageChart.destroy();
+            } else if (window.tokenUsageChart) {
+                // If chart exists but destroy method is not available
+                console.warn("Could not destroy existing token usage chart - recreating instead");
+            }
+            
+            // Clear the canvas manually as a fallback
+            const chartCanvas = document.getElementById('tokenUsageChart');
+            if (chartCanvas) {
+                const parent = chartCanvas.parentNode;
+                if (parent) {
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = 'tokenUsageChart';
+                    newCanvas.height = chartCanvas.height;
+                    parent.replaceChild(newCanvas, chartCanvas);
+                    ctx = newCanvas.getContext('2d');
+                }
             }
             
             window.tokenUsageChart = new Chart(ctx, {
