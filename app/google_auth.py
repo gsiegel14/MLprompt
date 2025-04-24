@@ -75,6 +75,14 @@ def callback():
     # Get authorization code Google sent back
     code = request.args.get("code")
     
+    # If there's no code, the user may have accessed this URL directly
+    # or there may have been an error in the OAuth process
+    if code is None:
+        error = request.args.get("error", "Unknown error")
+        logger.error(f"OAuth error: {error}")
+        flash(f"Authentication failed: {error}. Please try again.", "danger")
+        return redirect(url_for("login"))
+    
     # Find out what URL to hit to get tokens
     google_provider_cfg = get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
@@ -120,25 +128,40 @@ def callback():
         code=code
     )
     # Use auth only if both ID and SECRET are available as strings
-    if isinstance(GOOGLE_CLIENT_ID, str) and isinstance(GOOGLE_CLIENT_SECRET, str):
-        auth = (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
-        token_response = requests.post(
-            token_url,
-            headers=headers,
-            data=body,
-            auth=auth,
-        )
-    else:
-        # Log the issue with credentials
-        logger.warning("Google OAuth credentials are missing or invalid. Attempting without auth.")
-        token_response = requests.post(
-            token_url,
-            headers=headers,
-            data=body,
-        )
-
-    # Parse the tokens
-    client.parse_request_body_response(json.dumps(token_response.json()))
+    try:
+        if isinstance(GOOGLE_CLIENT_ID, str) and isinstance(GOOGLE_CLIENT_SECRET, str):
+            auth = (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+            token_response = requests.post(
+                token_url,
+                headers=headers,
+                data=body,
+                auth=auth,
+            )
+        else:
+            # Log the issue with credentials
+            logger.warning("Google OAuth credentials are missing or invalid. Attempting without auth.")
+            token_response = requests.post(
+                token_url,
+                headers=headers,
+                data=body,
+            )
+        
+        # Log the response for debugging
+        logger.debug(f"Token response status code: {token_response.status_code}")
+        
+        # Check if the response is valid
+        if token_response.status_code != 200:
+            logger.error(f"Token response error: {token_response.text}")
+            flash("Authentication failed. Please try again.", "danger")
+            return redirect(url_for("login"))
+        
+        # Parse the tokens
+        client.parse_request_body_response(json.dumps(token_response.json()))
+        
+    except Exception as e:
+        logger.error(f"Error in OAuth flow: {str(e)}")
+        flash("Authentication error. Please try again.", "danger")
+        return redirect(url_for("login"))
     
     # Get user info from Google
     userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
@@ -156,27 +179,40 @@ def callback():
         return redirect(url_for("google_auth.login"))
     
     # Create or update user
-    user = User.query.filter_by(email=users_email).first()
-    if not user:
-        # Create a new user
-        user = User(
-            username=users_name,
-            email=users_email,
-            profile_pic=picture
-        )
-        db.session.add(user)
-        db.session.commit()
-        logger.info(f"Created new user: {users_email}")
-    else:
-        # Update existing user
-        user.username = users_name
-        user.profile_pic = picture
-        db.session.commit()
-        logger.info(f"Updated existing user: {users_email}")
+    try:
+        user = User.query.filter_by(email=users_email).first()
+        if not user:
+            # Check if there's already a user with the same username
+            existing_user_with_username = User.query.filter_by(username=users_name).first()
+            if existing_user_with_username:
+                # Append a unique identifier to avoid username conflicts
+                users_name = f"{users_name}_{unique_id[:6]}"
+            
+            # Create a new user
+            user = User(
+                username=users_name,
+                email=users_email,
+                profile_pic=picture
+            )
+            db.session.add(user)
+            db.session.commit()
+            logger.info(f"Created new user: {users_email}")
+        else:
+            # Update existing user
+            user.username = users_name
+            user.profile_pic = picture
+            db.session.commit()
+            logger.info(f"Updated existing user: {users_email}")
+        
+        # Log in the user
+        login_user(user)
+        logger.info(f"Logged in user: {users_email}")
     
-    # Log in the user
-    login_user(user)
-    logger.info(f"Logged in user: {users_email}")
+    except Exception as e:
+        logger.error(f"Database error during user creation: {str(e)}")
+        db.session.rollback()  # Roll back the transaction on error
+        flash("An error occurred during login. Please try again.", "danger")
+        return redirect(url_for("login"))
     
     # Redirect to main dashboard
     return redirect(url_for("dashboard"))
