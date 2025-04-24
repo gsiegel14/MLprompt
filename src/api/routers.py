@@ -1,6 +1,70 @@
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from datetime import datetime
+
+from src.api.endpoints import (
+    prompts,
+    optimization,
+    cost_tracking,
+    experiments,
+    datasets,
+    inference
+)
+
+api_router = APIRouter(prefix="/api/v1")
+
+# Include all endpoint routers
+api_router.include_router(prompts.router)
+api_router.include_router(optimization.router)
+api_router.include_router(experiments.router)
+api_router.include_router(datasets.router)
+api_router.include_router(inference.router)
+api_router.include_router(cost_tracking.router)
+
+
+@api_router.get("/health")
+async def health_check():
+    """
+    Health check endpoint for API
+    """
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0"
+        }
+    )
+
+
+@api_router.get("/")
+async def api_root():
+    """
+    API root endpoint with documentation
+    """
+    return JSONResponse(
+        status_code=200,
+        content={
+            "name": "Prompt Optimization Platform API",
+            "version": "1.0.0",
+            "description": "API for optimizing LLM prompts using machine learning",
+            "documentation": "/docs",
+            "endpoints": [
+                {"path": "/prompts", "description": "Prompt management"},
+                {"path": "/optimization", "description": "Prompt optimization workflows"},
+                {"path": "/experiments", "description": "Experiment management"},
+                {"path": "/datasets", "description": "Dataset management"},
+                {"path": "/inference", "description": "Model inference"},
+                {"path": "/cost", "description": "Cost tracking"}
+            ],
+            "health": "/api/v1/health"
+        }
+    )
+"""
+Main API router that combines all endpoint modules
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from src.app.auth import get_api_key
-import sqlite3
 
 from src.api.endpoints import (
     prompts,
@@ -64,40 +128,3 @@ api_router.include_router(
     tags=["ML Settings"],
     dependencies=[Depends(get_api_key)]
 )
-
-
-# --- Database Implementation (Simplified Example) ---
-class Database:
-    def __init__(self, db_path="prompts.db"):
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-        self.create_tables()
-
-    def create_tables(self):
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS prompts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                prompt TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        self.conn.commit()
-
-    def add_prompt(self, prompt):
-        self.cursor.execute("INSERT INTO prompts (prompt) VALUES (?)", (prompt,))
-        self.conn.commit()
-        return self.cursor.lastrowid
-
-    def get_prompts(self):
-        self.cursor.execute("SELECT * FROM prompts")
-        return self.cursor.fetchall()
-
-    def close(self):
-        self.conn.close()
-
-# Example usage (would be integrated into relevant API endpoints)
-db = Database()
-#db.add_prompt("This is a test prompt.")
-#prompts = db.get_prompts()
-#print(prompts)
-#db.close()
