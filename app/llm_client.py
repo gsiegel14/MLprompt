@@ -54,12 +54,16 @@ def _get_cache_size_mb() -> float:
 def _prune_cache() -> None:
     """Remove old cache entries to keep cache size within limits."""
     try:
+        # Set a much lower cache size limit for deployment
+        deployment_mode = os.environ.get('DEPLOYMENT_MODE', 'development')
+        effective_max_size = MAX_CACHE_SIZE_MB if deployment_mode == 'development' else 50  # Only 50MB in production
+        
         # Check if pruning is needed
         current_size_mb = _get_cache_size_mb()
-        if current_size_mb <= MAX_CACHE_SIZE_MB:
+        if current_size_mb <= effective_max_size:
             return
 
-        logger.info(f"Cache size ({current_size_mb:.2f}MB) exceeds limit ({MAX_CACHE_SIZE_MB}MB). Pruning...")
+        logger.info(f"Cache size ({current_size_mb:.2f}MB) exceeds limit ({effective_max_size}MB). Pruning...")
 
         # Get all cache files with their last access time
         cache_files = []
@@ -72,14 +76,30 @@ def _prune_cache() -> None:
         # Sort by last access time (oldest first)
         cache_files.sort(key=lambda x: x[1])
 
+        # In deployment mode, be more aggressive with pruning
+        if deployment_mode == 'production':
+            # Keep only the 10 most recently used files
+            files_to_keep = 10
+            if len(cache_files) > files_to_keep:
+                files_to_delete = cache_files[:-files_to_keep]
+                for path, _ in files_to_delete:
+                    path.unlink()
+                    if path.with_suffix('.meta').exists():
+                        path.with_suffix('.meta').unlink()
+                
+                logger.info(f"Aggressively pruned cache to keep only {files_to_keep} files")
+                return
+
         # Delete oldest files until we're under the limit
         deleted_count = 0
         for path, _ in cache_files:
             path.unlink()
+            if path.with_suffix('.meta').exists():
+                path.with_suffix('.meta').unlink()
             deleted_count += 1
 
             # Check if we're under the limit
-            if _get_cache_size_mb() <= MAX_CACHE_SIZE_MB * 0.9:  # Aim for 90% of limit
+            if _get_cache_size_mb() <= effective_max_size * 0.9:  # Aim for 90% of limit
                 break
 
         logger.info(f"Pruned {deleted_count} old cache files. New cache size: {_get_cache_size_mb():.2f}MB")
