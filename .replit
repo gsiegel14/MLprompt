@@ -10,7 +10,7 @@ run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 build = ["sh", "-c", "chmod +x deployment_cleanup.sh && ./deployment_cleanup.sh"]
 
 [workflows]
-runButton = "Fix and Test 5-API Workflow"
+runButton = "Troubleshoot and Fix API Workflow"
 
 [[workflows.workflow]]
 name = "Project"
@@ -440,6 +440,55 @@ args = "sleep 10"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "# Run the test with proper API authentication"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_five_api_workflow_row2.py"
+
+[[workflows.workflow]]
+name = "Troubleshoot and Fix API Workflow"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "# Kill any running server processes"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"gunicorn.*main:app\" || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "# Fix data and authentication issues"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python fix_data_loading.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python fix_api_auth.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "# Start server with proper authentication"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --timeout 180 --workers 1 --reuse-port --reload main:app &"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 10"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "# Run the test"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
