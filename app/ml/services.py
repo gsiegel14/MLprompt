@@ -429,6 +429,19 @@ class MetaLearningService:
         return model.to_dict()
     
     @staticmethod
+    def get_meta_learning_model(model_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific meta-learning model by ID.
+        
+        Args:
+            model_id: The ID of the meta-learning model
+            
+        Returns:
+            Meta-learning model as a dictionary, or None if not found
+        """
+        model = MetaLearningModel.query.filter_by(id=model_id).first()
+        return model.to_dict() if model else None
+    
+    @staticmethod
     def update_meta_learning_model(model_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing meta-learning model.
         
@@ -451,6 +464,24 @@ class MetaLearningService:
         db.session.commit()
         
         return model.to_dict()
+        
+    @staticmethod
+    def delete_meta_learning_model(model_id: str) -> bool:
+        """Delete a meta-learning model.
+        
+        Args:
+            model_id: The ID of the meta-learning model to delete
+            
+        Returns:
+            True if the model was deleted, False otherwise
+        """
+        model = MetaLearningModel.query.filter_by(id=model_id).first()
+        if not model:
+            return False
+        
+        db.session.delete(model)
+        db.session.commit()
+        return True
 
 class RLModelService:
     """Service for managing reinforcement learning models and operations."""
