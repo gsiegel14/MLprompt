@@ -1,10 +1,17 @@
 
 #!/bin/bash
 # Template for GitHub login
-# Replace YOUR_TOKEN_HERE with your actual token when using locally
-# DO NOT commit the file with actual tokens
+# Copy this file to gh_login.sh and replace YOUR_PERSONAL_ACCESS_TOKEN with your token
+# DO NOT commit gh_login.sh to the repository
 
-# Login to GitHub CLI with token
-gh auth login --with-token <<< "YOUR_TOKEN_HERE"
+# Set GitHub credentials
+GH_TOKEN="YOUR_PERSONAL_ACCESS_TOKEN"
 
-echo "GitHub login completed"
+# Set Git config if needed
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Authenticate with GitHub
+echo "Authenticating with GitHub..."
+echo $GH_TOKEN | gh auth login --with-token
+echo "Authentication complete."

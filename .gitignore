@@ -23,6 +23,7 @@ logs/
 # Database files
 data/db/
 *.db
+gh_login.sh
 *.sqlite
 
 # Python artifacts
