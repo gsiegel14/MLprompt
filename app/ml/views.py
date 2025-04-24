@@ -146,6 +146,22 @@ def model_configurations():
         active_page='ml_configurations'
     )
 
+# Metric Configurations
+@ml_views.route('/metrics/configurations', methods=['GET'])
+@login_required
+def metric_configurations():
+    """Render the metric configurations page."""
+    service = MLConfigService()
+    user_id = current_user.id if current_user.is_authenticated else None
+    
+    metric_configs = service.get_metric_configurations(user_id)
+    
+    return render_template(
+        'ml/metric_configurations.html',
+        metric_configs=metric_configs,
+        active_page='ml_metric_configurations'
+    )
+
 # Meta-Learning Models
 @ml_views.route('/models/meta-learning', methods=['GET'])
 @login_required

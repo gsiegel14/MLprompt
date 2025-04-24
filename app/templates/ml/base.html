@@ -217,13 +217,10 @@
                     <a href="{{ url_for('ml_views.model_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.model_configurations' %}active{% endif %}">
                         <i class="fa-solid fa-sliders me-2"></i> Model Configs
                     </a>
-                    <a href="{{ url_for('ml_views.metric_configurations') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.metric_configurations' %}active{% endif %}">
-                        <i class="fa-solid fa-chart-bar me-2"></i> Metric Configs
-                    </a>
                     <a href="{{ url_for('ml_views.experiments') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.experiments' %}active{% endif %}">
                         <i class="fa-solid fa-flask me-2"></i> Experiments
                     </a>
-                    <a href="{{ url_for('ml_views.meta_learning') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.meta_learning' %}active{% endif %}">
+                    <a href="{{ url_for('ml_views.meta_learning_models') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.meta_learning_models' %}active{% endif %}">
                         <i class="fa-solid fa-graduation-cap me-2"></i> Meta-Learning
                     </a>
                     <a href="{{ url_for('ml_views.rl_models') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'ml_views.rl_models' %}active{% endif %}">
@@ -247,14 +244,14 @@
                             <a href="{{ url_for('ml_views.model_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.model_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-sliders me-1"></i> Models
                             </a>
-                            <a href="{{ url_for('ml_views.metric_configurations') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.metric_configurations' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
-                                <i class="fa-solid fa-chart-bar me-1"></i> Metrics
-                            </a>
                             <a href="{{ url_for('ml_views.experiments') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.experiments' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-flask me-1"></i> Experiments
                             </a>
-                            <a href="{{ url_for('ml_views.meta_learning') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.meta_learning' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                            <a href="{{ url_for('ml_views.meta_learning_models') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.meta_learning_models' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
                                 <i class="fa-solid fa-graduation-cap me-1"></i> Meta-Learning
+                            </a>
+                            <a href="{{ url_for('ml_views.rl_models') }}" class="btn btn-sm {% if request.endpoint == 'ml_views.rl_models' %}btn-primary{% else %}btn-outline-primary{% endif %} me-2">
+                                <i class="fa-solid fa-robot me-1"></i> RL Models
                             </a>
                         </div>
                     </div>
