@@ -1,8 +1,0 @@
-[
-  {
-    "user_input": "Dr. David P. Bullis (Behavioral Medicine, Newton\u2013Wellesley Hospital, Newton, MA): A 54-year-old man was evaluated by the neuropsychology service of this hospital because of irritability, confusion, and odd behaviors.\nThe patient had been in his usual state of health until 9 months before the current...",
-    "ground_truth_output": "Delayed posthypoxic leukoencephalopathy.",
-    "model_response": "1. **Analysis:** A 54-year-old man presents with new-onset cognitive decline, irritability, confusion, and odd behaviors following treatment for squamous cell carcinoma of the tongue with metastasis to cervical lymph nodes.  His treatment included surgery, radiation, and a sural nerve graft for post-operative neuropathy. He experienced a near-fatal methadone overdose, followed by septic shock, aspiration pneumonia, acute kidney injury, and delirium.  Neuropsychological testing revealed impaired ...",
-    "score": 0.006662134602311353
-  }
-]

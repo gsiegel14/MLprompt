@@ -6,7 +6,8 @@ packages = ["cairo", "ffmpeg-full", "freetype", "geckodriver", "gh", "ghostscrip
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "bash deployment_cleanup.sh && gunicorn --bind 0.0.0.0:5000 main:app"]
+run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app --workers 2 --timeout 120"]
+build = ["sh", "-c", "./deployment_cleanup.sh"]
 
 [workflows]
 runButton = "Project"
