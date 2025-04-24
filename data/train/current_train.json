@@ -1,14 +1,14 @@
 [
   {
-    "user_input": "A 45-year-old man presents with crushing chest pain radiating to the left arm that started 1 hour ago. He has a history of hypertension and smoking. Vital signs: BP 160/95, HR 110, RR 22. ECG shows ST elevation in leads II, III, and aVF.",
-    "ground_truth_output": "Acute inferior myocardial infarction"
+    "user_input": "Example 2",
+    "ground_truth_output": "Output 2"
   },
   {
-    "user_input": "A 60-year-old woman presents with sudden onset of weakness and numbness on the left side of her face and left arm that started 2 hours ago. She has a history of atrial fibrillation and is on warfarin. Vital signs: BP 170/90, HR 80, RR 16. CT scan of the head shows no bleeding.",
-    "ground_truth_output": "Ischemic stroke (cerebrovascular accident)"
+    "user_input": "Example 1",
+    "ground_truth_output": "Output 1"
   },
   {
-    "user_input": "A 35-year-old woman presents with severe headache that began suddenly while exercising. She describes it as \"the worst headache of my life.\" Neurological exam shows nuchal rigidity and photophobia. CT scan of the head shows subarachnoid blood.",
-    "ground_truth_output": "Subarachnoid hemorrhage"
+    "user_input": "Example 4",
+    "ground_truth_output": "Output 4"
   }
 ]

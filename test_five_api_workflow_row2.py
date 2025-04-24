@@ -58,9 +58,9 @@ def check_server_status():
 
                 # Use GET for most endpoints, but try POST for API endpoints that might require it
                 if "workflow" in endpoint:
-                    response = requests.post(url, json={}, timeout=2)
+                    response = requests.post(url, headers={"X-API-Key": "dev_api_key"}, headers={"X-API-Key": "dev_api_key"}, json={}, timeout=2)
                 else:
-                    response = requests.get(url, timeout=2)
+                    response = requests.get(url, headers={"X-API-Key": "dev_api_key"}, headers={"X-API-Key": "dev_api_key"}, timeout=2)
 
                 status = response.status_code
                 logger.info(f"Endpoint {endpoint} response: {status}")
@@ -151,7 +151,7 @@ def test_workflow_step(step, data):
 
         # Try alternative endpoints if the main one doesn't work
         try:
-            response = requests.post(endpoint, json=data, headers=headers, timeout=30)
+            response = requests.post(endpoint, headers={"X-API-Key": "dev_api_key"}, headers={"X-API-Key": "dev_api_key"}, json=data, headers=headers, timeout=30)
         except requests.exceptions.RequestException:
             # Try fallback endpoints
             fallback_endpoints = [
@@ -163,7 +163,7 @@ def test_workflow_step(step, data):
             for fallback in fallback_endpoints:
                 logger.info(f"Trying fallback endpoint: {fallback}")
                 try:
-                    response = requests.post(fallback, json=data, headers=headers, timeout=30)
+                    response = requests.post(fallback, headers={"X-API-Key": "dev_api_key"}, headers={"X-API-Key": "dev_api_key"}, json=data, headers=headers, timeout=30)
                     if response.status_code == 200:
                         logger.info(f"Fallback endpoint {fallback} succeeded")
                         break
@@ -255,7 +255,7 @@ def run_workflow_test():
         try:
             logger.info("Verifying API endpoints...")
             headers = {'X-API-Key': API_KEY, 'Content-Type': 'application/json'} # Added API key authentication
-            response = requests.get(f"{BASE_URL}/api/workflow/status", headers=headers, timeout=5)
+            response = requests.get(f"{BASE_URL}/api/workflow/status", headers={"X-API-Key": "dev_api_key"}, headers={"X-API-Key": "dev_api_key"}, headers=headers, timeout=5)
             logger.info(f"API endpoint verification status: {response.status_code}")
             if response.status_code != 200:
                 logger.warning(f"API endpoints may not be properly set up: {response.status_code}")
