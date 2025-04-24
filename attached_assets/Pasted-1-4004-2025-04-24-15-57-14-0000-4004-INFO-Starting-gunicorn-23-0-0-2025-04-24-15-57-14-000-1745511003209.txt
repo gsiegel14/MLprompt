@@ -1,0 +1,115 @@
+1] 4004
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Starting gunicorn 23.0.0
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Listening at: http://0.0.0.0:5000 (4004)
+[2025-04-24 15:57:14 +0000] [4004] [INFO] Using worker: sync
+[2025-04-24 15:57:14 +0000] [4009] [INFO] Booting worker with pid: 4009
+INFO:app:Database configuration complete. URI: postgresql://neondb_...
+DEBUG:app.main:Loaded configuration: {'gemini': {'model_name': 'gemini-1.5-flash', 'temperature': 0.0, 'top_p': 0.95, 'top_k': 40, 'max_output_tokens': 1024}, 'app': {'max_examples': 0, 'enable_caching': True, 'debug': True}, 'optimizer': {'model_name': 'gemini-1.5-flash', 'temperature': 0.7, 'max_output_tokens': 2048, 'strategies': ['reasoning_first', 'full_rewrite', 'targeted_edit', 'example_addition']}, 'evaluation': {'metrics': ['exact_match', 'semantic_similarity', 'keyword_match'], 'perfect_threshold': 0.9}, 'training': {'default_train_ratio': 0.8, 'default_max_iterations': 5, 'early_stopping_patience': 2}}
+WARNING:app.data_module:Examples file data/train/current_train.json does not exist
+WARNING:app.data_module:Examples file data/validation/current_validation.json does not exist
+WARNING:app.data_module:Examples file data/train/examples.json does not exist
+WARNING:app.data_module:Examples file data/validation/examples.json does not exist
+INFO:app.data_module:Initialized DataModule with 0 train examples and 0 validation examples
+WARNING:app.data_module:Examples file data/train/current_train.json does not exist
+WARNING:app.data_module:Examples file data/validation/current_validation.json does not exist
+WARNING:app.data_module:Examples file data/train/examples.json does not exist
+WARNING:app.data_module:Examples file data/validation/examples.json does not exist
+INFO:app.data_module:Initialized DataModule with 0 train examples and 0 validation examples
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+DEBUG:app.main:Root route accessed
+DEBUG:app.main:User not authenticated, redirecting to login page
+DEBUG:app.main:Login route accessed
+DEBUG:app.main:Rendering login.html template
+[2025-04-24 16:06:55 +0000] [4009] [INFO] Worker reloading: /home/runner/workspace/app/data_module.py modified
+[2025-04-24 16:06:55 +0000] [4009] [INFO] Worker exiting (pid: 4009)
+[2025-04-24 16:06:55 +0000] [4453] [INFO] Booting worker with pid: 4453
+INFO:app:Database configuration complete. URI: postgresql://neondb_...
+[2025-04-24 16:06:59 +0000] [4453] [ERROR] expected an indented block after 'if' statement on line 132 (data_module.py, line 133)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/main.py", line 1, in <module>
+    from app import app  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/__init__.py", line 76, in <module>
+    from app import main
+  File "/home/runner/workspace/app/main.py", line 15, in <module>
+    from app.data_module import DataModule
+  File "/home/runner/workspace/app/data_module.py", line 133
+    logger.warning("No examples provided to split")
+    ^^^^^^
+IndentationError: expected an indented block after 'if' statement on line 132
+[2025-04-24 16:09:26 +0000] [4453] [INFO] Worker reloading: /home/runner/workspace/app/data_module.py modified
+[2025-04-24 16:09:26 +0000] [4453] [INFO] Worker exiting (pid: 4453)
+[2025-04-24 16:09:26 +0000] [4632] [INFO] Booting worker with pid: 4632
+INFO:app:Database configuration complete. URI: postgresql://neondb_...
+[2025-04-24 16:09:31 +0000] [4632] [ERROR] expected an indented block after 'if' statement on line 133 (data_module.py, line 134)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/main.py", line 1, in <module>
+    from app import app  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/__init__.py", line 76, in <module>
+    from app import main
+  File "/home/runner/workspace/app/main.py", line 15, in <module>
+    from app.data_module import DataModule
+  File "/home/runner/workspace/app/data_module.py", line 134
+    logger.warning(f"No {'validation' if validation else 'training'} examples available when calling get_batch")
+    ^^^^^^
+IndentationError: expected an indented block after 'if' statement on line 133

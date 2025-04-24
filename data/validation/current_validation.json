@@ -1,0 +1,10 @@
+[
+  {
+    "user_input": "A 50-year-old man presents with gradually worsening shortness of breath over the past 2 weeks. He has a history of congestive heart failure. Physical exam reveals bilateral lower extremity edema and crackles in both lung bases. BNP is elevated.",
+    "ground_truth_output": "Acute exacerbation of congestive heart failure"
+  },
+  {
+    "user_input": "A 25-year-old woman presents with fever, right flank pain, and dysuria for the past 2 days. Urinalysis shows pyuria and bacteriuria. CBC reveals leukocytosis.",
+    "ground_truth_output": "Pyelonephritis"
+  }
+]
