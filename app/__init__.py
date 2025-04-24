@@ -19,12 +19,29 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to coo
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # Session timeout in seconds (1 hour)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session on each request
 
-# Configure database
+# Configure database with improved connection pool settings
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,  # Maximum number of connections to keep
+    'pool_timeout': 30,  # Seconds to wait before timing out
+    'pool_recycle': 1800,  # Recycle connections after 30 minutes
+    'max_overflow': 15,  # Maximum number of connections to create beyond pool_size
+    'pool_pre_ping': True,  # Enable connection testing before use to avoid stale connections
+    'connect_args': {
+        'connect_timeout': 10,  # Connection timeout in seconds
+        'keepalives': 1,  # Enable keepalive packets
+        'keepalives_idle': 30,  # Seconds between TCP keepalive packets
+        'keepalives_interval': 10,  # Seconds between keepalive probes
+        'keepalives_count': 5  # Maximum number of keepalive packets before dropping connection
+    }
+}
 
-# Initialize SQLAlchemy
+# Initialize SQLAlchemy with more robust connection handling
 db = SQLAlchemy(app)
+
+# Log database connection info
+logger.info(f"Database configuration complete. URI: {app.config['SQLALCHEMY_DATABASE_URI'][:20]}...")
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -36,7 +53,8 @@ login_manager.login_message_category = "info"
 @login_manager.user_loader
 def load_user(user_id):
     from app.models import User
-    return User.query.get(int(user_id))
+    # Use our new error-handling method
+    return User.get_by_id(user_id)
 
 # Create all tables in the database
 with app.app_context():

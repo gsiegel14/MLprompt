@@ -180,36 +180,85 @@ def callback():
     
     # Create or update user
     try:
-        user = User.query.filter_by(email=users_email).first()
+        # Use our new error-handling method
+        user = User.get_by_email(users_email)
         if not user:
             # Check if there's already a user with the same username
-            existing_user_with_username = User.query.filter_by(username=users_name).first()
-            if existing_user_with_username:
-                # Append a unique identifier to avoid username conflicts
+            # Wrap in try-except for database resilience
+            try:
+                existing_user_with_username = User.query.filter_by(username=users_name).first()
+                if existing_user_with_username:
+                    # Append a unique identifier to avoid username conflicts
+                    users_name = f"{users_name}_{unique_id[:6]}"
+            except Exception as username_check_error:
+                logger.warning(f"Error checking for username conflicts: {str(username_check_error)}")
+                # If we can't check, make it unique anyway as a precaution
                 users_name = f"{users_name}_{unique_id[:6]}"
             
-            # Create a new user
-            user = User(
-                username=users_name,
-                email=users_email,
-                profile_pic=picture
-            )
-            db.session.add(user)
-            db.session.commit()
-            logger.info(f"Created new user: {users_email}")
+            # Create a new user with retries
+            max_retries = 3
+            retry_count = 0
+            user_created = False
+            
+            while retry_count < max_retries and not user_created:
+                try:
+                    # Create a new user
+                    user = User(
+                        username=users_name,
+                        email=users_email,
+                        profile_pic=picture
+                    )
+                    db.session.add(user)
+                    db.session.commit()
+                    logger.info(f"Created new user: {users_email}")
+                    user_created = True
+                except Exception as retry_error:
+                    retry_count += 1
+                    logger.warning(f"Database error during user creation (attempt {retry_count}): {str(retry_error)}")
+                    db.session.rollback()
+                    if retry_count < max_retries:
+                        # Wait briefly before retrying
+                        import time
+                        time.sleep(0.5)
+            
+            if not user_created:
+                logger.error("Failed to create user after maximum retries")
+                flash("Database connection issue. Please try again in a moment.", "danger")
+                return redirect(url_for("login"))
         else:
-            # Update existing user
-            user.username = users_name
-            user.profile_pic = picture
-            db.session.commit()
-            logger.info(f"Updated existing user: {users_email}")
+            # Update existing user with retries
+            max_retries = 3
+            retry_count = 0
+            user_updated = False
+            
+            while retry_count < max_retries and not user_updated:
+                try:
+                    # Update existing user
+                    user.username = users_name
+                    user.profile_pic = picture
+                    db.session.commit()
+                    logger.info(f"Updated existing user: {users_email}")
+                    user_updated = True
+                except Exception as retry_error:
+                    retry_count += 1
+                    logger.warning(f"Database error during user update (attempt {retry_count}): {str(retry_error)}")
+                    db.session.rollback()
+                    if retry_count < max_retries:
+                        # Wait briefly before retrying
+                        import time
+                        time.sleep(0.5)
+            
+            if not user_updated:
+                logger.error("Failed to update user after maximum retries")
+                # If we can't update, we can still try to login with existing data
+                flash("Warning: User profile could not be updated, but login will proceed.", "warning")
         
         # Log in the user
         login_user(user)
         logger.info(f"Logged in user: {users_email}")
     
     except Exception as e:
-        logger.error(f"Database error during user creation: {str(e)}")
+        logger.error(f"Database error during user login process: {str(e)}")
         db.session.rollback()  # Roll back the transaction on error
         flash("An error occurred during login. Please try again.", "danger")
         return redirect(url_for("login"))
