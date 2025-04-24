@@ -998,6 +998,7 @@ function loadNejmDataset(datasetType) {
  */
 function resetNejmCache() {
     showAlert('Resetting NEJM data cache...', 'info');
+    console.log('Attempting to reset NEJM data cache...');
     
     fetch('/reset_nejm_cache_api', {
         method: 'POST',
@@ -1006,6 +1007,7 @@ function resetNejmCache() {
         }
     })
     .then(response => {
+        console.log(`Reset NEJM cache API response status: ${response.status}`);
         if (!response.ok) {
             throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
         }
@@ -1017,20 +1019,23 @@ function resetNejmCache() {
         } else {
             // Run the fix_nejm_data.py script to regenerate the datasets
             showAlert('Regenerating NEJM datasets...', 'info');
+            console.log('Attempting to regenerate NEJM datasets...');
             return fetch('/regenerate_nejm_data_api', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 }
+            }).then(response => {
+                console.log(`Regenerate NEJM datasets API response status: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
             });
         }
     })
-    .then(response => {
-        if (response && !response.ok) {
-            throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
-        }
-        if (response) return response.json();
-    })
+    // This step is no longer needed as we already parse the JSON in the previous step
+    // The data will flow directly to the next .then() handler
     .then(data => {
         if (data && data.error) {
             showAlert(data.error, 'danger');

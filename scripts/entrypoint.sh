@@ -9,8 +9,8 @@ MODE=${MODE:-api}
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 if [ "$MODE" = "api" ]; then
-    echo "Starting FastAPI server..."
-    gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:5000 main:app
+    echo "Starting Flask server..."
+    gunicorn -b 0.0.0.0:5000 main:app
 elif [ "$MODE" = "agent" ]; then
     echo "Starting Prefect agent..."
     python scripts/start_prefect_agent.py
