@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Test script for running the 5-API workflow with row 2 from NEJM CSV.
@@ -166,6 +167,17 @@ def load_prompts(prompt_type):
         except FileNotFoundError as e:
             logger.error(f"Error loading NEJM prompts: {e}")
             return None, None
+    elif prompt_type == "optimizer":
+        # Load optimizer prompts
+        try:
+            with open("prompts/optimizer/Optimizer_systemmessage.md.txt", "r") as f:
+                system_prompt = f.read()
+            with open("prompts/optimizer/optimizer_output_prompt.txt", "r") as f:
+                output_prompt = f.read()
+            return system_prompt, output_prompt
+        except FileNotFoundError as e:
+            logger.error(f"Error loading optimizer prompts: {e}")
+            return None, None
     else:
         logger.error(f"Unknown prompt type: {prompt_type}")
         return None, None
@@ -191,27 +203,250 @@ def test_api_workflow(test_input, ground_truth, system_prompt, output_prompt):
     headers = {"Content-Type": "application/json"}
 
     start_time = time.time()
-    success, result = make_api_request('post', endpoint, headers=headers, json=step1_data)
+    success, step1_result = make_api_request('post', endpoint, headers=headers, json=step1_data)
     elapsed_time = time.time() - start_time
 
-    if success:
+    if not success:
+        logger.error(f"Step 1 failed after {elapsed_time:.2f} seconds: {step1_result}")
+        if not ENABLE_PARTIAL_TESTING:
+            return None
+        # Create fallback result for testing subsequent steps
+        step1_result = {
+            "response": "Fallback response for testing subsequent steps",
+            "success": False
+        }
+    else:
         logger.info(f"Step 1 completed successfully in {elapsed_time:.2f} seconds")
 
         # Log summarized response data
-        if isinstance(result, dict) and "response" in result:
-            response_text = result["response"]
+        if isinstance(step1_result, dict) and "response" in step1_result:
+            response_text = step1_result["response"]
             summary = response_text[:200] + "..." if len(response_text) > 200 else response_text
             logger.info(f"Response summary: {summary}")
 
         # Save the full response to a file
-        if isinstance(result, dict) and "response" in result:
+        if isinstance(step1_result, dict) and "response" in step1_result:
             os.makedirs("row2_results", exist_ok=True)
             with open("row2_results/initial_response.txt", "w") as f:
-                f.write(result["response"])
+                f.write(step1_result["response"])
             logger.info("Saved initial response to row2_results/initial_response.txt")
+    
+    time.sleep(WAIT_TIME)  # Wait before next API call
+    
+    # Step 2: External validation with Hugging Face
+    logger.info("Step 2: External validation with Hugging Face API")
+    step2_data = {
+        "system_prompt": system_prompt,
+        "output_prompt": output_prompt,
+        "user_input": test_input,
+        "ground_truth": ground_truth,
+        "batch_size": BATCH_SIZE,
+        "step": 2,
+        "previous_response": step1_result.get("response", "")
+    }
+    
+    start_time = time.time()
+    success, step2_result = make_api_request('post', endpoint, headers=headers, json=step2_data)
+    elapsed_time = time.time() - start_time
+    
+    if not success:
+        logger.error(f"Step 2 failed after {elapsed_time:.2f} seconds: {step2_result}")
+        if not ENABLE_PARTIAL_TESTING:
+            return None
+        # Create fallback result for testing subsequent steps
+        step2_result = {
+            "response": "Fallback evaluation result",
+            "success": False
+        }
     else:
-        logger.error(f"Step 1 failed after {elapsed_time:.2f} seconds: {result}")
-        return None
+        logger.info(f"Step 2 completed successfully in {elapsed_time:.2f} seconds")
+        
+        # Log evaluation result
+        if isinstance(step2_result, dict) and "response" in step2_result:
+            response_text = step2_result["response"]
+            summary = response_text[:200] + "..." if len(response_text) > 200 else response_text
+            logger.info(f"Evaluation summary: {summary}")
+            
+            # Save evaluation result
+            with open("row2_results/evaluation_result.txt", "w") as f:
+                f.write(step2_result["response"])
+            logger.info("Saved evaluation result to row2_results/evaluation_result.txt")
+    
+    time.sleep(WAIT_TIME)  # Wait before next API call
+    
+    # Step 3: Optimizer LLM for prompt refinement
+    logger.info("Step 3: Optimizer LLM for prompt refinement (Google Vertex API)")
+    
+    # Load optimizer prompts if they aren't already loaded
+    optimizer_system, optimizer_output = load_prompts("optimizer")
+    
+    step3_data = {
+        "system_prompt": system_prompt,
+        "output_prompt": output_prompt,
+        "optimizer_system_prompt": optimizer_system,
+        "optimizer_output_prompt": optimizer_output,
+        "user_input": test_input,
+        "ground_truth": ground_truth,
+        "batch_size": BATCH_SIZE,
+        "step": 3,
+        "previous_response": step1_result.get("response", ""),
+        "evaluation_result": step2_result.get("response", "")
+    }
+    
+    start_time = time.time()
+    success, step3_result = make_api_request('post', endpoint, headers=headers, json=step3_data)
+    elapsed_time = time.time() - start_time
+    
+    if not success:
+        logger.error(f"Step 3 failed after {elapsed_time:.2f} seconds: {step3_result}")
+        if not ENABLE_PARTIAL_TESTING:
+            return None
+        # Create fallback result for testing subsequent steps
+        step3_result = {
+            "response": "Fallback optimizer result",
+            "optimized_system_prompt": system_prompt,
+            "optimized_output_prompt": output_prompt,
+            "success": False
+        }
+    else:
+        logger.info(f"Step 3 completed successfully in {elapsed_time:.2f} seconds")
+        
+        # Save optimized prompts
+        if isinstance(step3_result, dict):
+            optimized_system = step3_result.get("optimized_system_prompt", system_prompt)
+            optimized_output = step3_result.get("optimized_output_prompt", output_prompt)
+            
+            with open("row2_results/optimized_system_prompt.txt", "w") as f:
+                f.write(optimized_system)
+            with open("row2_results/optimized_output_prompt.txt", "w") as f:
+                f.write(optimized_output)
+            
+            logger.info("Saved optimized prompts to row2_results directory")
+    
+    time.sleep(WAIT_TIME)  # Wait before next API call
+    
+    # Step 4: Optimizer LLM reruns on original dataset
+    logger.info("Step 4: Optimizer LLM reruns with optimized prompts (Google Vertex API)")
+    
+    optimized_system = step3_result.get("optimized_system_prompt", system_prompt)
+    optimized_output = step3_result.get("optimized_output_prompt", output_prompt)
+    
+    step4_data = {
+        "system_prompt": system_prompt,
+        "output_prompt": output_prompt,
+        "optimized_system_prompt": optimized_system,
+        "optimized_output_prompt": optimized_output,
+        "user_input": test_input,
+        "ground_truth": ground_truth,
+        "batch_size": BATCH_SIZE,
+        "step": 4
+    }
+    
+    start_time = time.time()
+    success, step4_result = make_api_request('post', endpoint, headers=headers, json=step4_data)
+    elapsed_time = time.time() - start_time
+    
+    if not success:
+        logger.error(f"Step 4 failed after {elapsed_time:.2f} seconds: {step4_result}")
+        if not ENABLE_PARTIAL_TESTING:
+            return None
+        # Create fallback result for testing subsequent steps
+        step4_result = {
+            "response": "Fallback optimized response",
+            "success": False
+        }
+    else:
+        logger.info(f"Step 4 completed successfully in {elapsed_time:.2f} seconds")
+        
+        # Save optimized response
+        if isinstance(step4_result, dict) and "response" in step4_result:
+            response_text = step4_result["response"]
+            summary = response_text[:200] + "..." if len(response_text) > 200 else response_text
+            logger.info(f"Optimized response summary: {summary}")
+            
+            with open("row2_results/optimized_response.txt", "w") as f:
+                f.write(step4_result["response"])
+            logger.info("Saved optimized response to row2_results/optimized_response.txt")
+    
+    time.sleep(WAIT_TIME)  # Wait before next API call
+    
+    # Step 5: Second external validation on refined outputs
+    logger.info("Step 5: Second external validation with Hugging Face API")
+    
+    step5_data = {
+        "system_prompt": system_prompt,
+        "output_prompt": output_prompt,
+        "optimized_system_prompt": optimized_system,
+        "optimized_output_prompt": optimized_output,
+        "user_input": test_input,
+        "ground_truth": ground_truth,
+        "batch_size": BATCH_SIZE,
+        "step": 5,
+        "original_response": step1_result.get("response", ""),
+        "optimized_response": step4_result.get("response", "")
+    }
+    
+    start_time = time.time()
+    success, step5_result = make_api_request('post', endpoint, headers=headers, json=step5_data)
+    elapsed_time = time.time() - start_time
+    
+    if not success:
+        logger.error(f"Step 5 failed after {elapsed_time:.2f} seconds: {step5_result}")
+        if not ENABLE_PARTIAL_TESTING:
+            return None
+        # Create fallback result
+        step5_result = {
+            "response": "Fallback comparison result",
+            "improvement": 0,
+            "success": False
+        }
+    else:
+        logger.info(f"Step 5 completed successfully in {elapsed_time:.2f} seconds")
+        
+        # Save comparison result
+        if isinstance(step5_result, dict):
+            comparison = step5_result.get("response", "No comparison available")
+            improvement = step5_result.get("improvement", 0)
+            
+            with open("row2_results/comparison_result.txt", "w") as f:
+                f.write(f"Comparison Result:\n{comparison}\n\nImprovement: {improvement}")
+            
+            logger.info(f"Improvement score: {improvement}")
+            logger.info("Saved comparison result to row2_results/comparison_result.txt")
+    
+    # Workflow summary
+    logger.info("\n" + "=" * 80)
+    logger.info("WORKFLOW SUMMARY")
+    logger.info("=" * 80)
+    
+    # Create summary of all steps
+    steps = [
+        ("Step 1 (Initial LLM)", step1_result.get("success", False)),
+        ("Step 2 (Evaluation)", step2_result.get("success", False)),
+        ("Step 3 (Optimizer)", step3_result.get("success", False)),
+        ("Step 4 (Optimized LLM)", step4_result.get("success", False)),
+        ("Step 5 (Comparison)", step5_result.get("success", False))
+    ]
+    
+    steps_completed = sum(1 for _, success in steps if success)
+    
+    logger.info(f"Steps completed: {steps_completed}/5")
+    for step_name, success in steps:
+        status = "✓ Success" if success else "✗ Failed"
+        logger.info(f"{step_name}: {status}")
+    
+    # Save all results to a summary file
+    with open("row2_results/workflow_summary.json", "w") as f:
+        json.dump({
+            "test_input": test_input[:500] + "..." if len(test_input) > 500 else test_input,
+            "ground_truth": ground_truth,
+            "steps_completed": steps_completed,
+            "step_statuses": {name: success for name, success in steps},
+            "improvement": step5_result.get("improvement", 0) if isinstance(step5_result, dict) else 0
+        }, f, indent=2)
+    
+    logger.info(f"Complete workflow summary saved to row2_results/workflow_summary.json")
+    return steps_completed == 5
 
 def main():
     """Main test function"""
@@ -242,12 +477,12 @@ def main():
             return False
 
     # Run the workflow with the example
-    test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
+    success = test_api_workflow(test_input, ground_truth, system_prompt, output_prompt)
 
     logger.info("\n" + "#" * 80)
     logger.info("## TEST COMPLETED")
     logger.info("#" * 80)
-    return True
+    return success
 
 if __name__ == "__main__":
     main()

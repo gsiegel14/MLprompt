@@ -284,6 +284,15 @@ mode = "sequential"
 task = "shell.exec"
 args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 
+[[workflows.workflow]]
+name = "Run Complete 5-API Workflow"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_five_api_workflow_row2.py"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
