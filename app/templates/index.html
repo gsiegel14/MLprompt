@@ -19,6 +19,9 @@
             --accent-color: #4cc9f0;
             --light-accent: #f8f9fa;
             --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --info-color: #03a9f4;
             --bg-gradient: linear-gradient(135deg, #ffffff, #f8f9fa);
         }
 
@@ -43,6 +46,8 @@
             background-color: white;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             font-weight: 600;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
         }
 
         .btn-primary {
@@ -71,6 +76,84 @@
             padding: 2rem 0;
             background-color: white;
             border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 5-API Workflow Styles */
+        .workflow-steps {
+            position: relative;
+            padding: 0 20px;
+        }
+        
+        .workflow-step {
+            flex: 1;
+            max-width: 140px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .step-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .step-api {
+            font-size: 0.75rem;
+            color: #555;
+            background-color: rgba(67, 97, 238, 0.1);
+            border-radius: 12px;
+            padding: 2px 8px;
+            display: inline-block;
+        }
+        
+        .workflow-connector {
+            flex-grow: 1;
+            height: 3px;
+            background-color: var(--primary-color);
+            margin: 0 10px;
+            position: relative;
+            top: -25px;
+            z-index: 1;
+            max-width: 80px;
+        }
+        
+        @media (max-width: 768px) {
+            .workflow-steps {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .workflow-step {
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                max-width: 100%;
+            }
+            
+            .step-circle {
+                margin-right: 15px;
+                margin-bottom: 0;
+            }
+            
+            .workflow-connector {
+                width: 3px;
+                height: 30px;
+                margin: 5px 0 5px 24px;
+                transform: none;
+                top: 0;
+            }
         }
     </style>
 </head>
@@ -163,31 +246,136 @@
                         <i class="fa-solid fa-gauge-high me-2"></i> Dashboard
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <!-- Prompt Widgets Section -->
-                            <div class="col-md-3">
-                                <div class="card h-100">
-                                    <div class="card-header">
-                                        <i class="fa-solid fa-keyboard me-2"></i> Prompt Widgets
+                        <div class="row mb-4">
+                            <!-- 5-API Workflow Section -->
+                            <div class="col-12">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fa-solid fa-diagram-project me-2"></i> 5-API Workflow Process
                                     </div>
                                     <div class="card-body">
-                                        <div class="d-grid gap-2">
-                                            <a href="/evaluation" class="btn btn-outline-primary btn-sm mb-2">
-                                                <i class="fa-solid fa-pencil me-1"></i> Edit System Prompt
-                                            </a>
-                                            <a href="/evaluation" class="btn btn-outline-primary btn-sm mb-2">
-                                                <i class="fa-solid fa-code me-1"></i> Edit Output Prompt
-                                            </a>
-                                            <a href="/evaluation" class="btn btn-outline-primary btn-sm">
-                                                <i class="fa-solid fa-ruler me-1"></i> Configure Evaluator
+                                        <div class="d-flex justify-content-center mb-4">
+                                            <div class="workflow-steps d-flex flex-wrap justify-content-between align-items-center w-100">
+                                                <div class="workflow-step text-center">
+                                                    <div class="step-circle bg-primary text-white">1</div>
+                                                    <div class="step-label">Data Preparation</div>
+                                                    <div class="step-api">Vertex AI</div>
+                                                </div>
+                                                <div class="workflow-connector"></div>
+                                                <div class="workflow-step text-center">
+                                                    <div class="step-circle bg-primary text-white">2</div>
+                                                    <div class="step-label">Evaluation</div>
+                                                    <div class="step-api">Hugging Face</div>
+                                                </div>
+                                                <div class="workflow-connector"></div>
+                                                <div class="workflow-step text-center">
+                                                    <div class="step-circle bg-primary text-white">3</div>
+                                                    <div class="step-label">Optimization</div>
+                                                    <div class="step-api">Vertex AI</div>
+                                                </div>
+                                                <div class="workflow-connector"></div>
+                                                <div class="workflow-step text-center">
+                                                    <div class="step-circle bg-primary text-white">4</div>
+                                                    <div class="step-label">Validation</div>
+                                                    <div class="step-api">Hugging Face</div>
+                                                </div>
+                                                <div class="workflow-connector"></div>
+                                                <div class="workflow-step text-center">
+                                                    <div class="step-circle bg-primary text-white">5</div>
+                                                    <div class="step-label">Finalization</div>
+                                                    <div class="step-api">Vertex AI</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-center">
+                                            <a href="/five_api_workflow_page" class="btn btn-primary">
+                                                <i class="fa-solid fa-play me-2"></i> Launch 5-API Workflow
                                             </a>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <!-- Four Prompt Categories -->
+                            <div class="col-12">
+                                <h5 class="mb-3">Prompt Categories</h5>
+                                <div class="row">
+                                    <!-- Original Prompts -->
+                                    <div class="col-md-3">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-info text-white">
+                                                <i class="fa-solid fa-file-code me-2"></i> Original Prompts
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">Starting prompts for the LLM model before optimization.</p>
+                                                <div class="d-grid">
+                                                    <a href="/prompts?category=original" class="btn btn-outline-info btn-sm">
+                                                        <i class="fa-solid fa-eye me-1"></i> View Original
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Evaluator Prompts -->
+                                    <div class="col-md-3">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-warning text-dark">
+                                                <i class="fa-solid fa-scale-balanced me-2"></i> Evaluator Prompts
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">Prompts that assess the quality and accuracy of outputs.</p>
+                                                <div class="d-grid">
+                                                    <a href="/prompts?category=evaluator" class="btn btn-outline-warning btn-sm">
+                                                        <i class="fa-solid fa-eye me-1"></i> View Evaluator
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Optimizer Prompts -->
+                                    <div class="col-md-3">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-danger text-white">
+                                                <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Optimizer Prompts
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">Prompts that generate improvements to existing prompts.</p>
+                                                <div class="d-grid">
+                                                    <a href="/prompts?category=optimizer" class="btn btn-outline-danger btn-sm">
+                                                        <i class="fa-solid fa-eye me-1"></i> View Optimizer
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Final Optimized Prompts -->
+                                    <div class="col-md-3">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-success text-white">
+                                                <i class="fa-solid fa-check-circle me-2"></i> Final Optimized Prompts
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">The final, optimized prompts ready for production use.</p>
+                                                <div class="d-grid">
+                                                    <a href="/final_prompts" class="btn btn-outline-success btn-sm">
+                                                        <i class="fa-solid fa-eye me-1"></i> View Final
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
                             <!-- Dataset Overview Section -->
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="card h-100">
                                     <div class="card-header">
                                         <i class="fa-solid fa-database me-2"></i> Dataset Overview
@@ -209,7 +397,7 @@
                             </div>
                             
                             <!-- Experiment Status Section -->
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="card h-100">
                                     <div class="card-header">
                                         <i class="fa-solid fa-flask me-2"></i> Experiment Status
@@ -228,13 +416,22 @@
                             </div>
                             
                             <!-- Metrics Summary Section -->
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="card h-100">
                                     <div class="card-header">
                                         <i class="fa-solid fa-chart-simple me-2"></i> Metrics Summary
                                     </div>
                                     <div class="card-body">
-                                        <canvas id="metrics-chart" height="150"></canvas>
+                                        <div class="mb-2">
+                                            <strong>Training Accuracy:</strong> <span id="training-accuracy">0.88</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Validation Accuracy:</strong> <span id="validation-accuracy">0.84</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <strong>Optimizer Improvement:</strong> <span id="optimizer-improvement">+12%</span>
+                                        </div>
+                                        <canvas id="metrics-chart" height="100"></canvas>
                                         <div class="d-grid mt-2">
                                             <a href="/final_prompts" class="btn btn-outline-success btn-sm">
                                                 <i class="fa-solid fa-check-circle me-1"></i> View Final Prompts
