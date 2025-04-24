@@ -44,3 +44,5 @@ psutil
 requests
 selenium
 pyyaml
+flask-login
+oauthlib
