@@ -19,6 +19,7 @@ const workflowState = {
 document.addEventListener('DOMContentLoaded', function() {
     initializeUI();
     setupEventListeners();
+    initializeDebugConsole();
 });
 
 /**
