@@ -23,20 +23,22 @@ def check_prefect_installed():
         return False
 
 def create_prefect_profile():
-    """Create a new Prefect profile for SQLite"""
-    logger.info("Creating Prefect profile for SQLite")
+    """Create a new Prefect profile for PostgreSQL"""
+    logger.info("Creating Prefect profile for PostgreSQL")
     try:
-        # Create directory for Prefect SQLite database if it doesn't exist
-        prefect_db_dir = Path(__file__).parent.parent / "data" / "prefect"
-        prefect_db_dir.mkdir(exist_ok=True, parents=True)
-        prefect_db_path = prefect_db_dir / "prefect.db"
+        # Get main database URL from environment
+        main_db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/promptopt")
         
-        # Set the Prefect database URL to use SQLite
-        prefect_db_url = f"sqlite:///{prefect_db_path}"
+        # Create a prefect-specific database URL (same server, different database)
+        parts = main_db_url.rsplit('/', 1)
+        base_url = parts[0]
+        prefect_db_url = f"{base_url}/prefect"
+        
+        # Set environment variable for Prefect
         os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
         
         # Create a new profile
-        subprocess.run(["prefect", "profile", "create", "sqlite-profile"], check=True)
+        subprocess.run(["prefect", "profile", "create", "postgres-profile"], check=True)
         
         # Configure the profile
         subprocess.run([
@@ -45,9 +47,9 @@ def create_prefect_profile():
         ], check=True)
         
         # Set as active profile
-        subprocess.run(["prefect", "profile", "use", "sqlite-profile"], check=True)
+        subprocess.run(["prefect", "profile", "use", "postgres-profile"], check=True)
         
-        logger.info(f"Prefect profile created and configured to use SQLite at {prefect_db_path}")
+        logger.info(f"Prefect profile created and configured to use PostgreSQL at {prefect_db_url}")
         return True
     except subprocess.CalledProcessError as e:
         logger.error(f"Error creating Prefect profile: {str(e)}")
