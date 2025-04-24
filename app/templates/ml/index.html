@@ -214,36 +214,34 @@
 <script src="{{ url_for('static', filename='js/workflow_animations.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Fetch metrics summary
-        fetch('/api/ml/metrics-summary')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update training accuracy
-                    const trainingAccuracy = data.training_accuracy || 0;
-                    document.getElementById('training-accuracy').textContent = trainingAccuracy.toFixed(2);
-                    document.getElementById('training-accuracy-bar').style.width = `${trainingAccuracy * 100}%`;
-                    document.getElementById('training-accuracy-bar').setAttribute('aria-valuenow', trainingAccuracy * 100);
-                    
-                    // Update validation accuracy
-                    const validationAccuracy = data.validation_accuracy || 0;
-                    document.getElementById('validation-accuracy').textContent = validationAccuracy.toFixed(2);
-                    document.getElementById('validation-accuracy-bar').style.width = `${validationAccuracy * 100}%`;
-                    document.getElementById('validation-accuracy-bar').setAttribute('aria-valuenow', validationAccuracy * 100);
-                    
-                    // Update improvement
-                    const improvement = data.improvement_percentage || 0;
-                    document.getElementById('improvement-percentage').textContent = `+${improvement}%`;
-                    
-                    // Cap at 100% for progress bar
-                    const improvementPercent = Math.min(improvement, 100);
-                    document.getElementById('improvement-bar').style.width = `${improvementPercent}%`;
-                    document.getElementById('improvement-bar').setAttribute('aria-valuenow', improvementPercent);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching metrics summary:', error);
-            });
+        // Get metrics from the page instead of making an API call
+        const data = {
+            status: 'success',
+            training_accuracy: {{ metrics.training_accuracy }},
+            validation_accuracy: {{ metrics.validation_accuracy }},
+            improvement_percentage: {{ metrics.improvement_percentage }}
+        };
+        
+        // Update training accuracy
+        const trainingAccuracy = data.training_accuracy || 0;
+        document.getElementById('training-accuracy').textContent = trainingAccuracy.toFixed(2);
+        document.getElementById('training-accuracy-bar').style.width = `${trainingAccuracy * 100}%`;
+        document.getElementById('training-accuracy-bar').setAttribute('aria-valuenow', trainingAccuracy * 100);
+        
+        // Update validation accuracy
+        const validationAccuracy = data.validation_accuracy || 0;
+        document.getElementById('validation-accuracy').textContent = validationAccuracy.toFixed(2);
+        document.getElementById('validation-accuracy-bar').style.width = `${validationAccuracy * 100}%`;
+        document.getElementById('validation-accuracy-bar').setAttribute('aria-valuenow', validationAccuracy * 100);
+        
+        // Update improvement
+        const improvement = data.improvement_percentage || 0;
+        document.getElementById('improvement-percentage').textContent = `+${improvement}%`;
+        
+        // Cap at 100% for progress bar
+        const improvementPercent = Math.min(improvement, 100);
+        document.getElementById('improvement-bar').style.width = `${improvementPercent}%`;
+        document.getElementById('improvement-bar').setAttribute('aria-valuenow', improvementPercent);
     });
 </script>
 {% endblock %}
