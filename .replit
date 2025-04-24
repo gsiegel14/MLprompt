@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 main:app"]
 
 [workflows]
-runButton = "Setup PostgreSQL and Prefect"
+runButton = "Setup Replit PostgreSQL"
 
 [[workflows.workflow]]
 name = "Project"
@@ -256,6 +256,23 @@ args = "python -m scripts.start_prefect_agent &"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uvicorn src.app.main:app --host 0.0.0.0 --port 5000 --reload"
+
+[[workflows.workflow]]
+name = "Setup Replit PostgreSQL"
+author = 41794870
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install -r requirements.txt"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.init_database"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m scripts.setup_prefect"
 
 [[ports]]
 localPort = 5000

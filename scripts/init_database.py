@@ -46,7 +46,9 @@ def check_database_exists():
             return True
         except Exception as e:
             logger.error(f"Error connecting to Replit PostgreSQL: {str(e)}")
-            logger.error("Please create a PostgreSQL database in the Replit interface")
+            logger.error("Please create a PostgreSQL database in the Replit Database panel")
+            logger.error("1. Open a new tab in Replit and type 'Database'")
+            logger.error("2. Click 'Create a database' button")
             return False
     
     # Standard PostgreSQL setup for non-Replit environments
@@ -167,22 +169,33 @@ def check_prefect_database():
             # Using Replit's PostgreSQL
             main_db_url = os.getenv("DATABASE_URL")
             
-            # Create a prefect-specific database URL (same server, different database)
-            # For Replit, we just need to modify the database name part in the URL
-            prefect_db_url = main_db_url.rsplit('/', 1)[0] + "/prefect"
+            # For Replit, we need to use the same database since we can't create
+            # new databases through code. We'll use schema instead.
+            prefect_db_url = main_db_url
             
             # Set environment variable for Prefect
             os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
             
-            # Test if we can connect (we can't create databases in Replit, so we'll need to
-            # create this through the Replit database UI)
+            # Test if we can connect
             try:
-                test_conn = psycopg2.connect(prefect_db_url)
-                test_conn.close()
-                logger.info(f"Connected to existing Prefect database on Replit")
+                conn = psycopg2.connect(prefect_db_url)
+                cursor = conn.cursor()
+                
+                # Check if prefect schema exists
+                cursor.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'prefect'")
+                if cursor.fetchone() is None:
+                    # Create schema if it doesn't exist
+                    cursor.execute("CREATE SCHEMA IF NOT EXISTS prefect")
+                    conn.commit()
+                    logger.info("Created 'prefect' schema in Replit PostgreSQL database")
+                
+                cursor.close()
+                conn.close()
+                logger.info(f"Connected to Replit PostgreSQL for Prefect")
             except Exception as e:
-                logger.warning(f"Prefect database doesn't exist on Replit yet: {str(e)}")
-                logger.warning("Please create a 'prefect' database in the Replit Database UI")
+                logger.warning(f"Error setting up Prefect schema: {str(e)}")
+                logger.warning("Make sure your Replit PostgreSQL database is properly set up")
+                return False
                 
             logger.info(f"Configured Prefect to use Replit PostgreSQL database")
             return True

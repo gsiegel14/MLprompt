@@ -33,13 +33,27 @@ def create_prefect_profile():
         if is_replit and os.getenv("REPLIT_DB_URL"):
             main_db_url = os.getenv("DATABASE_URL")
             logger.info("Using Replit PostgreSQL database for Prefect")
+            
+            # For Replit, we use same database with a schema
+            prefect_db_url = main_db_url
+            
+            # Make sure the schema exists
+            try:
+                conn = psycopg2.connect(main_db_url)
+                cursor = conn.cursor()
+                cursor.execute("CREATE SCHEMA IF NOT EXISTS prefect")
+                conn.commit()
+                cursor.close()
+                conn.close()
+                logger.info("Ensured 'prefect' schema exists in Replit PostgreSQL")
+            except Exception as e:
+                logger.warning(f"Error creating prefect schema: {str(e)}")
         else:
             main_db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/promptopt")
-        
-        # Create a prefect-specific database URL (same server, different database)
-        parts = main_db_url.rsplit('/', 1)
-        base_url = parts[0]
-        prefect_db_url = f"{base_url}/prefect"
+            # Create a prefect-specific database URL (same server, different database)
+            parts = main_db_url.rsplit('/', 1)
+            base_url = parts[0]
+            prefect_db_url = f"{base_url}/prefect"
         
         # Set environment variable for Prefect
         os.environ["PREFECT_API_DATABASE_CONNECTION_URL"] = prefect_db_url
