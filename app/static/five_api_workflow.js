@@ -3,8 +3,8 @@
  * Handles the 5-step prompt optimization process using Vertex AI and Hugging Face
  */
 
-// Workflow state tracking
-const workflowState = {
+// Workflow state tracking - use var instead of const to prevent redeclaration errors
+var workflowState = window.workflowState || {
     inProgress: false,
     currentStep: 0,
     examples: [],
@@ -15,6 +15,9 @@ const workflowState = {
     currentIteration: 0,
     customOptimizerInstructions: null
 };
+
+// Set the workflowState on the window to prevent duplicate declaration
+window.workflowState = workflowState;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeUI();
@@ -921,9 +924,11 @@ function showAlert(message, type) {
  */
 function loadNejmDataset(datasetType) {
     showAlert(`Loading NEJM ${datasetType} dataset...`, 'info');
+    console.log(`Attempting to load NEJM ${datasetType} dataset...`);
     
     fetch(`/load_dataset_api?type=nejm_${datasetType}`)
         .then(response => {
+            console.log(`NEJM dataset API response status: ${response.status}`);
             if (!response.ok) {
                 throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
             }
