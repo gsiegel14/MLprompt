@@ -6,7 +6,10 @@ import pickle
 import json
 from pathlib import Path
 import google.generativeai as genai
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union
+
+# Import the variable substitution utilities
+from app.utils import substitute_variables, create_variables_dict
 
 logger = logging.getLogger(__name__)
 
@@ -163,15 +166,27 @@ def _load_from_cache(cache_key: str) -> Optional[str]:
 
         return None
 
-def get_llm_response(system_prompt: str, user_input: str, output_prompt: str, config: Optional[Dict[str, Any]] = None) -> str:
+def get_llm_response(
+    system_prompt: str, 
+    user_input: str, 
+    output_prompt: str, 
+    config: Optional[Dict[str, Any]] = None,
+    eval_data_base: Optional[Dict[str, Any]] = None,
+    eval_data_optimized: Optional[Dict[str, Any]] = None,
+    dataset_answers_base: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]] = None
+) -> str:
     """
     Get a response from the Google Gemini API with robust error handling, retry logic and caching.
+    Supports variable substitution in prompts.
 
     Args:
         system_prompt (str): The system prompt to guide the model
         user_input (str): The user input to process
         output_prompt (str): The output prompt format instructions
         config (dict): Configuration for Gemini API
+        eval_data_base (dict, optional): Base evaluation data for $EVAL_DATA_BASE
+        eval_data_optimized (dict, optional): Optimized evaluation data for $EVAL_DATA_OPTIMIZED
+        dataset_answers_base (list or dict, optional): Dataset answers for prompt optimization
 
     Returns:
         str: The model's response
