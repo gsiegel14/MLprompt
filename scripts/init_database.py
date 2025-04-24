@@ -93,36 +93,49 @@ def create_default_model_configurations():
             logger.info(f"Default model configuration already exists: {default_config.name}")
             return True
 
+        logger.info("No default configuration found, creating new model configurations")
+        
         # Create default configs for Gemini models
-        repo.create_model_config(
-            name="Gemini 1.5 Flash + Pro",
-            primary_model="gemini-1.5-flash",
-            optimizer_model="gemini-1.5-pro",
-            temperature=0.2,
-            max_tokens=1024,
-            top_p=0.95,
-            top_k=40,
-            is_default=True
-        )
-
-        repo.create_model_config(
-            name="Gemini Pro Only",
-            primary_model="gemini-1.5-pro",
-            optimizer_model="gemini-1.5-pro",
-            temperature=0.0,
-            max_tokens=2048,
-            top_p=1.0,
-            top_k=40,
-            is_default=False
-        )
-
-        logger.info("Default model configurations created successfully")
-        return True
+        try:
+            repo.create_model_config(
+                name="Gemini 1.5 Flash + Pro",
+                primary_model="gemini-1.5-flash",
+                optimizer_model="gemini-1.5-pro",
+                temperature=0.2,
+                max_tokens=1024,
+                top_p=0.95,
+                top_k=40,
+                is_default=True
+            )
+            logger.info("Created 'Gemini 1.5 Flash + Pro' configuration")
+            
+            repo.create_model_config(
+                name="Gemini Pro Only",
+                primary_model="gemini-1.5-pro",
+                optimizer_model="gemini-1.5-pro",
+                temperature=0.0,
+                max_tokens=2048,
+                top_p=1.0,
+                top_k=40,
+                is_default=False
+            )
+            logger.info("Created 'Gemini Pro Only' configuration")
+            
+            # Verify configurations were created
+            all_configs = session.query(ModelConfiguration).all()
+            logger.info(f"Total model configurations now available: {len(all_configs)}")
+            
+            logger.info("Default model configurations created successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error during model configuration creation: {str(e)}")
+            return False
     except Exception as e:
         logger.error(f"Error creating default model configurations: {str(e)}")
         return False
     finally:
-        session.close()
+        if session:
+            session.close()
 
 def check_prefect_database():
     """Check if Prefect database exists and create it if needed"""
@@ -151,23 +164,36 @@ def main():
     if not check_database_exists():
         logger.error("Failed to check/create application database")
         sys.exit(1)
+    logger.info("✅ Application database setup complete")
 
     # Check Prefect database exists
     if not check_prefect_database():
         logger.error("Failed to check/create Prefect database")
         sys.exit(1)
+    logger.info("✅ Prefect database setup complete")
 
     # Run migrations
     if not run_migrations():
         logger.error("Failed to run database migrations")
         sys.exit(1)
+    logger.info("✅ Database migrations complete")
 
     # Create default data
     if not create_default_model_configurations():
         logger.error("Failed to create default model configurations")
         sys.exit(1)
+    logger.info("✅ Default model configurations created")
 
-    logger.info("Database initialization completed successfully")
+    logger.info("✅ Database initialization completed successfully")
+    
+    # Print summary
+    try:
+        session = SessionLocal()
+        model_count = session.query(ModelConfiguration).count()
+        session.close()
+        logger.info(f"Database has {model_count} model configurations available")
+    except Exception as e:
+        logger.warning(f"Could not count model configurations: {str(e)}")
 
 if __name__ == "__main__":
     main()
