@@ -55,7 +55,7 @@ def api_status():
     """Return the status of the API and its components."""
     try:
         # Check for Hugging Face API token
-        hf_token_available = 'HUGGING_FACE_TOKEN' in os.environ
+        hf_token_available = 'HUGGING_FACE_TOKEN' in os.environ or 'HUGGINGFACE_API_KEY' in os.environ
         
         # Check model configuration
         gemini_model = config.get('gemini', {}).get('model_name', 'unknown')
@@ -272,4 +272,161 @@ def list_experiments_api():
         })
     except Exception as e:
         logger.error(f"Error in list_experiments endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Optimizer Prompts API Endpoints
+@app.route('/api/optimizer_prompt', methods=['GET'])
+def get_optimizer_prompt_api():
+    """Get the current optimizer prompts."""
+    try:
+        # Get default optimizer prompt strategy
+        strategy = request.args.get('strategy', 'reasoning_first')
+        
+        # Load system prompt and output prompt
+        optimizer_strategies = get_optimization_strategies()
+        
+        if strategy not in optimizer_strategies:
+            strategy = 'reasoning_first'  # Default fallback
+            
+        system_prompt = ""
+        output_prompt = ""
+        
+        # Try to load from files
+        try:
+            with open(f"prompts/optimizer/Optimizer_systemmessage.md.txt", "r") as f:
+                system_prompt = f.read()
+                
+            with open(f"prompts/optimizer/optimizer_output_prompt.txt", "r") as f:
+                output_prompt = f.read()
+        except Exception as e:
+            logger.warning(f"Could not load optimizer prompt files: {e}")
+            system_prompt = "You are an expert prompt engineer."
+            output_prompt = "Analyze and optimize the given prompt."
+        
+        return jsonify({
+            'system_prompt': system_prompt,
+            'output_prompt': output_prompt,
+            'strategy': strategy,
+            'available_strategies': optimizer_strategies
+        })
+    except Exception as e:
+        logger.error(f"Error in get_optimizer_prompt endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/save_optimizer_prompt', methods=['POST'])
+def save_optimizer_prompt_api():
+    """Save custom optimizer prompts."""
+    try:
+        data = request.json
+        system_prompt = data.get('system_prompt', '')
+        output_prompt = data.get('output_prompt', '')
+        
+        if not system_prompt:
+            return jsonify({'error': 'System prompt is required'}), 400
+            
+        # Create optimizer directory if it doesn't exist
+        os.makedirs('prompts/optimizer', exist_ok=True)
+        
+        # Save files
+        with open(f"prompts/optimizer/Optimizer_systemmessage.md.txt", "w") as f:
+            f.write(system_prompt)
+            
+        if output_prompt:
+            with open(f"prompts/optimizer/optimizer_output_prompt.txt", "w") as f:
+                f.write(output_prompt)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Optimizer prompts saved successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error in save_optimizer_prompt endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+        
+# Metrics Summary API Endpoint
+@app.route('/api/metrics_summary', methods=['GET'])
+def metrics_summary_api():
+    """Get a summary of metrics from recent experiments."""
+    try:
+        # Get experiment list (max 10 most recent)
+        experiments = experiment_tracker.get_experiment_list()[-10:]
+        
+        # Initialize summary data
+        summary = {
+            'experiment_count': len(experiments),
+            'average_improvement': 0.0,
+            'metrics_by_experiment': {},
+            'strategies_used': {}
+        }
+        
+        if experiments:
+            # Track total improvement
+            total_improvement = 0.0
+            improvements_count = 0
+            
+            # Process each experiment
+            for exp_id in experiments:
+                try:
+                    iterations = experiment_tracker.get_experiment_iterations(exp_id)
+                    if iterations and len(iterations) > 0:
+                        first_iteration = iterations[0]
+                        last_iteration = iterations[-1]
+                        
+                        strategy = first_iteration.get('strategy', 'unknown')
+                        
+                        # Track strategy usage
+                        if strategy in summary['strategies_used']:
+                            summary['strategies_used'][strategy] += 1
+                        else:
+                            summary['strategies_used'][strategy] = 1
+                        
+                        # Calculate improvement
+                        first_score = first_iteration.get('metrics', {}).get('avg_score', 0)
+                        last_score = last_iteration.get('metrics', {}).get('avg_score', 0)
+                        improvement = last_score - first_score
+                        
+                        if improvement != 0:
+                            total_improvement += improvement
+                            improvements_count += 1
+                        
+                        # Add to metrics by experiment
+                        summary['metrics_by_experiment'][exp_id] = {
+                            'initial_score': first_score,
+                            'final_score': last_score,
+                            'improvement': improvement,
+                            'iterations': len(iterations),
+                            'strategy': strategy
+                        }
+                except Exception as inner_e:
+                    logger.warning(f"Error processing experiment {exp_id}: {inner_e}")
+                    continue
+            
+            # Calculate average improvement
+            if improvements_count > 0:
+                summary['average_improvement'] = total_improvement / improvements_count
+        
+        return jsonify(summary)
+    except Exception as e:
+        logger.error(f"Error in metrics_summary endpoint: {e}")
+        return jsonify({
+            'error': str(e),
+            'experiment_count': 0,
+            'average_improvement': 0.0
+        }), 500
+
+# Five API Workflow API Endpoint
+@app.route('/api/five_api_workflow_info', methods=['GET'])
+def five_api_workflow_info():
+    """Return information for the five API workflow page."""
+    try:
+        # Get strategies for the UI
+        strategies = get_optimization_strategies()
+        
+        return jsonify({
+            'status': 'ok',
+            'strategies': strategies,
+            'message': 'Five API workflow info endpoint'
+        })
+    except Exception as e:
+        logger.error(f"Error in five_api_workflow_info endpoint: {e}")
         return jsonify({'error': str(e)}), 500

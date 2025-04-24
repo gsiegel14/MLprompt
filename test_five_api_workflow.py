@@ -25,9 +25,10 @@ from requests.exceptions import ConnectionError, RequestException, Timeout
 
 # Check for API keys
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-HUGGINGFACE_API_KEY = os.environ.get("HUGGINGFACE_API_KEY")
-SIMULATION_MODE = True  # Use simulations if API keys not available
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # May not be available
+HUGGINGFACE_API_KEY = os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HUGGING_FACE_TOKEN")
+# Determine if we need simulation mode based on whether the relevant API keys are available
+SIMULATION_MODE = not (GOOGLE_API_KEY or GEMINI_API_KEY or HUGGINGFACE_API_KEY)
 
 # Configure logging
 logging.basicConfig(
@@ -435,6 +436,64 @@ def run_full_five_api_workflow(system_prompt, output_prompt):
     
     return success
 
+def check_api_endpoints():
+    """Check which API endpoints are available"""
+    logger.info("\n" + "=" * 80)
+    logger.info("CHECKING API ENDPOINTS AVAILABILITY")
+    logger.info("=" * 80)
+    
+    endpoints = [
+        {"method": "get", "url": f"{BASE_URL}/", "name": "Home Page"},
+        {"method": "get", "url": f"{BASE_URL}/api/status", "name": "API Status"},
+        {"method": "get", "url": f"{BASE_URL}/load_dataset", "params": {"type": "base_prompts"}, "name": "Load Dataset"},
+        {"method": "get", "url": f"{BASE_URL}/api/optimizer_prompt", "name": "Get Optimizer Prompt"},
+        {"method": "get", "url": f"{BASE_URL}/api/metrics_summary", "name": "Metrics Summary"},
+        {"method": "get", "url": f"{BASE_URL}/api/five_api_workflow_info", "name": "5-API Workflow Info"}
+    ]
+    
+    available_endpoints = []
+    missing_endpoints = []
+    
+    for endpoint in endpoints:
+        method = endpoint["method"]
+        url = endpoint["url"]
+        name = endpoint["name"]
+        params = endpoint.get("params", None)
+        
+        logger.info(f"Checking endpoint: {name} ({method.upper()} {url})")
+        
+        success, _ = make_api_request(method, url, params=params, retries=0, timeout=5)
+        
+        if success:
+            logger.info(f"✓ Endpoint {name} is available")
+            available_endpoints.append(name)
+        else:
+            logger.warning(f"✗ Endpoint {name} is not available")
+            missing_endpoints.append(name)
+    
+    logger.info("\nSUMMARY:")
+    logger.info(f"Available endpoints: {len(available_endpoints)}/{len(endpoints)}")
+    logger.info(f"Missing endpoints: {len(missing_endpoints)}/{len(endpoints)}")
+    
+    # Check API keys
+    logger.info("\nAPI KEYS STATUS:")
+    if GOOGLE_API_KEY:
+        logger.info("✓ GOOGLE_API_KEY is available")
+    else:
+        logger.warning("✗ GOOGLE_API_KEY is not available")
+        
+    if GEMINI_API_KEY:
+        logger.info("✓ GEMINI_API_KEY is available")
+    else:
+        logger.warning("✗ GEMINI_API_KEY is not available (will use GOOGLE_API_KEY if available)")
+        
+    if HUGGINGFACE_API_KEY:
+        logger.info("✓ HUGGINGFACE_API_KEY is available")
+    else:
+        logger.warning("✗ HUGGINGFACE_API_KEY is not available (will use simulation mode)")
+    
+    return available_endpoints, missing_endpoints
+
 def main():
     """Main test function"""
     logger.info("\n" + "#" * 80)
@@ -443,6 +502,9 @@ def main():
     logger.info(f"## Test Input: {TEST_INPUT}")
     logger.info(f"## Ground Truth: {GROUND_TRUTH}")
     logger.info("#" * 80 + "\n")
+    
+    # Check available API endpoints
+    available_endpoints, missing_endpoints = check_api_endpoints()
     
     # Test 1: Load Base Prompts
     system_prompt, output_prompt = test_load_base_prompts()
