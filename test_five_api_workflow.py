@@ -25,10 +25,10 @@ from requests.exceptions import ConnectionError, RequestException, Timeout
 
 # Check for API keys
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # May not be available
-HUGGINGFACE_API_KEY = os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HUGGING_FACE_TOKEN")
+HUGGING_FACE_TOKEN = os.environ.get("HUGGING_FACE_TOKEN")
 # Determine if we need simulation mode based on whether the relevant API keys are available
-SIMULATION_MODE = not (GOOGLE_API_KEY or GEMINI_API_KEY or HUGGINGFACE_API_KEY)
+# Note: GEMINI_API_KEY not needed if GOOGLE_API_KEY is available
+SIMULATION_MODE = not (GOOGLE_API_KEY and HUGGING_FACE_TOKEN)
 
 # Configure logging
 logging.basicConfig(
@@ -482,15 +482,10 @@ def check_api_endpoints():
     else:
         logger.warning("✗ GOOGLE_API_KEY is not available")
         
-    if GEMINI_API_KEY:
-        logger.info("✓ GEMINI_API_KEY is available")
+    if HUGGING_FACE_TOKEN:
+        logger.info("✓ HUGGING_FACE_TOKEN is available")
     else:
-        logger.warning("✗ GEMINI_API_KEY is not available (will use GOOGLE_API_KEY if available)")
-        
-    if HUGGINGFACE_API_KEY:
-        logger.info("✓ HUGGINGFACE_API_KEY is available")
-    else:
-        logger.warning("✗ HUGGINGFACE_API_KEY is not available (will use simulation mode)")
+        logger.warning("✗ HUGGING_FACE_TOKEN is not available (will use simulation mode)")
     
     return available_endpoints, missing_endpoints
 
